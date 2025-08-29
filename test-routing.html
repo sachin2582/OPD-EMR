@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPD-EMR Routing Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border-radius: 8px; 
+        }
+        .result { 
+            background: rgba(255, 255, 255, 0.2); 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            white-space: pre-wrap; 
+        }
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: bold;
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+        h1, h2 { text-align: center; }
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .status.online { background: #10b981; color: white; }
+        .status.offline { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🏥 OPD-EMR System Test</h1>
+        <p style="text-align: center; opacity: 0.9;">Testing system connectivity and routing</p>
+        
+        <div class="test-section">
+            <h3>🔗 Frontend Status</h3>
+            <div id="frontend-status" class="result">
+                <span class="status online">✅ Frontend Running</span><br>
+                URL: <a href="http://localhost:3000" target="_blank" style="color: #fbbf24;">http://localhost:3000</a>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Backend Health Check</h3>
+            <button onclick="testBackend()">Test Backend Health</button>
+            <div id="backend-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Admin API Test</h3>
+            <button onclick="testAdminAPI()">Test Admin Overview</button>
+            <div id="admin-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📱 Navigation Test</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="window.open('http://localhost:3000', '_blank')">🏠 Dashboard</button>
+                <button onclick="window.open('http://localhost:3000/login', '_blank')">🔐 Login</button>
+                <button onclick="window.open('http://localhost:3000/register', '_blank')">👤 Register Patient</button>
+                <button onclick="window.open('http://localhost:3000/patients', '_blank')">👥 Patients</button>
+        
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 System Information</h3>
+            <div class="result">
+                <strong>Frontend:</strong> React.js running on port 3000<br>
+                <strong>Backend:</strong> Node.js/Express running on port 5000<br>
+                <strong>Database:</strong> SQLite with rights management<br>
+                <strong>Features:</strong> Patient Management, Appointments, Clinical Notes, E-Prescriptions, Admin Panel<br>
+                <strong>Login:</strong> Username: admin, Password: admin123
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        const ADMIN_BASE = 'http://localhost:5000/api/admin';
+        const headers = {
+            'Authorization': 'Bearer admin-token',
+            'Content-Type': 'application/json'
+        };
+
+        async function testBackend() {
+            try {
+                const response = await fetch(`${API_BASE.replace('/api', '')}/health`);
+                const data = await response.json();
+                document.getElementById('backend-result').innerHTML = 
+                    `<span class="success">✅ Backend is running!</span><br>
+                     Status: ${response.status}<br>
+                     Uptime: ${data.uptime ? Math.round(data.uptime) + 's' : 'N/A'}<br>
+                     Timestamp: ${data.timestamp || 'N/A'}`;
+            } catch (error) {
+                document.getElementById('backend-result').innerHTML = 
+                    `<span class="error">❌ Backend connection failed</span><br>
+                     Error: ${error.message}`;
+            }
+        }
+
+        async function testAdminAPI() {
+            try {
+                const response = await fetch(`${ADMIN_BASE}/overview`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                const data = await response.json();
+                document.getElementById('admin-result').innerHTML = 
+                    `<span class="success">✅ Admin API is working!</span><br>
+                     Status: ${response.status}<br>
+                     Total Patients: ${data.totalPatients || 'N/A'}<br>
+                     Active Doctors: ${data.activeDoctors || 'N/A'}<br>
+                     Active Users: ${data.activeUsers || 'N/A'}`;
+            } catch (error) {
+                document.getElementById('admin-result').innerHTML = 
+                    `<span class="error">❌ Admin API failed</span><br>
+                     Error: ${error.message}`;
+            }
+        }
+
+        // Auto-test backend on page load
+        window.onload = function() {
+            setTimeout(testBackend, 1000);
+        };
+    </script>
+</body>
+</html>

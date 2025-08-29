@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Test Billing Workflow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .workflow-step {
+            background: #ecf0f1;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .step-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .step-description {
+            color: #34495e;
+            line-height: 1.6;
+        }
+        .api-endpoint {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .status-pending { background: #f39c12; color: white; }
+        .status-paid { background: #27ae60; color: white; }
+        .status-ordered { background: #3498db; color: white; }
+        .status-collected { background: #9b59b6; color: white; }
+        .status-completed { background: #27ae60; color: white; }
+        .button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background: #2980b9;
+        }
+        .button.success { background: #27ae60; }
+        .button.warning { background: #f39c12; }
+        .button.info { background: #17a2b8; }
+        .demo-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .demo-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .order-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .order-id {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .order-badges {
+            display: flex;
+            gap: 10px;
+        }
+        .order-details {
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Lab Test Billing & Sample Collection Workflow</h1>
+        
+        <div class="workflow-step">
+            <div class="step-number">1</div>
+            <div class="step-title">Lab Test Ordered</div>
+            <div class="step-description">
+                Doctor prescribes lab tests through the E-Prescription system. 
+                The system creates a lab order with status "ordered" and payment status "pending".
+            </div>
+            <div class="api-endpoint">POST /api/lab-tests/orders</div>
+        </div>
+
+        <div class="workflow-step">
+            <div class="step-number">2</div>
+            <div class="step-title">Billing Completed</div>
+            <div class="step-description">
+                Lab staff completes the billing process by updating payment status to "paid". 
+                This enables the next step in the workflow.
+            </div>
+            <div class="api-endpoint">PUT /api/lab-tests/orders/:id/billing</div>
+        </div>
+
+        <div class="workflow-step">
+            <div class="step-number">3</div>
+            <div class="step-title">Sample Collection Scheduled</div>
+            <div class="step-description">
+                After billing is complete, sample collection can be scheduled. 
+                The system creates a collection record with default settings.
+            </div>
+            <div class="api-endpoint">POST /api/lab-tests/sample-collection</div>
+        </div>
+
+        <div class="workflow-step">
+            <div class="step-number">4</div>
+            <div class="step-title">Processing & Completion</div>
+            <div class="step-description">
+                Lab staff processes the tests and updates status through "in_progress" to "completed".
+                Sample collection status is automatically synchronized.
+            </div>
+            <div class="api-endpoint">PUT /api/lab-tests/orders/:id/status</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🎯 Workflow Demo</h2>
+        
+        <div class="demo-section">
+            <div class="demo-title">Current Lab Test Orders</div>
+            
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-id">LAB-123456-ABC</div>
+                    <div class="order-badges">
+                        <span class="status-badge status-ordered">Ordered</span>
+                        <span class="status-badge status-pending">Payment Pending</span>
+                        <span class="status-badge status-ordered">Routine</span>
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <div class="detail-row">
+                        <strong>Patient:</strong> John Doe
+                    </div>
+                    <div class="detail-row">
+                        <strong>Doctor:</strong> Dr. Smith
+                    </div>
+                    <div class="detail-row">
+                        <strong>Date:</strong> 2024-01-15
+                    </div>
+                    <div class="detail-row">
+                        <strong>Amount:</strong> ₹1,500
+                    </div>
+                </div>
+                
+                <div class="order-actions">
+                    <button class="button info">💳 Complete Billing</button>
+                    <button class="button" disabled>👁️ View Details</button>
+                </div>
+            </div>
+
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-id">LAB-123457-DEF</div>
+                    <div class="order-badges">
+                        <span class="status-badge status-ordered">Ordered</span>
+                        <span class="status-badge status-paid">Paid</span>
+                        <span class="status-badge status-ordered">Urgent</span>
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <div class="detail-row">
+                        <strong>Patient:</strong> Jane Smith
+                    </div>
+                    <div class="detail-row">
+                        <strong>Doctor:</strong> Dr. Johnson
+                    </div>
+                    <div class="detail-row">
+                        <strong>Date:</strong> 2024-01-15
+                    </div>
+                    <div class="detail-row">
+                        <strong>Amount:</strong> ₹2,200
+                    </div>
+                </div>
+                
+                <div class="order-actions">
+                    <button class="button success">👤 Schedule Collection</button>
+                    <button class="button warning">⏰ Start Processing</button>
+                    <button class="button">👁️ View Details</button>
+                </div>
+            </div>
+
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-id">LAB-123458-GHI</div>
+                    <div class="order-badges">
+                        <span class="status-badge status-ordered">In Progress</span>
+                        <span class="status-badge status-paid">Paid</span>
+                        <span class="status-badge status-ordered">Routine</span>
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <div class="detail-row">
+                        <strong>Patient:</strong> Mike Johnson
+                    </div>
+                    <div class="detail-row">
+                        <strong>Doctor:</strong> Dr. Williams
+                    </div>
+                    <div class="detail-row">
+                        <strong>Date:</strong> 2024-01-14
+                    </div>
+                    <div class="detail-row">
+                        <strong>Amount:</strong> ₹1,800
+                    </div>
+                </div>
+                
+                <div class="order-actions">
+                    <button class="button success">✅ Mark Complete</button>
+                    <button class="button">👁️ View Details</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">Sample Collection Records</div>
+            
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-id">SAMP-123456-XYZ</div>
+                    <div class="order-badges">
+                        <span class="status-badge status-collected">Collected</span>
+                        <span class="status-badge status-ordered">Routine</span>
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <div class="detail-row">
+                        <strong>Patient:</strong> Jane Smith
+                    </div>
+                    <div class="detail-row">
+                        <strong>Order ID:</strong> LAB-123457-DEF
+                    </div>
+                    <div class="detail-row">
+                        <strong>Collection Date:</strong> 2024-01-15
+                    </div>
+                    <div class="detail-row">
+                        <strong>Sample Type:</strong> Blood
+                    </div>
+                </div>
+                
+                <div class="order-actions">
+                    <button class="button">✏️ Update Collection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Technical Implementation</h2>
+        
+        <div class="demo-section">
+            <div class="demo-title">Frontend Components</div>
+            <ul>
+                <li><strong>LabTestManagement.js</strong> - Main component with billing modal and workflow logic</li>
+                <li><strong>LabTestManagement.css</strong> - Styling for payment badges and buttons</li>
+                <li><strong>Billing Modal</strong> - Complete billing interface with payment methods</li>
+                <li><strong>Smart Buttons</strong> - Different actions based on current status</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">Backend API Endpoints</div>
+            <ul>
+                <li><strong>PUT /api/lab-tests/orders/:id/billing</strong> - Update payment status</li>
+                <li><strong>POST /api/lab-tests/sample-collection</strong> - Create collection record</li>
+                <li><strong>PUT /api/lab-tests/orders/:id/status</strong> - Update order status</li>
+                <li><strong>GET /api/lab-tests/orders</strong> - Fetch all orders with payment status</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">Database Schema</div>
+            <ul>
+                <li><strong>lab_orders</strong> - paymentStatus, totalAmount, status</li>
+                <li><strong>sample_collection</strong> - orderId, collectionDate, status</li>
+                <li><strong>lab_order_items</strong> - Individual test items in orders</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>✅ Key Features Implemented</h2>
+        
+        <div class="demo-section">
+            <div class="demo-title">Billing System</div>
+            <ul>
+                <li>✅ Payment status tracking (Pending/Paid)</li>
+                <li>✅ Multiple payment methods (Cash, Card, Insurance, Online)</li>
+                <li>✅ Discount support</li>
+                <li>✅ Billing notes and documentation</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">Workflow Control</div>
+            <ul>
+                <li>✅ Billing required before sample collection</li>
+                <li>✅ Status progression: Ordered → Billed → Collection → Processing → Complete</li>
+                <li>✅ Smart button logic based on current status</li>
+                <li>✅ Automatic status synchronization</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">Sample Collection</div>
+            <ul>
+                <li>✅ Automatic scheduling after billing</li>
+                <li>✅ Collection details (date, time, collector, sample type)</li>
+                <li>✅ Status tracking through completion</li>
+                <li>✅ Priority-based scheduling</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Demo functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Lab Test Billing Workflow Demo Loaded');
+            
+            // Add click handlers for demo buttons
+            const buttons = document.querySelectorAll('.button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (!button.disabled) {
+                        const action = button.textContent.trim();
+                        alert(`Demo: ${action} action would be executed here.`);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

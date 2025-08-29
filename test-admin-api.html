@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; white-space: pre-wrap; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input, select { padding: 8px; margin: 5px; width: 200px; }
+        .form-group { margin: 10px 0; }
+        label { display: inline-block; width: 120px; }
+    </style>
+</head>
+<body>
+    <h1>Admin API Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Overview Endpoint</h3>
+        <button onclick="testOverview()">Test Overview</button>
+        <div id="overview-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Users Endpoint</h3>
+        <button onclick="testUsers()">Test Users</button>
+        <div id="users-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Create User</h3>
+        <div class="form-group">
+            <label>Username:</label>
+            <input type="text" id="username" value="testuser" />
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="password" value="testpass123" />
+        </div>
+        <div class="form-group">
+            <label>Full Name:</label>
+            <input type="text" id="fullName" value="Test User" />
+        </div>
+        <div class="form-group">
+            <label>Role:</label>
+            <select id="role">
+                <option value="billing">Billing</option>
+                <option value="reception">Reception</option>
+                <option value="nurse">Nurse</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <button onclick="testCreateUser()">Create User</button>
+        <div id="create-user-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Doctors Endpoint</h3>
+        <button onclick="testDoctors()">Test Doctors</button>
+        <div id="doctors-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Services Endpoint</h3>
+        <button onclick="testServices()">Test Services</button>
+        <div id="services-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Bill Series Endpoint</h3>
+        <button onclick="testBillSeries()">Test Bill Series</button>
+        <div id="bill-series-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/admin';
+        const headers = {
+            'Authorization': 'Bearer admin-token',
+            'Content-Type': 'application/json'
+        };
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: headers,
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testOverview() {
+            const result = await makeRequest('/overview');
+            document.getElementById('overview-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+
+        async function testUsers() {
+            const result = await makeRequest('/users');
+            document.getElementById('users-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+
+        async function testCreateUser() {
+            const userData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                fullName: document.getElementById('fullName').value,
+                role: document.getElementById('role').value,
+                email: 'test@example.com',
+                phone: '1234567890',
+                department: 'Testing',
+                permissions: ''
+            };
+
+            const result = await makeRequest('/users', {
+                method: 'POST',
+                body: JSON.stringify(userData)
+            });
+
+            document.getElementById('create-user-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+
+        async function testDoctors() {
+            const result = await makeRequest('/doctors');
+            document.getElementById('doctors-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+
+        async function testServices() {
+            const result = await makeRequest('/services');
+            document.getElementById('services-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+
+        async function testBillSeries() {
+            const result = await makeRequest('/bill-series');
+            document.getElementById('bill-series-result').textContent = 
+                result.success ? JSON.stringify(result.data, null, 2) : `Error: ${result.error}`;
+        }
+    </script>
+</body>
+</html>

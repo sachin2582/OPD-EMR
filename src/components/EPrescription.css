@@ -1,0 +1,419 @@
+/* EPrescription Component Styles */
+
+/* Medication Table Styles */
+.medication-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  table-layout: fixed;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 1200px; /* Ensure minimum width for readability */
+}
+
+.medication-table th {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  padding: 0.75rem;
+  text-align: left;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.medication-table td {
+  padding: 0.75rem;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0; /* Allow cells to shrink */
+}
+
+.medication-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.medication-table tr:hover {
+  background: #f1f5f9;
+}
+
+.medication-table input,
+.medication-table select {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  outline: none;
+  min-width: 0; /* Allow inputs to shrink */
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+}
+
+.medication-table input:focus,
+.medication-table select:focus {
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: 0.25rem;
+  white-space: normal; /* Allow text to wrap on focus */
+}
+
+.medication-table .action-cell {
+  text-align: center;
+  width: 6%;
+}
+
+.medication-table .type-cell {
+  width: 10%;
+}
+
+.medication-table .medicine-cell {
+  width: 22%;
+}
+
+.medication-table .dose-cell {
+  width: 14%;
+}
+
+.medication-table .when-cell {
+  width: 14%;
+}
+
+.medication-table .frequency-cell {
+  width: 14%;
+}
+
+.medication-table .duration-cell {
+  width: 14%;
+}
+
+.medication-table .notes-cell {
+  width: 6%;
+}
+
+/* Responsive table */
+@media (max-width: 1200px) {
+  .medication-table {
+    font-size: 0.8rem;
+    min-width: 1000px; /* Reduce minimum width for smaller screens */
+  }
+  
+  .medication-table th,
+  .medication-table td {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .medication-table {
+    table-layout: auto;
+    min-width: 800px; /* Further reduce for mobile */
+  }
+  
+  .medication-table th,
+  .medication-table td {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Ensure table content is properly spaced */
+.medication-table td {
+  padding: 0.75rem;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0; /* Allow cells to shrink */
+}
+
+/* Improve input and select styling */
+.medication-table input,
+.medication-table select {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  outline: none;
+  min-width: 0; /* Allow inputs to shrink */
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+}
+
+.medication-table input:focus,
+.medication-table select:focus {
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: 0.25rem;
+  white-space: normal; /* Allow text to wrap on focus */
+}
+
+.medication-table .action-cell {
+  text-align: center;
+  width: 6%;
+}
+
+.medication-table .type-cell {
+  width: 10%;
+}
+
+.medication-table .medicine-cell {
+  width: 22%;
+}
+
+.medication-table .dose-cell {
+  width: 14%;
+}
+
+.medication-table .when-cell {
+  width: 14%;
+}
+
+.medication-table .frequency-cell {
+  width: 14%;
+}
+
+.medication-table .duration-cell {
+  width: 14%;
+}
+
+.medication-table .notes-cell {
+  width: 6%;
+}
+
+.selected-tests {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(37, 99, 235, 0.02);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 0.5rem;
+}
+
+.selected-tests h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.selected-tests-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.selected-test-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 0.375rem;
+  position: relative;
+}
+
+.test-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.test-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.test-abbreviation {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: monospace;
+  min-width: fit-content;
+}
+
+.test-code {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.test-price {
+  color: var(--success-color);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.test-description {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.remove-test-btn {
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.75rem;
+}
+
+.remove-test-btn:hover {
+  background: var(--danger-color-dark);
+  transform: scale(1.05);
+}
+
+.total-amount {
+  padding: 1rem;
+  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 0.5rem;
+  text-align: center;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(37, 99, 235, 0.1);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  border-radius: 0.5rem;
+  color: var(--danger-color);
+}
+
+.error-message {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Search input styling */
+.lab-test-search {
+  border: 2px solid var(--primary-color);
+  background: rgba(37, 99, 235, 0.02);
+  transition: all 0.2s ease;
+}
+
+.lab-test-search:focus {
+  border-color: var(--primary-color-dark);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Custom multi-select styling */
+.custom-multi-select {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.test-option {
+  transition: all 0.2s ease;
+}
+
+.test-option:hover {
+  background: rgba(37, 99, 235, 0.05) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.test-option.selected {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+}
+
+.test-option.selected:hover {
+  background: var(--primary-color) !important;
+  opacity: 0.9;
+}
+
+/* Delete button styling */
+.test-option button {
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.test-option button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.test-option:hover button {
+  opacity: 1;
+}
+
+/* ICD-10 styling */
+.icd10-option {
+  transition: all 0.2s ease;
+}
+
+.icd10-option:hover {
+  background: rgba(37, 99, 235, 0.05) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.icd10-option.selected {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+}
+
+.icd10-option.selected:hover {
+  background: var(--primary-color) !important;
+  opacity: 0.9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .selected-test-item {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .remove-test-btn {
+    align-self: flex-end;
+    margin-left: 0;
+  }
+  
+  .test-info {
+    gap: 0.5rem;
+  }
+}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Patient API Test</h1>
+    <p>This page tests the patient API endpoints to verify that patient IDs are being returned correctly.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Get All Patients</h2>
+        <button onclick="testGetAllPatients()">Test Get All Patients</button>
+        <div id="result1" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Get Patient by ID</h2>
+        <input type="number" id="patientIdInput" placeholder="Enter Patient ID" value="1" style="padding: 5px; margin: 5px;">
+        <button onclick="testGetPatientById()">Test Get Patient by ID</button>
+        <div id="result2" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Get Appointments</h2>
+        <button onclick="testGetAppointments()">Test Get Appointments</button>
+        <div id="result3" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        async function testGetAllPatients() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const patients = data.patients || [];
+                    const patientIds = patients.map(p => ({
+                        id: p.id,
+                        patientId: p.patientId,
+                        name: `${p.firstName} ${p.lastName}`,
+                        hasPatientId: p.patientId !== undefined && p.patientId !== null
+                    }));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Success! Found ${patients.length} patients</h3>
+                            <h4>Patient ID Analysis:</h4>
+                            <ul>
+                                ${patientIds.map(p => `
+                                    <li>
+                                        <strong>${p.name}</strong> - 
+                                        Internal ID: ${p.id}, 
+                                        Patient ID: ${p.patientId || 'MISSING'} 
+                                        ${p.hasPatientId ? '✅' : '❌'}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testGetPatientById() {
+            const patientId = document.getElementById('patientIdInput').value;
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients/${patientId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const patient = data;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Success! Patient Details:</h3>
+                            <ul>
+                                <li><strong>Internal ID:</strong> ${patient.id}</li>
+                                <li><strong>Patient ID:</strong> ${patient.patientId || 'MISSING'} ${patient.patientId ? '✅' : '❌'}</li>
+                                <li><strong>Name:</strong> ${patient.firstName} ${patient.lastName}</li>
+                                <li><strong>Phone:</strong> ${patient.phone}</li>
+                                <li><strong>Age:</strong> ${patient.age}</li>
+                                <li><strong>Gender:</strong> ${patient.gender}</li>
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testGetAppointments() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/appointments`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const appointments = data.appointments || [];
+                    const appointmentAnalysis = appointments.map(apt => ({
+                        id: apt.id,
+                        patientId: apt.patientId,
+                        patientIdNumber: apt.patientIdNumber,
+                        patientName: apt.patientName,
+                        hasPatientId: apt.patientId !== undefined && apt.patientId !== null,
+                        hasPatientIdNumber: apt.patientIdNumber !== undefined && apt.patientIdNumber !== null
+                    }));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Success! Found ${appointments.length} appointments</h3>
+                            <h4>Appointment Patient ID Analysis:</h4>
+                            <ul>
+                                ${appointmentAnalysis.map(apt => `
+                                    <li>
+                                        <strong>Appointment ${apt.id}</strong> - 
+                                        Patient: ${apt.patientName}, 
+                                        Internal Patient ID: ${apt.patientId || 'MISSING'} ${apt.hasPatientId ? '✅' : '❌'},
+                                        Patient ID Number: ${apt.patientIdNumber || 'MISSING'} ${apt.hasPatientIdNumber ? '✅' : '❌'}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

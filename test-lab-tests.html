@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Test Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .info { border-left: 4px solid #17a2b8; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Lab Test Functionality Test</h1>
+    <p>This page tests the new laboratory test functionality in your OPD-EMR system.</p>
+
+    <div class="test-section">
+        <h2>1. Test Lab Test Categories API</h2>
+        <button class="test-button" onclick="testCategories()">Get Lab Test Categories</button>
+        <div id="categories-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Lab Tests API</h2>
+        <button class="test-button" onclick="testLabTests()">Get All Lab Tests</button>
+        <div id="tests-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Lab Orders API</h2>
+        <button class="test-button" onclick="testLabOrders()">Get Lab Orders</button>
+        <div id="orders-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test Sample Collection API</h2>
+        <button class="test-button" onclick="testSampleCollection()">Get Sample Collections</button>
+        <div id="collections-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Test Create Lab Order</h2>
+        <button class="test-button" onclick="testCreateOrder()">Create Test Lab Order</button>
+        <div id="create-order-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Frontend Integration Test</h2>
+        <p>To test the frontend integration:</p>
+        <ol>
+            <li>Go to your React app at <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+            <li>Navigate to a patient's e-prescription</li>
+            <li>Click "Order Laboratory Tests"</li>
+            <li>Browse and select tests</li>
+            <li>Submit the order</li>
+        </ol>
+        <p>Or go directly to lab test management: <a href="http://localhost:3000/lab-tests" target="_blank">http://localhost:3000/lab-tests</a></p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        function showResult(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `result ${type}`;
+        }
+
+        async function testCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/lab-tests/categories`);
+                const data = await response.json();
+                showResult('categories-result', data, 'success');
+            } catch (error) {
+                showResult('categories-result', { error: error.message }, 'error');
+            }
+        }
+
+        async function testLabTests() {
+            try {
+                const response = await fetch(`${API_BASE}/lab-tests/tests?limit=5`);
+                const data = await response.json();
+                showResult('tests-result', data, 'success');
+            } catch (error) {
+                showResult('tests-result', { error: error.message }, 'error');
+            }
+        }
+
+        async function testLabOrders() {
+            try {
+                const response = await fetch(`${API_BASE}/lab-tests/orders?limit=5`);
+                const data = await response.json();
+                showResult('orders-result', data, 'success');
+            } catch (error) {
+                showResult('orders-result', { error: error.message }, 'error');
+            }
+        }
+
+        async function testSampleCollection() {
+            try {
+                const response = await fetch(`${API_BASE}/lab-tests/sample-collection?limit=5`);
+                const data = await response.json();
+                showResult('collections-result', data, 'success');
+            } catch (error) {
+                showResult('collections-result', { error: error.message }, 'error');
+            }
+        }
+
+        async function testCreateOrder() {
+            try {
+                // This is a test order - you'll need to adjust the IDs based on your actual data
+                const testOrder = {
+                    prescriptionId: 1,
+                    patientId: 1,
+                    doctorId: 1,
+                    tests: [
+                        {
+                            testId: 1,
+                            clinicalNotes: "Test order for demonstration",
+                            instructions: "Fasting required"
+                        }
+                    ],
+                    clinicalNotes: "Test lab order",
+                    instructions: "Please process as routine",
+                    priority: "routine"
+                };
+
+                const response = await fetch(`${API_BASE}/lab-tests/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testOrder),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('create-order-result', { 
+                        success: true, 
+                        message: 'Test order created successfully!',
+                        order: data 
+                    }, 'success');
+                } else {
+                    const error = await response.json();
+                    showResult('create-order-result', { 
+                        success: false, 
+                        error: error.error || 'Failed to create order' 
+                    }, 'error');
+                }
+            } catch (error) {
+                showResult('create-order-result', { 
+                    success: false, 
+                    error: error.message 
+                }, 'error');
+            }
+        }
+
+        // Auto-run basic tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testCategories();
+                testLabTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
