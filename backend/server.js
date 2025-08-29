@@ -29,26 +29,28 @@ const PORT = process.env.PORT || 5000;
 // Security middleware
 app.use(helmet());
 
-// Rate limiting - temporarily disabled for testing
+// Rate limiting - configurable via environment variables
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000 // limit each IP to 1000 requests per windowMs (increased for testing)
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000 // limit each IP to 1000 requests per windowMs
 });
 app.use(limiter);
 
-// CORS configuration
+// CORS configuration - configurable via environment variables
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? [process.env.CORS_ORIGIN]
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body parsing middleware
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: process.env.MAX_FILE_SIZE || '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '10mb' }));
 
 // Static files (for uploaded documents)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -58,7 +60,9 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    corsOrigins: corsOrigins
   });
 });
 
@@ -100,28 +104,17 @@ async function startServer() {
     await initDatabase();
     console.log('✅ Database initialized successfully');
     
-    // Start server after database is ready
     app.listen(PORT, () => {
       console.log(`🚀 OPD-EMR Backend Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`📡 CORS Origins: ${corsOrigins.join(', ')}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    console.error('Error details:', error.stack);
     process.exit(1);
   }
 }
-
-// Add error handlers
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('Error stack:', error.stack);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-});
 
 startServer();
 
