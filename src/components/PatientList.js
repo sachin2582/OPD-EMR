@@ -1,118 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Container,
-  Heading,
-  Text,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Badge,
-  IconButton,
-  Input,
-  Select,
-  HStack,
-  VStack,
-  Flex,
-  Spacer,
-  useToast,
-  useColorModeValue,
-  Card,
-  CardBody,
-  CardHeader,
-  SimpleGrid,
-  Avatar,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  StatArrow,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Spinner,
-  Center,
-  Divider,
-  Icon,
-  Tooltip,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  MenuDivider,
-  useBreakpointValue
-} from '@chakra-ui/react';
-import { 
-  FaUser, 
-  FaPhone, 
-  FaEnvelope, 
-  FaMapMarkerAlt, 
-  FaCalendarAlt, 
-  FaVenusMars,
-  FaTint,
-  FaEye,
-  FaEdit,
-  FaTrash,
-  FaPlus,
-  FaSearch,
-  FaFilter,
-  FaArrowLeft,
-  FaUsers,
-  FaHospital,
-  FaStethoscope,
-  FaTimes,
-  FaUserInjured,
-  FaIdCard,
-  FaHeartbeat,
-  FaEllipsisV,
-  FaTable,
-  FaTh,
-  FaDownload,
-  FaPrint
-} from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const PatientList = () => {
   const navigate = useNavigate();
-  const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterGender, setFilterGender] = useState('');
-  const [filterBloodGroup, setFilterBloodGroup] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
-  const [selectedPatient, setSelectedPatient] = useState(null);
-
-  // Color scheme
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const cardBg = useColorModeValue('white', 'gray.700');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const primaryColor = 'medical.500';
-
-  // Responsive values
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     fetchPatients();
@@ -120,584 +16,524 @@ const PatientList = () => {
 
   const fetchPatients = async () => {
     try {
-      console.log('Fetching records from API...');
-      const response = await fetch('/api/patients');
-      console.log('API Response status:', response.status);
+      setLoading(true);
+      setError('');
+      const response = await axios.get('/api/patients');
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('API Response data:', data);
-        
-        // Handle the API response structure correctly
-        if (data.patients && Array.isArray(data.patients)) {
-          console.log('Setting records from data.patients:', data.patients.length);
-          setPatients(data.patients);
-        } else if (Array.isArray(data)) {
-          console.log('Setting records from direct array:', data.length);
-          setPatients(data);
-        } else {
-          console.log('No valid records data found, setting empty array');
-          setPatients([]);
-        }
+      // Ensure patients is always an array
+      if (Array.isArray(response.data)) {
+        setPatients(response.data);
+      } else if (response.data && Array.isArray(response.data.patients)) {
+        setPatients(response.data.patients);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        setPatients(response.data.data);
       } else {
-        console.error('API response not ok:', response.status, response.statusText);
-        setError('Failed to fetch records');
+        console.warn('Unexpected API response format:', response.data);
+        setPatients([]);
       }
     } catch (err) {
-      console.error('Error fetching records:', err);
-      setError('Failed to connect to server');
+      console.error('Error fetching patients:', err);
+      setError('Failed to fetch patients. Please try again.');
+      setPatients([]); // Ensure patients is always an array
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (patientId) => {
-    if (window.confirm('Are you sure you want to delete this record?')) {
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this patient?')) {
       try {
-        const response = await fetch(`/api/patients/${patientId}`, {
-          method: 'DELETE',
-        });
-        
-        if (response.ok) {
-          setPatients(patients.filter(p => p.patientId !== patientId));
-          toast({
-            title: 'Success!',
-            description: 'Patient deleted successfully',
-            status: 'success',
-            duration: 3000,
-            isClosable: true,
-          });
-        } else {
-          toast({
-            title: 'Error!',
-            description: 'Failed to delete patient',
-            status: 'error',
-            duration: 3000,
-            isClosable: true,
-          });
-        }
+        await axios.delete(`/api/patients/${id}`);
+        fetchPatients();
       } catch (err) {
-        toast({
-          title: 'Error!',
-          description: 'Error deleting patient',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+        setError('Failed to delete patient');
       }
     }
   };
 
-  const filteredPatients = (patients || []).filter(patient => {
+  // Ensure patients is always an array before filtering
+  const safePatients = Array.isArray(patients) ? patients : [];
+  
+  const filteredPatients = safePatients.filter(patient => {
     if (!patient) return false;
     
-    const matchesSearch = 
-      patient.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone?.includes(searchTerm) ||
-      patient.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (patient.firstName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (patient.lastName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (patient.phone || '').includes(searchTerm);
     
-    const matchesGender = !filterGender || patient.gender === filterGender;
-    const matchesBloodGroup = !filterBloodGroup || patient.bloodGroup === filterBloodGroup;
+    if (filterStatus === 'all') return matchesSearch;
+    if (filterStatus === 'active') return matchesSearch && patient.status === 'active';
+    if (filterStatus === 'inactive') return matchesSearch && patient.status === 'inactive';
     
-    return matchesSearch && matchesGender && matchesBloodGroup;
+    return matchesSearch;
   });
 
-  const getGenderColor = (gender) => {
-    switch (gender?.toLowerCase()) {
-      case 'male': return 'blue';
-      case 'female': return 'pink';
-      default: return 'gray';
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return '#28a745';
+      case 'inactive': return '#dc3545';
+      default: return '#6c757d';
     }
   };
 
-  const getBloodGroupColor = (bloodGroup) => {
-    if (!bloodGroup) return 'gray';
-    return bloodGroup.includes('+') ? 'red' : 'orange';
-  };
-
-  const openPatientDetails = (patient) => {
-    setSelectedPatient(patient);
-    onOpen();
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'active': return 'Active';
+      case 'inactive': return 'Inactive';
+      default: return 'Unknown';
+    }
   };
 
   if (loading) {
     return (
-      <Center minH="400px">
-        <VStack spacing={4}>
-          <Spinner size="xl" color={primaryColor} />
-          <Text>Loading patients...</Text>
-        </VStack>
-      </Center>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxW="container.xl" py={8}>
-        <Alert status="error">
-          <AlertIcon />
-          <AlertTitle>Error!</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </Container>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        ⏳ Loading patients...
+      </div>
     );
   }
 
   return (
-    <Box bg={bgColor} minH="100vh" py={8}>
-      <Container maxW="7xl">
+    <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <Flex mb={8} align="center" justify="space-between" flexWrap="wrap" gap={4}>
-          <Box>
-            <Heading size="lg" color={textColor} display="flex" alignItems="center" gap={3}>
-              <Icon as={FaUsers} color={primaryColor} />
-              Patient Management
-            </Heading>
-            <Text color="gray.600" mt={2}>
-              Manage and view all patient records
-            </Text>
-          </Box>
-          
-          <HStack spacing={4}>
-            <Button
-              leftIcon={<FaArrowLeft />}
-              onClick={() => navigate('/dashboard')}
-              variant="outline"
-              colorScheme="gray"
-            >
-              Back to Dashboard
-            </Button>
-            <Button
-              leftIcon={<FaPlus />}
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderRadius: '10px', 
+          padding: '25px', 
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          marginBottom: '20px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '20px'
+          }}>
+            <div>
+              <h1 style={{ 
+                fontSize: '28px', 
+                color: '#333', 
+                margin: '0 0 10px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                👥 Patient Management
+              </h1>
+              <p style={{ color: '#666', margin: 0 }}>
+                Manage and view all registered patients
+              </p>
+            </div>
+            
+            <button
               onClick={() => navigate('/add-patient')}
-              colorScheme="medical"
-              size="lg"
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.3s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
             >
-              Add New Patient
-            </Button>
-          </HStack>
-        </Flex>
-
-        {/* Stats Cards */}
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-          <Card>
-            <CardBody>
-              <Stat>
-                <StatLabel>Total Patients</StatLabel>
-                <StatNumber>{patients.length}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  23.36%
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-          
-          <Card>
-            <CardBody>
-              <Stat>
-                <StatLabel>Active Patients</StatLabel>
-                <StatNumber>{filteredPatients.length}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  12.5%
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-          
-          <Card>
-            <CardBody>
-              <Stat>
-                <StatLabel>New This Month</StatLabel>
-                <StatNumber>24</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  8.2%
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-          
-          <Card>
-            <CardBody>
-              <Stat>
-                <StatLabel>Pending Appointments</StatLabel>
-                <StatNumber>12</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="decrease" />
-                  3.1%
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </SimpleGrid>
+              ➕ Add New Patient
+            </button>
+          </div>
+        </div>
 
         {/* Search and Filters */}
-        <Card mb={6}>
-          <CardBody>
-            <VStack spacing={4}>
-              <HStack w="full" spacing={4} flexWrap="wrap">
-                <Box flex="1" minW="200px">
-                  <Input
-                    placeholder="Search patients..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    leftIcon={<FaSearch />}
-                    size="lg"
-                  />
-                </Box>
-                
-                <Select
-                  value={filterGender}
-                  onChange={(e) => setFilterGender(e.target.value)}
-                  placeholder="Filter by Gender"
-                  size="lg"
-                  minW="150px"
-                >
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </Select>
-                
-                <Select
-                  value={filterBloodGroup}
-                  onChange={(e) => setFilterBloodGroup(e.target.value)}
-                  placeholder="Filter by Blood Group"
-                  size="lg"
-                  minW="150px"
-                >
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                </Select>
-              </HStack>
-              
-              <HStack spacing={4}>
-                <Button
-                  leftIcon={<FaTable />}
-                  variant={viewMode === 'table' ? 'solid' : 'outline'}
-                  colorScheme="medical"
-                  onClick={() => setViewMode('table')}
-                >
-                  Table View
-                </Button>
-                <Button
-                  leftIcon={<FaTh />}
-                  variant={viewMode === 'grid' ? 'solid' : 'outline'}
-                  colorScheme="medical"
-                  onClick={() => setViewMode('grid')}
-                >
-                  Grid View
-                </Button>
-              </HStack>
-            </VStack>
-          </CardBody>
-        </Card>
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderRadius: '10px', 
+          padding: '20px', 
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          marginBottom: '20px'
+        }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '20px',
+            alignItems: 'end'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333' }}>
+                🔍 Search Patients
+              </label>
+              <input
+                type="text"
+                placeholder="Search by name or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
 
-        {/* Patient List */}
-        {viewMode === 'table' ? (
-          <Card>
-            <CardBody>
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th>Patient</Th>
-                      <Th>Contact</Th>
-                      <Th>Demographics</Th>
-                      <Th>Medical</Th>
-                      <Th>Actions</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {filteredPatients.map((patient) => (
-                      <Tr key={patient.patientId || patient.id}>
-                        <Td>
-                          <VStack align="start" spacing={1}>
-                            <Text fontWeight="bold">
-                              {patient.firstName} {patient.lastName}
-                            </Text>
-                            <Text fontSize="sm" color="gray.600">
-                              ID: {patient.patientId || patient.id}
-                            </Text>
-                          </VStack>
-                        </Td>
-                        
-                        <Td>
-                          <VStack align="start" spacing={1}>
-                            {patient.phone && (
-                              <HStack spacing={2}>
-                                <Icon as={FaPhone} color="gray.500" />
-                                <Text fontSize="sm">{patient.phone}</Text>
-                              </HStack>
-                            )}
-                            {patient.email && (
-                              <HStack spacing={2}>
-                                <Icon as={FaEnvelope} color="gray.500" />
-                                <Text fontSize="sm">{patient.email}</Text>
-                              </HStack>
-                            )}
-                          </VStack>
-                        </Td>
-                        
-                        <Td>
-                          <VStack align="start" spacing={1}>
-                            <HStack spacing={2}>
-                              <Icon as={FaCalendarAlt} color="gray.500" />
-                              <Text fontSize="sm">{patient.dateOfBirth}</Text>
-                            </HStack>
-                            <HStack spacing={2}>
-                              <Icon as={FaVenusMars} color="gray.500" />
-                              <Badge colorScheme={getGenderColor(patient.gender)}>
-                                {patient.gender}
-                              </Badge>
-                            </HStack>
-                          </VStack>
-                        </Td>
-                        
-                        <Td>
-                          <VStack align="start" spacing={1}>
-                            {patient.bloodGroup && (
-                              <HStack spacing={2}>
-                                <Icon as={FaTint} color="gray.500" />
-                                <Badge colorScheme={getBloodGroupColor(patient.bloodGroup)}>
-                                  {patient.bloodGroup}
-                                </Badge>
-                              </HStack>
-                            )}
-                            {patient.chiefComplaint && (
-                              <Text fontSize="sm" color="gray.600" noOfLines={2}>
-                                {patient.chiefComplaint}
-                              </Text>
-                            )}
-                          </VStack>
-                        </Td>
-                        
-                        <Td>
-                          <HStack spacing={2}>
-                            <Tooltip label="View Details">
-                              <IconButton
-                                icon={<FaEye />}
-                                onClick={() => openPatientDetails(patient)}
-                                aria-label="View patient details"
-                                size="sm"
-                                colorScheme="blue"
-                                variant="ghost"
-                              />
-                            </Tooltip>
-                            
-                            <Tooltip label="Edit Patient">
-                              <IconButton
-                                icon={<FaEdit />}
-                                onClick={() => navigate(`/patient/${patient.patientId || patient.id}`)}
-                                aria-label="Edit patient"
-                                size="sm"
-                                colorScheme="green"
-                                variant="ghost"
-                              />
-                            </Tooltip>
-                            
-                            <Tooltip label="Delete Patient">
-                              <IconButton
-                                icon={<FaTrash />}
-                                onClick={() => handleDelete(patient.patientId || patient.id)}
-                                aria-label="Delete patient"
-                                size="sm"
-                                colorScheme="red"
-                                variant="ghost"
-                              />
-                            </Tooltip>
-                          </HStack>
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            </CardBody>
-          </Card>
-        ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-            {filteredPatients.map((patient) => (
-              <Card key={patient.patientId || patient.id} cursor="pointer" 
-                    _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
-                    transition="all 0.2s">
-                <CardHeader pb={2}>
-                  <Flex align="center" justify="space-between">
-                    <Avatar name={`${patient.firstName} ${patient.lastName}`} size="sm" />
-                    <Menu>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FaEllipsisV />}
-                        variant="ghost"
-                        size="sm"
-                        aria-label="Patient actions"
-                      />
-                      <MenuList>
-                        <MenuItem icon={<FaEye />} onClick={() => openPatientDetails(patient)}>
-                          View Details
-                        </MenuItem>
-                        <MenuItem icon={<FaEdit />} onClick={() => navigate(`/patient/${patient.patientId || patient.id}`)}>
-                          Edit Patient
-                        </MenuItem>
-                        <MenuDivider />
-                        <MenuItem icon={<FaTrash />} onClick={() => handleDelete(patient.patientId || patient.id)} color="red.500">
-                          Delete Patient
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
-                  </Flex>
-                  <Heading size="md" mt={2}>
-                    {patient.firstName} {patient.lastName}
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600">
-                    ID: {patient.patientId || patient.id}
-                  </Text>
-                </CardHeader>
-                
-                <CardBody pt={0}>
-                  <VStack align="start" spacing={3}>
-                    {patient.phone && (
-                      <HStack spacing={2}>
-                        <Icon as={FaPhone} color="gray.500" />
-                        <Text fontSize="sm">{patient.phone}</Text>
-                      </HStack>
-                    )}
-                    
-                    <HStack spacing={2}>
-                      <Icon as={FaCalendarAlt} color="gray.500" />
-                      <Text fontSize="sm">{patient.dateOfBirth}</Text>
-                    </HStack>
-                    
-                    <HStack spacing={2}>
-                      <Icon as={FaVenusMars} color="gray.500" />
-                      <Badge colorScheme={getGenderColor(patient.gender)}>
-                        {patient.gender}
-                      </Badge>
-                    </HStack>
-                    
-                    {patient.bloodGroup && (
-                      <HStack spacing={2}>
-                        <Icon as={FaTint} color="gray.500" />
-                        <Badge colorScheme={getBloodGroupColor(patient.bloodGroup)}>
-                          {patient.bloodGroup}
-                        </Badge>
-                      </HStack>
-                    )}
-                    
-                    {patient.chiefComplaint && (
-                      <Text fontSize="sm" color="gray.600" noOfLines={2}>
-                        <Icon as={FaStethoscope} mr={2} />
-                        {patient.chiefComplaint}
-                      </Text>
-                    )}
-                  </VStack>
-                </CardBody>
-              </Card>
-            ))}
-          </SimpleGrid>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#333' }}>
+                📊 Filter by Status
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="all">All Patients</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+              </select>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ 
+                padding: '10px 15px', 
+                backgroundColor: '#e9ecef', 
+                borderRadius: '5px',
+                display: 'inline-block'
+              }}>
+                <span style={{ fontWeight: '500', color: '#333' }}>
+                  Total Patients: {filteredPatients.length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div style={{ 
+            padding: '15px', 
+            backgroundColor: '#ffebee', 
+            color: '#c62828', 
+            borderRadius: '5px', 
+            marginBottom: '20px',
+            border: '1px solid #ffcdd2'
+          }}>
+            {error}
+          </div>
         )}
 
-        {/* Patient Details Modal */}
-        <Modal isOpen={isOpen} onClose={onClose} size="xl">
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>
-              <HStack>
-                <Icon as={FaUser} color={primaryColor} />
-                <Text>Patient Details</Text>
-              </HStack>
-            </ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              {selectedPatient && (
-                <VStack align="start" spacing={4}>
-                  <Box>
-                    <Text fontWeight="bold" fontSize="lg">
-                      {selectedPatient.firstName} {selectedPatient.lastName}
-                    </Text>
-                    <Text color="gray.600">ID: {selectedPatient.patientId || selectedPatient.id}</Text>
-                  </Box>
-                  
-                  <Divider />
-                  
-                  <SimpleGrid columns={2} spacing={4} w="full">
-                    <Box>
-                      <Text fontWeight="semibold" color="gray.700">Date of Birth</Text>
-                      <Text>{selectedPatient.dateOfBirth}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontWeight="semibold" color="gray.700">Gender</Text>
-                      <Badge colorScheme={getGenderColor(selectedPatient.gender)}>
-                        {selectedPatient.gender}
-                      </Badge>
-                    </Box>
-                    <Box>
-                      <Text fontWeight="semibold" color="gray.700">Blood Group</Text>
-                      {selectedPatient.bloodGroup ? (
-                        <Badge colorScheme={getBloodGroupColor(selectedPatient.bloodGroup)}>
-                          {selectedPatient.bloodGroup}
-                        </Badge>
-                      ) : (
-                        <Text color="gray.500">Not specified</Text>
-                      )}
-                    </Box>
-                    <Box>
-                      <Text fontWeight="semibold" color="gray.700">Phone</Text>
-                      <Text>{selectedPatient.phone || 'Not specified'}</Text>
-                    </Box>
-                  </SimpleGrid>
-                  
-                  {selectedPatient.email && (
-                    <Box w="full">
-                      <Text fontWeight="semibold" color="gray.700">Email</Text>
-                      <Text>{selectedPatient.email}</Text>
-                    </Box>
-                  )}
-                  
-                  {selectedPatient.address && (
-                    <Box w="full">
-                      <Text fontWeight="semibold" color="gray.700">Address</Text>
-                      <Text>{selectedPatient.address}</Text>
-                    </Box>
-                  )}
-                  
-                  {selectedPatient.chiefComplaint && (
-                    <Box w="full">
-                      <Text fontWeight="semibold" color="gray.700">Chief Complaint</Text>
-                      <Text>{selectedPatient.chiefComplaint}</Text>
-                    </Box>
-                  )}
-                </VStack>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="ghost" mr={3} onClick={onClose}>
-                Close
-              </Button>
-              {selectedPatient && (
-                <Button
-                  colorScheme="medical"
-                  onClick={() => {
-                    onClose();
-                    navigate(`/patient/${selectedPatient.patientId || selectedPatient.id}`);
-                  }}
-                >
-                  Edit Patient
-                </Button>
-              )}
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      </Container>
-    </Box>
+        {/* Patients Table */}
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderRadius: '10px', 
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ 
+            padding: '20px', 
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: '#f8f9fa'
+          }}>
+            <h3 style={{ margin: 0, color: '#333', fontSize: '18px' }}>
+              📋 Patient List ({filteredPatients.length} patients)
+            </h3>
+          </div>
+
+          {filteredPatients.length === 0 ? (
+            <div style={{ 
+              padding: '40px', 
+              textAlign: 'center', 
+              color: '#666'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
+              <h3 style={{ margin: '0 0 10px 0', color: '#333' }}>No patients found</h3>
+              <p style={{ margin: 0 }}>
+                {searchTerm || filterStatus !== 'all' 
+                  ? 'Try adjusting your search or filters' 
+                  : 'No patients have been registered yet'
+                }
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ 
+                width: '100%', 
+                borderCollapse: 'collapse',
+                minWidth: '800px'
+              }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8f9fa' }}>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Patient ID
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Name
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Age
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Phone
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Status
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'left', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Last Visit
+                    </th>
+                    <th style={{ 
+                      padding: '15px', 
+                      textAlign: 'center', 
+                      borderBottom: '1px solid #e9ecef',
+                      fontWeight: '600',
+                      color: '#333'
+                    }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPatients.map((patient) => {
+                    if (!patient || !patient.id) return null;
+                    
+                    const age = patient.dateOfBirth 
+                      ? Math.floor((new Date() - new Date(patient.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000))
+                      : 'N/A';
+                    
+                    return (
+                      <tr key={patient.id} style={{ 
+                        borderBottom: '1px solid #f0f0f0',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.parentElement.style.backgroundColor = '#f8f9fa'}
+                      onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = 'transparent'}
+                      >
+                        <td style={{ padding: '15px', color: '#007bff', fontWeight: '500' }}>
+                          P{patient.id?.toString().padStart(3, '0') || 'N/A'}
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <div style={{ fontWeight: '500', color: '#333' }}>
+                            {patient.firstName || ''} {patient.lastName || ''}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                            {patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'N/A'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '15px', color: '#666' }}>
+                          {age === 'N/A' ? 'N/A' : `${age} years`}
+                        </td>
+                        <td style={{ padding: '15px', color: '#666' }}>
+                          {patient.phone || 'N/A'}
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            backgroundColor: getStatusColor(patient.status || 'unknown') + '20',
+                            color: getStatusColor(patient.status || 'unknown')
+                          }}>
+                            {getStatusText(patient.status || 'unknown')}
+                          </span>
+                        </td>
+                        <td style={{ padding: '15px', color: '#666' }}>
+                          {patient.lastVisit 
+                            ? new Date(patient.lastVisit).toLocaleDateString()
+                            : 'Never'
+                          }
+                        </td>
+                        <td style={{ padding: '15px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => navigate(`/patient/${patient.id}`)}
+                              style={{
+                                padding: '6px 10px',
+                                backgroundColor: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.3s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
+                              title="View Details"
+                            >
+                              👁️ View
+                            </button>
+                            
+                            <button
+                              onClick={() => navigate(`/add-patient/${patient.id}`)}
+                              style={{
+                                padding: '6px 10px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.3s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+                              title="Edit Patient"
+                            >
+                              ✏️ Edit
+                            </button>
+                            
+                            <button
+                              onClick={() => handleDelete(patient.id)}
+                              style={{
+                                padding: '6px 10px',
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.3s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+                              title="Delete Patient"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderRadius: '10px', 
+          padding: '20px', 
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          marginTop: '20px'
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#333', fontSize: '18px' }}>
+            🚀 Quick Actions
+          </h3>
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/add-patient')}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
+            >
+              ➕ Add New Patient
+            </button>
+            
+            <button
+              onClick={() => navigate('/appointments')}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+            >
+              📅 Schedule Appointment
+            </button>
+            
+            <button
+              onClick={() => window.print()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6268'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#6c757d'}
+            >
+              🖨️ Print List
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

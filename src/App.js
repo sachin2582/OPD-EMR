@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
@@ -17,6 +16,8 @@ import LabTestManagement from './components/LabTestManagement';
 import LabTestBilling from './components/LabTestBilling';
 import PatientDashboard from './components/PatientDashboard';
 import AppLayout from './components/AppLayout';
+import AdvancedDashboard from './components/AdvancedDashboard';
+import SmartAppointmentScheduler from './components/SmartAppointmentScheduler';
 // Pharmacy Module Imports
 import PharmacyDashboard from './components/pharmacy/PharmacyDashboard';
 import PharmacyPOS from './components/pharmacy/POS/PharmacyPOS';
@@ -27,68 +28,37 @@ import './styles/MasterTheme.css';
 import './styles/GlobalComponents.css';
 import './App.css';
 
-// Create a custom theme for medical/EMR applications
-const theme = extendTheme({
-  colors: {
-    brand: {
-      50: '#E6F7FF',
-      100: '#BAE7FF',
-      200: '#91D5FF',
-      300: '#69C0FF',
-      400: '#40A9FF',
-      500: '#1890FF',
-      600: '#096DD9',
-      700: '#0050B3',
-      800: '#003A8C',
-      900: '#002766',
-    },
-    medical: {
-      50: '#F0F9FF',
-      100: '#E0F2FE',
-      200: '#BAE6FD',
-      300: '#7DD3FC',
-      400: '#38BDF8',
-      500: '#0EA5E9',
-      600: '#0284C7',
-      700: '#0369A1',
-      800: '#075985',
-      900: '#0C4A6E',
-    }
-  },
-  fonts: {
-    heading: 'Inter, system-ui, sans-serif',
-    body: 'Inter, system-ui, sans-serif',
-  },
-  components: {
-    Button: {
-      defaultProps: {
-        colorScheme: 'medical',
-      },
-    },
-  },
-});
-
 function App() {
   return (
-    <ChakraProvider theme={theme}>
-      <Router future={{ v7_relativeSplatPath: true }}>
-        <div className="App">
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* All other routes wrapped in AppLayout */}
-            <Route path="/dashboard" element={
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            } />
-            <Route path="/add-patient" element={
-              <AppLayout>
-                <PatientForm />
-              </AppLayout>
-            } />
+    <Router future={{ v7_relativeSplatPath: true }}>
+      <div className="App">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* All other routes wrapped in AppLayout */}
+          <Route path="/dashboard" element={
+            <AppLayout>
+              <Dashboard />
+            </AppLayout>
+          } />
+          <Route path="/advanced-dashboard" element={
+            <AppLayout>
+              <AdvancedDashboard />
+            </AppLayout>
+          } />
+          <Route path="/smart-appointments" element={
+            <AppLayout>
+              <SmartAppointmentScheduler />
+            </AppLayout>
+          } />
+          <Route path="/add-patient" element={
+            <AppLayout>
+              <PatientForm />
+            </AppLayout>
+          } />
             <Route path="/patients" element={
               <AppLayout>
                 <PatientList />
@@ -169,7 +139,6 @@ function App() {
           </Routes>
         </div>
       </Router>
-    </ChakraProvider>
   );
 }
 

@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPD-EMR Complete System Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .page {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .page-header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            background: white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-scheduled { background: #e3f2fd; color: #1976d2; }
+        .status-confirmed { background: #e8f5e8; color: #2e7d32; }
+        .status-completed { background: #f3e5f5; color: #7b1fa2; }
+        .status-cancelled { background: #ffebee; color: #c62828; }
+        
+        .priority-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .priority-low { background: #e8f5e8; color: #2e7d32; }
+        .priority-normal { background: #e3f2fd; color: #1976d2; }
+        .priority-high { background: #fff3e0; color: #f57c00; }
+        .priority-urgent { background: #ffebee; color: #c62828; }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        .alert-success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .alert-warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffcc02;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .modal-header h2 {
+            color: #667eea;
+            margin: 0;
+        }
+        
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .close:hover {
+            color: #333;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 2rem;
+        }
+        
+        .tab {
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">🏥 OPD-EMR</div>
+            <ul class="nav-links">
+                <li><a href="#" onclick="showPage('dashboard')">Dashboard</a></li>
+                <li><a href="#" onclick="showPage('advanced-dashboard')">Advanced Dashboard</a></li>
+                <li><a href="#" onclick="showPage('smart-scheduling')">Smart Scheduling</a></li>
+                <li><a href="#" onclick="showPage('patients')">Patients</a></li>
+                <li><a href="#" onclick="showPage('appointments')">Appointments</a></li>
+                <li><a href="#" onclick="showPage('pharmacy')">Pharmacy</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="page-header">
+                <h1>🏥 Main Dashboard</h1>
+                <p>Welcome to your OPD-EMR System</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">1,250</div>
+                    <div class="stat-label">Total Patients</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">45</div>
+                    <div class="stat-label">Today's Appointments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">₹125K</div>
+                    <div class="stat-label">Monthly Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">98.5%</div>
+                    <div class="stat-label">System Health</div>
+                </div>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>📊 Quick Actions</h3>
+                    <p>Access frequently used features quickly</p>
+                    <button class="btn" onclick="showPage('patients')">Manage Patients</button>
+                    <button class="btn" onclick="showPage('appointments')">Schedule Appointments</button>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 Recent Activity</h3>
+                    <p>Monitor system activity and updates</p>
+                    <button class="btn" onclick="showPage('advanced-dashboard')">View Details</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Dashboard Page -->
+        <div id="advanced-dashboard" class="page">
+            <div class="page-header">
+                <h1>🚀 Advanced Dashboard</h1>
+                <p>Comprehensive system overview with real-time monitoring</p>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>AI Assistant Active:</strong> Smart monitoring, conflict detection, and optimization are enabled.
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">24</div>
+                    <div class="stat-label">Patients in Queue</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Currently Consulting</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 40%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">13</div>
+                    <div class="stat-label">Completed Today</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 65%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">94.2%</div>
+                    <div class="stat-label">Patient Satisfaction</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 94%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🖥️ System Status</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: #28a745;">●</span> Database: Online
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: #28a745;">●</span> API Services: Online
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: #28a745;">●</span> File Storage: Online
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: #28a745;">●</span> Security: Protected
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <h3>💡 AI Insights</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <div class="alert alert-success" style="margin-bottom: 0.5rem;">
+                            Peak hours: 10 AM - 2 PM
+                        </div>
+                        <div class="alert alert-info" style="margin-bottom: 0.5rem;">
+                            Optimal slot: 3:30 PM
+                        </div>
+                        <div class="alert alert-warning">
+                            High demand: Morning slots
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Scheduling Page -->
+        <div id="smart-scheduling" class="page">
+            <div class="page-header">
+                <h1>📅 Smart Appointment Scheduler</h1>
+                <p>AI-powered scheduling with conflict detection and optimization</p>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>AI Optimization:</strong> Smart scheduling, conflict detection, and optimization are enabled.
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>⚙️ Schedule Configuration</h3>
+                    <div class="form-group">
+                        <label>Select Date</label>
+                        <input type="date" id="scheduleDate" value="2024-01-15">
+                    </div>
+                    <div class="form-group">
+                        <label>Select Doctor</label>
+                        <select id="scheduleDoctor">
+                            <option value="">Choose a doctor</option>
+                            <option value="Dr. Smith">Dr. Smith - Cardiology</option>
+                            <option value="Dr. Johnson">Dr. Johnson - Neurology</option>
+                            <option value="Dr. Williams">Dr. Williams - Pediatrics</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="showModal('scheduleModal')">📅 Schedule New Appointment</button>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>📊 Today's Overview</h3>
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #667eea;">2</div>
+                        <div style="color: #666;">Total Appointments</div>
+                        <div style="color: #28a745; font-size: 0.9rem;">↗️ +12.5%</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #28a745;">8</div>
+                        <div style="color: #666;">Available Slots</div>
+                        <div style="color: #dc3545; font-size: 0.9rem;">↘️ 2 slots used</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="feature-card">
+                <h3>👥 Scheduled Appointments</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Patient</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div>09:00</div>
+                                <div style="font-size: 0.8rem; color: #666;">30 min</div>
+                            </td>
+                            <td>John Doe</td>
+                            <td>General Consultation</td>
+                            <td><span class="status-badge status-scheduled">Scheduled</span></td>
+                            <td><span class="priority-badge priority-normal">Normal</span></td>
+                            <td>
+                                <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">👁️</button>
+                                <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">❌</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div>10:00</div>
+                                <div style="font-size: 0.8rem; color: #666;">30 min</div>
+                            </td>
+                            <td>Jane Smith</td>
+                            <td>Follow-up</td>
+                            <td><span class="status-badge status-confirmed">Confirmed</span></td>
+                            <td><span class="priority-badge priority-high">High</span></td>
+                            <td>
+                                <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">👁️</button>
+                                <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">❌</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Patients Page -->
+        <div id="patients" class="page">
+            <div class="page-header">
+                <h1>👥 Patient Management</h1>
+                <p>Comprehensive patient registration and records management</p>
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <button class="btn btn-success" onclick="showModal('patientModal')">➕ Add New Patient</button>
+                <button class="btn">🔍 Search Patients</button>
+                <button class="btn">📊 Export Data</button>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📋 Patient List</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Phone</th>
+                            <th>Last Visit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>P001</td>
+                            <td>John Doe</td>
+                            <td>35</td>
+                            <td>123-456-7890</td>
+                            <td>2024-01-10</td>
+                            <td>
+                                <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">👁️</button>
+                                <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">📋</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P002</td>
+                            <td>Jane Smith</td>
+                            <td>28</td>
+                            <td>098-765-4321</td>
+                            <td>2024-01-12</td>
+                            <td>
+                                <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">👁️</button>
+                                <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">📋</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Appointments Page -->
+        <div id="appointments" class="page">
+            <div class="page-header">
+                <h1>📅 Appointment Management</h1>
+                <p>Schedule and manage patient appointments</p>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('upcoming')">Upcoming</button>
+                <button class="tab" onclick="showTab('today')">Today</button>
+                <button class="tab" onclick="showTab('completed')">Completed</button>
+                <button class="tab" onclick="showTab('cancelled')">Cancelled</button>
+            </div>
+            
+            <div id="upcoming" class="tab-content active">
+                <div class="feature-card">
+                    <h3>📋 Upcoming Appointments</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2024-01-15 09:00</td>
+                                <td>John Doe</td>
+                                <td>Dr. Smith</td>
+                                <td>General Consultation</td>
+                                <td><span class="status-badge status-scheduled">Scheduled</span></td>
+                                <td>
+                                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">👁️</button>
+                                    <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">✏️</button>
+                                    <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">❌</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="today" class="tab-content">
+                <div class="feature-card">
+                    <h3>📋 Today's Appointments</h3>
+                    <p>No appointments scheduled for today.</p>
+                </div>
+            </div>
+            
+            <div id="completed" class="tab-content">
+                <div class="feature-card">
+                    <h3>📋 Completed Appointments</h3>
+                    <p>No completed appointments to display.</p>
+                </div>
+            </div>
+            
+            <div id="cancelled" class="tab-content">
+                <div class="feature-card">
+                    <h3>📋 Cancelled Appointments</h3>
+                    <p>No cancelled appointments to display.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pharmacy Page -->
+        <div id="pharmacy" class="page">
+            <div class="page-header">
+                <h1>🏥 Pharmacy Module</h1>
+                <p>Complete pharmacy management system</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">1,250</div>
+                    <div class="stat-label">Total Medicines</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">45</div>
+                    <div class="stat-label">Low Stock Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">₹25K</div>
+                    <div class="stat-label">Today's Sales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Pending Orders</div>
+                </div>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>💊 POS System</h3>
+                    <p>Point of sale for prescription dispensing</p>
+                    <button class="btn">🛒 Open POS</button>
+                </div>
+                <div class="feature-card">
+                    <h3>📦 Inventory Management</h3>
+                    <p>Track medicine stock and reorder levels</p>
+                    <button class="btn">📋 View Inventory</button>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Reports</h3>
+                    <p>Sales reports and analytics</p>
+                    <button class="btn">📈 Generate Reports</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Appointment Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Schedule New Appointment</h2>
+                <button class="close" onclick="hideModal('scheduleModal')">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Patient *</label>
+                <select id="patientSelect">
+                    <option value="">Select patient</option>
+                    <option value="John Doe">John Doe - 123-456-7890</option>
+                    <option value="Jane Smith">Jane Smith - 098-765-4321</option>
+                    <option value="Mike Johnson">Mike Johnson - 555-123-4567</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Appointment Type *</label>
+                <select id="appointmentType">
+                    <option value="">Select type</option>
+                    <option value="General Consultation">General Consultation</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Routine Check-up">Routine Check-up</option>
+                    <option value="Specialist Consultation">Specialist Consultation</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Duration (minutes)</label>
+                <input type="number" id="duration" value="30" min="15" max="180" step="15">
+            </div>
+            
+            <div class="form-group">
+                <label>Priority</label>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="priority" value="low"> <span class="priority-badge priority-low">Low</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="priority" value="normal" checked> <span class="priority-badge priority-normal">Normal</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="priority" value="high"> <span class="priority-badge priority-high">High</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="priority" value="urgent"> <span class="priority-badge priority-urgent">Urgent</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="notes" rows="3" placeholder="Additional notes..."></textarea>
+            </div>
+            
+            <div style="text-align: right;">
+                <button class="btn btn-secondary" onclick="hideModal('scheduleModal')">Cancel</button>
+                <button class="btn btn-success" onclick="scheduleAppointment()">💾 Schedule Appointment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Patient Modal -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👤 Add New Patient</h2>
+                <button class="close" onclick="hideModal('patientModal')">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>First Name *</label>
+                <input type="text" id="firstName" placeholder="Enter first name">
+            </div>
+            
+            <div class="form-group">
+                <label>Last Name *</label>
+                <input type="text" id="lastName" placeholder="Enter last name">
+            </div>
+            
+            <div class="form-group">
+                <label>Date of Birth *</label>
+                <input type="date" id="dob">
+            </div>
+            
+            <div class="form-group">
+                <label>Phone Number *</label>
+                <input type="tel" id="phone" placeholder="Enter phone number">
+            </div>
+            
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="Enter email address">
+            </div>
+            
+            <div class="form-group">
+                <label>Address</label>
+                <textarea id="address" rows="3" placeholder="Enter address"></textarea>
+            </div>
+            
+            <div style="text-align: right;">
+                <button class="btn btn-secondary" onclick="hideModal('patientModal')">Cancel</button>
+                <button class="btn btn-success" onclick="addPatient()">💾 Add Patient</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Page navigation
+        function showPage(pageId) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Update active nav link
+            const navLinks = document.querySelectorAll('.nav-links a');
+            navLinks.forEach(link => link.style.background = '');
+        }
+        
+        // Tab navigation
+        function showTab(tabId) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        // Modal functions
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+        
+        function hideModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+        
+        // Schedule appointment function
+        function scheduleAppointment() {
+            const patient = document.getElementById('patientSelect').value;
+            const type = document.getElementById('appointmentType').value;
+            
+            if (!patient || !type) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            alert('Appointment scheduled successfully for ' + patient + ' - ' + type);
+            hideModal('scheduleModal');
+            
+            // Reset form
+            document.getElementById('patientSelect').value = '';
+            document.getElementById('appointmentType').value = '';
+            document.getElementById('duration').value = '30';
+            document.getElementById('notes').value = '';
+            document.querySelector('input[name="priority"][value="normal"]').checked = true;
+        }
+        
+        // Add patient function
+        function addPatient() {
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const dob = document.getElementById('dob').value;
+            const phone = document.getElementById('phone').value;
+            
+            if (!firstName || !lastName || !dob || !phone) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            alert('Patient ' + firstName + ' ' + lastName + ' added successfully!');
+            hideModal('patientModal');
+            
+            // Reset form
+            document.getElementById('firstName').value = '';
+            document.getElementById('lastName').value = '';
+            document.getElementById('dob').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('address').value = '';
+        }
+        
+        // Simulate real-time updates
+        setInterval(function() {
+            const appointmentCount = document.querySelector('#dashboard .stat-card:nth-child(2) .stat-number');
+            if (appointmentCount) {
+                const currentCount = parseInt(appointmentCount.textContent);
+                const newCount = currentCount + Math.floor(Math.random() * 3) - 1;
+                if (newCount >= 40 && newCount <= 50) {
+                    appointmentCount.textContent = newCount;
+                }
+            }
+        }, 5000);
+        
+        // Add some interactive features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hover effects to stat cards
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+            
+            // Add click effects to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

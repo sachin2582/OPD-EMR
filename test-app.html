@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPD-EMR Test App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .feature-card h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-online { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-offline { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 OPD-EMR Advanced Dashboard</h1>
+            <p>Comprehensive Electronic Medical Records System</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">1,250</div>
+                <div class="stat-label">Total Patients</div>
+                <div style="color: #28a745; font-size: 0.8em;">↗️ +12.5%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">45</div>
+                <div class="stat-label">Today's Appointments</div>
+                <div style="color: #28a745; font-size: 0.8em;">↗️ +8.2%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">₹125K</div>
+                <div class="stat-label">Monthly Revenue</div>
+                <div style="color: #28a745; font-size: 0.8em;">↗️ +15.3%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">98.5%</div>
+                <div class="stat-label">System Health</div>
+                <div style="color: #28a745; font-size: 0.8em;">↗️ +2.1%</div>
+            </div>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>📊 Patient Management</h3>
+                <p>Comprehensive patient registration, history tracking, and medical records management.</p>
+                <a href="#" class="btn">Manage Patients</a>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📅 Smart Scheduling</h3>
+                <p>AI-powered appointment scheduling with conflict detection and optimization.</p>
+                <a href="#" class="btn">Schedule Appointments</a>
+            </div>
+            
+            <div class="feature-card">
+                <h3>💊 E-Prescriptions</h3>
+                <p>Digital prescription management with drug interaction checking and patient safety.</p>
+                <a href="#" class="btn">Create Prescriptions</a>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🧪 Lab Tests</h3>
+                <p>Laboratory test ordering, results tracking, and billing management.</p>
+                <a href="#" class="btn">Order Tests</a>
+            </div>
+            
+            <div class="feature-card">
+                <h3>💰 Billing & Payments</h3>
+                <p>Integrated billing system with payment tracking and financial reporting.</p>
+                <a href="#" class="btn">Manage Billing</a>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🏥 Pharmacy Module</h3>
+                <p>Complete pharmacy management including POS, inventory, and prescription dispensing.</p>
+                <a href="#" class="btn">Pharmacy Dashboard</a>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <h3>🖥️ System Status</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    <strong>Database:</strong> Online
+                </div>
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    <strong>API Services:</strong> Online
+                </div>
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    <strong>File Storage:</strong> Online
+                </div>
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    <strong>Security:</strong> Protected
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <h3>🚀 Quick Actions</h3>
+            <div style="text-align: center;">
+                <a href="#" class="btn">➕ Add Patient</a>
+                <a href="#" class="btn">📅 New Appointment</a>
+                <a href="#" class="btn">💊 New Prescription</a>
+                <a href="#" class="btn">🧪 Order Lab Test</a>
+                <a href="#" class="btn">💰 Process Payment</a>
+                <a href="#" class="btn">📊 View Reports</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple interactive features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Feature: ' + this.textContent + '\n\nThis is a demo version. In the full application, this would navigate to the respective module.');
+                });
+            });
+
+            // Simulate real-time updates
+            setInterval(function() {
+                const statNumbers = document.querySelectorAll('.stat-number');
+                statNumbers.forEach(stat => {
+                    if (stat.textContent.includes('45')) {
+                        // Simulate appointment count changes
+                        const currentCount = parseInt(stat.textContent);
+                        const newCount = currentCount + Math.floor(Math.random() * 3) - 1;
+                        if (newCount >= 40 && newCount <= 50) {
+                            stat.textContent = newCount;
+                        }
+                    }
+                });
+            }, 5000);
+
+            // Add some visual feedback
+            const cards = document.querySelectorAll('.feature-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 5px 20px rgba(0,0,0,0.15)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

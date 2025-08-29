@@ -12,7 +12,8 @@ import {
   FaCalendarAlt,
   FaFileAlt,
   FaPills,
-  FaCreditCard
+  FaCreditCard,
+  FaChartLine
 } from 'react-icons/fa';
 import './Navbar.css';
 
@@ -56,6 +57,8 @@ const Navbar = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <FaHome /> },
+    { path: '/advanced-dashboard', label: 'Advanced Dashboard', icon: <FaChartLine /> },
+    { path: '/smart-appointments', label: 'Smart Scheduling', icon: <FaCalendarAlt /> },
     { path: '/add-patient', label: 'Add Patient', icon: <FaUsers /> },
     { path: '/patients', label: 'Patients', icon: <FaUsers /> },
     { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt /> },
