@@ -34,6 +34,14 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Check if we're in production (Vercel) and set offline mode
+  useEffect(() => {
+    if (window.location.hostname.includes('vercel.app')) {
+      setIsOffline(true);
+    }
+  }, []);
 
   const redirectBasedOnUserType = useCallback((userType) => {
     switch (userType) {
@@ -55,8 +63,14 @@ const LoginPage = () => {
   }, [navigate]);
 
   const verifyToken = useCallback(async (token) => {
+    if (isOffline) {
+      // In demo mode, just redirect to dashboard
+      redirectBasedOnUserType('admin');
+      return;
+    }
+
     try {
-              const response = await fetch('/api/auth/verify', {
+      const response = await fetch('/api/auth/verify', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -74,7 +88,7 @@ const LoginPage = () => {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
     }
-  }, [redirectBasedOnUserType]);
+  }, [redirectBasedOnUserType, isOffline]);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -124,6 +138,30 @@ const LoginPage = () => {
     setLoading(true);
     setError('');
     setSuccess('');
+
+    if (isOffline) {
+      // Demo mode - simulate successful login
+      setTimeout(() => {
+        setSuccess('Demo login successful! Redirecting...');
+        
+        // Store demo user data
+        const demoUser = {
+          id: 1,
+          username: formData.username,
+          userType: 'admin',
+          name: 'Demo User'
+        };
+        
+        localStorage.setItem('authToken', 'demo-token-123');
+        localStorage.setItem('userData', JSON.stringify(demoUser));
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          redirectBasedOnUserType('admin');
+        }, 1000);
+      }, 1000);
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -179,11 +217,30 @@ const LoginPage = () => {
   };
 
   return (
-          <div className="demr-login">
+    <div className="demr-login">
       {/* Background Pattern */}
       <div className="login-background">
         <div className="pattern-overlay"></div>
       </div>
+
+      {/* Demo Mode Banner */}
+      {isOffline && (
+        <div style={{
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          right: '0',
+          backgroundColor: '#fff3cd',
+          color: '#856404',
+          padding: '10px',
+          textAlign: 'center',
+          borderBottom: '1px solid #ffeaa7',
+          zIndex: 1000,
+          fontSize: '14px'
+        }}>
+          🔄 Demo Mode - Backend Offline. Using sample data for demonstration.
+        </div>
+      )}
 
       {/* Main Login Container */}
       <div className="login-container">
@@ -258,6 +315,16 @@ const LoginPage = () => {
                 <span className="logo-text-small">D"EMR</span>
               </div>
               <h2 className="form-title">SIGN IN</h2>
+              {isOffline && (
+                <p style={{ 
+                  fontSize: '12px', 
+                  color: '#856404', 
+                  margin: '5px 0 0 0',
+                  textAlign: 'center'
+                }}>
+                  Demo Mode - Any credentials will work
+                </p>
+              )}
             </div>
 
             {/* Error/Success Messages */}
@@ -287,7 +354,7 @@ const LoginPage = () => {
                     className="form-input"
                     value={formData.username}
                     onChange={handleInputChange}
-                    placeholder="arti@hplx.com"
+                    placeholder={isOffline ? "demo@opd-emr.com" : "arti@hplx.com"}
                     disabled={loading}
                     autoComplete="username"
                   />
@@ -304,7 +371,7 @@ const LoginPage = () => {
                     className="form-input"
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="********"
+                    placeholder={isOffline ? "demo123" : "********"}
                     disabled={loading}
                     autoComplete="current-password"
                   />
@@ -356,7 +423,7 @@ const LoginPage = () => {
                 ) : (
                   <>
                     <FaArrowRight className="button-icon" />
-                    Login
+                    {isOffline ? 'Demo Login' : 'Login'}
                   </>
                 )}
               </button>
