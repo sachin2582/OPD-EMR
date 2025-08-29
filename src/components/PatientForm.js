@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
+// Get API base URL from environment variables
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const PatientForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -39,7 +42,7 @@ const PatientForm = () => {
 
   const fetchPatientData = async () => {
     try {
-      const response = await axios.get(`/api/patients/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/api/patients/${id}`);
       setFormData(response.data);
     } catch (err) {
       setError('Failed to fetch patient data');
@@ -61,9 +64,9 @@ const PatientForm = () => {
 
     try {
       if (isEditMode) {
-        await axios.put(`/api/patients/${id}`, formData);
+        await axios.put(`${API_BASE_URL}/api/patients/${id}`, formData);
       } else {
-        await axios.post('/api/patients', formData);
+        await axios.post(`${API_BASE_URL}/api/patients`, formData);
       }
       navigate('/patients');
     } catch (err) {
@@ -86,6 +89,20 @@ const PatientForm = () => {
   return (
     <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* API Status Display */}
+        <div style={{ 
+          padding: '10px 15px', 
+          backgroundColor: '#e3f2fd', 
+          color: '#1976d2', 
+          borderRadius: '5px', 
+          marginBottom: '20px',
+          border: '1px solid #bbdefb',
+          fontSize: '14px',
+          textAlign: 'center'
+        }}>
+          🔗 API Endpoint: {API_BASE_URL}
+        </div>
+
         <div style={{ 
           backgroundColor: 'white', 
           borderRadius: '10px', 

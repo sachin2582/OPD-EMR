@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+// Get API base URL from environment variables
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const PatientList = () => {
   const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
@@ -18,7 +21,7 @@ const PatientList = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.get('/api/patients');
+      const response = await axios.get(`${API_BASE_URL}/api/patients`);
       
       // Ensure patients is always an array
       if (Array.isArray(response.data)) {
@@ -43,7 +46,7 @@ const PatientList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this patient?')) {
       try {
-        await axios.delete(`/api/patients/${id}`);
+        await axios.delete(`${API_BASE_URL}/api/patients/${id}`);
         fetchPatients();
       } catch (err) {
         setError('Failed to delete patient');
@@ -238,6 +241,19 @@ const PatientList = () => {
             {error}
           </div>
         )}
+
+        {/* API Status Display */}
+        <div style={{ 
+          padding: '10px 15px', 
+          backgroundColor: '#e3f2fd', 
+          color: '#1976d2', 
+          borderRadius: '5px', 
+          marginBottom: '20px',
+          border: '1px solid #bbdefb',
+          fontSize: '14px'
+        }}>
+          🔗 API Endpoint: {API_BASE_URL}
+        </div>
 
         {/* Patients Table */}
         <div style={{ 

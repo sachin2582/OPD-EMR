@@ -1,0 +1,11 @@
+# Environment Variables for OPD-EMR System
+# Copy this file to .env and update the values
+
+# API Base URL
+# For local development: http://localhost:5000
+# For production: https://your-backend-domain.com
+REACT_APP_API_URL=http://localhost:5000
+
+# Other environment variables can be added here
+# REACT_APP_APP_NAME=OPD-EMR
+# REACT_APP_VERSION=1.0.0
