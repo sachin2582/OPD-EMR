@@ -58,8 +58,8 @@ REACT_APP_API_URL=https://your-backend-domain.com
 1. **Deploy Backend:**
    ```bash
    # Choose one: Railway, Render, Heroku, etc.
-   # Get your production API URL
-   ```
+   # Get your production API URLnpm audit
+      ```
 
 2. **Set Vercel Environment Variable:**
    - Vercel Dashboard → Project Settings → Environment Variables

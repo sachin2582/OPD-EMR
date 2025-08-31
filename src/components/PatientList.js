@@ -1,9 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-// Get API base URL from environment variables
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Button,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Card,
+  CardBody,
+  CardHeader,
+  Icon,
+  Badge,
+  Avatar,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Spinner,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Flex,
+  SimpleGrid,
+  Stat,
+  StatLabel,
+  StatNumber,
+  IconButton,
+  Tooltip,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  FormControl,
+  FormLabel,
+  Select,
+} from '@chakra-ui/react';
+import {
+  FaUserPlus,
+  FaSearch,
+  FaFilter,
+  FaEye,
+  FaEdit,
+  FaTrash,
+  FaPhone,
+  FaEnvelope,
+  FaMapMarkerAlt,
+  FaUser,
+  FaHeartbeat,
+  FaUsers,
+  FaMale,
+  FaFemale,
+} from 'react-icons/fa';
 
 // Mock data for demo purposes when backend is not available
 const mockPatients = [
@@ -77,19 +138,36 @@ const mockPatients = [
 
 const PatientList = () => {
   const navigate = useNavigate();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [filterGender, setFilterGender] = useState('');
+  const [filterBloodGroup, setFilterBloodGroup] = useState('');
+
+  // Color mode values
+  const bgColor = 'gray.50';
+  const cardBg = 'white';
+  const textColor = 'gray.800';
+  const textSecondary = 'gray.600';
 
   useEffect(() => {
-    fetchPatients();
+    console.log('🚀 PatientList component mounted');
+    console.log('🌐 Current hostname:', window.location.hostname);
+    console.log('🔌 Offline mode:', isOffline);
+    
     // Check if we're in production (Vercel) and set offline mode
     if (window.location.hostname.includes('vercel.app')) {
+      console.log('🚨 Setting offline mode for Vercel deployment');
       setIsOffline(true);
     }
-  }, []);
+    
+    fetchPatients();
+  }, [isOffline]);
 
   const fetchPatients = async () => {
     if (isOffline) {
@@ -100,316 +178,541 @@ const PatientList = () => {
     }
 
     try {
-      setLoading(true);
-      setError('');
-      const response = await axios.get(`${API_BASE_URL}/api/patients`);
+      console.log('🔍 Fetching patients from API...');
+      const response = await fetch('/api/patients');
+      console.log('📡 API Response status:', response.status);
       
-      // Ensure patients is always an array
-      if (Array.isArray(response.data)) {
-        setPatients(response.data);
-      } else if (response.data && Array.isArray(response.data.patients)) {
-        setPatients(response.data.patients);
-      } else if (response.data && Array.isArray(response.data.data)) {
-        setPatients(response.data.data);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Patients data received:', data);
+        setPatients(data.patients || data); // Handle both formats
       } else {
-        console.warn('Unexpected API response format:', response.data);
-        setPatients([]);
+        console.error('❌ API Error:', response.status, response.statusText);
+        throw new Error(`Failed to fetch patients: ${response.status}`);
       }
-    } catch (err) {
-      console.error('Error fetching patients:', err);
-      console.log('Backend not available, using mock data');
-      setIsOffline(true);
+    } catch (error) {
+      console.error('❌ Error fetching patients:', error);
+      console.log('🔄 Falling back to mock data...');
       setPatients(mockPatients);
-      setError('Backend not available. Using demo data.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this patient?')) {
-      if (isOffline) {
-        // Simulate deletion for demo
-        setPatients(prev => prev.filter(p => p.id !== id));
-        return;
-      }
-
-      try {
-        await axios.delete(`${API_BASE_URL}/api/patients/${id}`);
-        fetchPatients();
-      } catch (err) {
-        setError('Failed to delete patient');
-      }
+  const handleDelete = async (patientId) => {
+    if (isOffline) {
+      // Demo mode - just remove from local state
+      setPatients(patients.filter(p => p.id !== patientId));
+      toast({
+        title: 'Patient Deleted',
+        description: 'Patient removed successfully (demo mode)',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
     }
-  };
 
-  const handleEdit = (id) => {
-    navigate(`/add-patient/${id}`);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
     try {
-      return new Date(dateString).toLocaleDateString('en-IN');
-    } catch {
-      return 'Invalid Date';
+      const response = await fetch(`/api/patients/${patientId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setPatients(patients.filter(p => p.id !== patientId));
+        toast({
+          title: 'Patient Deleted',
+          description: 'Patient removed successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error('Failed to delete patient');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete patient',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
-  const safePatients = Array.isArray(patients) ? patients : [];
-  const filteredPatients = safePatients.filter(patient => {
-    if (!patient) return false;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      patient.firstName?.toLowerCase().includes(searchLower) ||
-      patient.lastName?.toLowerCase().includes(searchLower) ||
-      patient.phone?.includes(searchTerm) ||
-      patient.email?.toLowerCase().includes(searchLower) ||
-      patient.city?.toLowerCase().includes(searchLower)
-    );
+  const handleViewPatient = (patient) => {
+    setSelectedPatient(patient);
+    onOpen();
+  };
+
+  const calculateAge = (dateOfBirth) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const filteredPatients = patients.filter(patient => {
+    const matchesSearch = 
+      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.phone.includes(searchTerm) ||
+      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.city.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesGender = !filterGender || patient.gender === filterGender;
+    const matchesBloodGroup = !filterBloodGroup || patient.bloodGroup === filterBloodGroup;
+    
+    return matchesSearch && matchesGender && matchesBloodGroup;
   });
+
+  const stats = {
+    total: patients.length,
+    male: patients.filter(p => p.gender === 'Male').length,
+    female: patients.filter(p => p.gender === 'Female').length,
+    withAllergies: patients.filter(p => p.allergies && p.allergies !== 'None').length,
+  };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '18px', color: '#666' }}>Loading patients...</div>
-      </div>
+      <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="health.500" thickness="4px" />
+          <Text color={textSecondary} fontSize="lg">
+            Loading patients...
+          </Text>
+        </VStack>
+      </Box>
     );
   }
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* API Status Display */}
-        <div style={{ 
-          padding: '10px 15px', 
-          backgroundColor: isOffline ? '#fff3cd' : '#e3f2fd', 
-          color: isOffline ? '#856404' : '#1976d2', 
-          borderRadius: '5px', 
-          marginBottom: '20px',
-          border: `1px solid ${isOffline ? '#ffeaa7' : '#bbdefb'}`,
-          fontSize: '14px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>
-            {isOffline ? '🔄 Demo Mode (Backend Offline)' : '🔗 API Endpoint: ' + API_BASE_URL}
-          </span>
-          {isOffline && (
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>
-              Using mock data for demonstration
-            </span>
-          )}
-        </div>
+    <Box bg={bgColor} minH="100vh" py={8}>
+      <Container maxW="7xl">
+        <VStack spacing={8} align="stretch">
+          {/* Header */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardBody p={8}>
+              <Flex alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={4}>
+                <VStack align="start" spacing={2}>
+                  <HStack spacing={3}>
+                    <Icon as={FaUsers} w={8} h={8} color="health.500" />
+                    <Heading size="xl" color={textColor}>
+                      Patient Management
+                    </Heading>
+                  </HStack>
+                  <Text color={textSecondary} fontSize="lg">
+                    {isOffline ? 'Demo Mode: Managing sample patient data' : 'Manage your patient records'}
+                  </Text>
+                  {isOffline && (
+                    <Alert status="info" borderRadius="md" maxW="md">
+                      <AlertIcon />
+                      <Box>
+                        <AlertTitle>Demo Mode</AlertTitle>
+                        <AlertDescription>
+                          Using mock data for demonstration
+                        </AlertDescription>
+                      </Box>
+                    </Alert>
+                  )}
+                </VStack>
+                <Button
+                  onClick={() => navigate('/add-patient')}
+                  colorScheme="health"
+                  size="lg"
+                  borderRadius="lg"
+                  leftIcon={<FaUserPlus />}
+                  _hover={{ transform: 'translateY(-1px)', shadow: 'lg' }}
+                  transition="all 0.2s"
+                >
+                  Add Patient
+                </Button>
+              </Flex>
+            </CardBody>
+          </Card>
 
-        {/* Header */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <h1 style={{ margin: '0 0 10px 0', color: '#333' }}>Patient Management</h1>
-            <p style={{ margin: 0, color: '#666' }}>
-              {isOffline ? 'Demo Mode: Managing sample patient data' : 'Manage your patient records'}
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/add-patient')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              transition: 'background-color 0.3s'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
-          >
-            + Add Patient
-          </button>
-        </div>
+          {/* Stats Overview */}
+          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
+            <Card shadow="md" borderRadius="lg" bg={cardBg}>
+              <CardBody p={6} textAlign="center">
+                <Stat>
+                  <StatNumber fontSize="3xl" color="blue.600">{stats.total}</StatNumber>
+                  <StatLabel color={textSecondary}>Total Patients</StatLabel>
+                </Stat>
+              </CardBody>
+            </Card>
+            <Card shadow="md" borderRadius="lg" bg={cardBg}>
+              <CardBody p={6} textAlign="center">
+                <Stat>
+                  <StatNumber fontSize="3xl" color="blue.500">{stats.male}</StatNumber>
+                  <StatLabel color={textSecondary}>Male Patients</StatLabel>
+                </Stat>
+              </CardBody>
+            </Card>
+            <Card shadow="md" borderRadius="lg" bg={cardBg}>
+              <CardBody p={6} textAlign="center">
+                <Stat>
+                  <StatNumber fontSize="3xl" color="pink.500">{stats.female}</StatNumber>
+                  <StatLabel color={textSecondary}>Female Patients</StatLabel>
+                </Stat>
+              </CardBody>
+            </Card>
+            <Card shadow="md" borderRadius="lg" bg={cardBg}>
+              <CardBody p={6} textAlign="center">
+                <Stat>
+                  <StatNumber fontSize="3xl" color="orange.500">{stats.withAllergies}</StatNumber>
+                  <StatLabel color={textSecondary}>With Allergies</StatLabel>
+                </Stat>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
 
-        {/* Error Display */}
-        {error && (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#ffebee', 
-            color: '#c62828', 
-            borderRadius: '5px', 
-            marginBottom: '20px',
-            border: '1px solid #ffcdd2'
-          }}>
-            {error}
-          </div>
-        )}
+          {/* Search and Filters */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardBody p={6}>
+              <VStack spacing={6}>
+                <HStack spacing={4} w="full">
+                  <InputGroup>
+                    <InputLeftElement>
+                      <Icon as={FaSearch} color="gray.400" />
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search patients by name, phone, email, or city..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      size="lg"
+                      borderRadius="lg"
+                      focusBorderColor="health.500"
+                    />
+                  </InputGroup>
+                  <Text color={textSecondary} fontSize="sm" whiteSpace="nowrap">
+                    {filteredPatients.length} of {patients.length} patients
+                  </Text>
+                </HStack>
+                
+                <HStack spacing={4} w="full">
+                  <FormControl maxW="200px">
+                    <FormLabel fontSize="sm">Gender</FormLabel>
+                    <Select
+                      value={filterGender}
+                      onChange={(e) => setFilterGender(e.target.value)}
+                      placeholder="All Genders"
+                      borderRadius="lg"
+                      focusBorderColor="health.500"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </Select>
+                  </FormControl>
+                  
+                  <FormControl maxW="200px">
+                    <FormLabel fontSize="sm">Blood Group</FormLabel>
+                    <Select
+                      value={filterBloodGroup}
+                      onChange={(e) => setFilterBloodGroup(e.target.value)}
+                      placeholder="All Blood Groups"
+                      borderRadius="lg"
+                      focusBorderColor="health.500"
+                    >
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                    </Select>
+                  </FormControl>
+                  
+                  <Button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterGender('');
+                      setFilterBloodGroup('');
+                    }}
+                    variant="outline"
+                    colorScheme="gray"
+                    borderRadius="lg"
+                    leftIcon={<FaFilter />}
+                  >
+                    Clear Filters
+                  </Button>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
 
-        {/* Search and Filters */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <input
-                type="text"
-                placeholder="Search patients by name, phone, email, or city..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '16px'
-                }}
-              />
-            </div>
-            <div style={{ color: '#666', fontSize: '14px' }}>
-              {filteredPatients.length} of {safePatients.length} patients
-            </div>
-          </div>
-        </div>
+          {/* Patients Table */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardHeader pb={4}>
+              <Heading size="md" color={textColor}>
+                Patient Records
+              </Heading>
+            </CardHeader>
+            <CardBody pt={0}>
+              <TableContainer>
+                <Table variant="simple">
+                  <Thead bg="gray.50" _dark={{ bg: 'gray.700' }}>
+                    <Tr>
+                      <Th color={textColor}>Patient</Th>
+                      <Th color={textColor}>Contact</Th>
+                      <Th color={textColor}>Location</Th>
+                      <Th color={textColor}>Medical Info</Th>
+                      <Th color={textColor}>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {filteredPatients.map((patient) => (
+                      <Tr key={patient.id} _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.700' } }}>
+                        <Td>
+                          <HStack spacing={3}>
+                            <Avatar
+                              size="md"
+                              name={`${patient.firstName} ${patient.lastName}`}
+                              bg={patient.gender === 'Male' ? 'blue.500' : 'pink.500'}
+                            />
+                            <VStack align="start" spacing={1}>
+                              <Text fontWeight="bold" color={textColor}>
+                                {patient.firstName} {patient.lastName}
+                              </Text>
+                              <HStack spacing={2}>
+                                <Badge colorScheme={patient.gender === 'Male' ? 'blue' : 'pink'} variant="subtle">
+                                  {patient.gender === 'Male' ? <FaMale /> : <FaFemale />} {patient.gender}
+                                </Badge>
+                                <Text fontSize="sm" color={textSecondary}>
+                                  {calculateAge(patient.dateOfBirth)} years
+                                </Text>
+                              </HStack>
+                            </VStack>
+                          </HStack>
+                        </Td>
+                        
+                        <Td>
+                          <VStack align="start" spacing={1}>
+                            <HStack spacing={2} fontSize="sm">
+                              <Icon as={FaPhone} color="gray.500" />
+                              <Text color={textColor}>{patient.phone}</Text>
+                            </HStack>
+                            <HStack spacing={2} fontSize="sm">
+                              <Icon as={FaEnvelope} color="gray.500" />
+                              <Text color={textColor}>{patient.email}</Text>
+                            </HStack>
+                          </VStack>
+                        </Td>
+                        
+                        <Td>
+                          <VStack align="start" spacing={1}>
+                            <HStack spacing={2} fontSize="sm">
+                              <Icon as={FaMapMarkerAlt} color="gray.500" />
+                              <Text color={textColor}>{patient.city}, {patient.state}</Text>
+                            </HStack>
+                            <Text fontSize="sm" color={textSecondary}>
+                              PIN: {patient.pinCode}
+                            </Text>
+                          </VStack>
+                        </Td>
+                        
+                        <Td>
+                          <VStack align="start" spacing={1}>
+                            <HStack spacing={2} fontSize="sm">
+                              <Icon as={FaHeartbeat} color="red.500" />
+                              <Text color={textColor}>Blood: {patient.bloodGroup}</Text>
+                            </HStack>
+                            {patient.allergies && patient.allergies !== 'None' && (
+                              <Badge colorScheme="red" variant="outline" fontSize="xs">
+                                Allergy: {patient.allergies}
+                              </Badge>
+                            )}
+                          </VStack>
+                        </Td>
+                        
+                        <Td>
+                          <HStack spacing={2}>
+                            <Tooltip label="View Details">
+                              <IconButton
+                                icon={<FaEye />}
+                                onClick={() => handleViewPatient(patient)}
+                                colorScheme="blue"
+                                variant="ghost"
+                                size="sm"
+                                aria-label="View patient"
+                              />
+                            </Tooltip>
+                            <Tooltip label="Edit Patient">
+                              <IconButton
+                                icon={<FaEdit />}
+                                onClick={() => navigate(`/patient/${patient.id}/edit`)}
+                                colorScheme="green"
+                                variant="ghost"
+                                size="sm"
+                                aria-label="Edit patient"
+                              />
+                            </Tooltip>
+                            <Tooltip label="Delete Patient">
+                              <IconButton
+                                icon={<FaTrash />}
+                                onClick={() => handleDelete(patient.id)}
+                                colorScheme="red"
+                                variant="ghost"
+                                size="sm"
+                                aria-label="Delete patient"
+                              />
+                            </Tooltip>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+              
+              {filteredPatients.length === 0 && (
+                <VStack spacing={4} py={12}>
+                  <Icon as={FaUsers} w={16} h={16} color="gray.400" />
+                  <Text color={textSecondary} fontSize="lg">
+                    No patients found matching your criteria
+                  </Text>
+                  <Button
+                    onClick={() => navigate('/add-patient')}
+                    colorScheme="health"
+                    leftIcon={<FaUserPlus />}
+                    borderRadius="lg"
+                  >
+                    Add Your First Patient
+                  </Button>
+                </VStack>
+              )}
+            </CardBody>
+          </Card>
+        </VStack>
+      </Container>
 
-        {/* Patients Table */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8f9fa' }}>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: 'bold', color: '#333' }}>
-                    Patient Name
-                  </th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: 'bold', color: '#333' }}>
-                    Contact Info
-                  </th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: 'bold', color: '#333' }}>
-                    Location
-                  </th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: 'bold', color: '#333' }}>
-                    Medical Info
-                  </th>
-                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: 'bold', color: '#333' }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPatients.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                      {searchTerm ? 'No patients found matching your search.' : 'No patients found.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPatients.map(patient => (
-                    <tr key={patient.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                      <td style={{ padding: '15px' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', color: '#333', marginBottom: '5px' }}>
-                            {patient.firstName} {patient.lastName}
-                          </div>
-                          <div style={{ fontSize: '14px', color: '#666' }}>
-                            ID: {patient.id} • {patient.gender} • {formatDate(patient.dateOfBirth)}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div>
-                          <div style={{ marginBottom: '5px' }}>
-                            📱 {patient.phone}
-                          </div>
-                          {patient.email && (
-                            <div style={{ fontSize: '14px', color: '#666' }}>
-                              ✉️ {patient.email}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div>
-                          <div style={{ marginBottom: '5px' }}>
-                            🏠 {patient.city}, {patient.state}
-                          </div>
-                          <div style={{ fontSize: '14px', color: '#666' }}>
-                            📍 {patient.pinCode}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div>
-                          <div style={{ marginBottom: '5px' }}>
-                            🩸 {patient.bloodGroup || 'N/A'}
-                          </div>
-                          <div style={{ fontSize: '14px', color: '#666' }}>
-                            💼 {patient.occupation || 'N/A'}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <button
-                            onClick={() => handleEdit(patient.id)}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#28a745',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '14px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.3s'
-                            }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(patient.id)}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '14px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.3s'
-                            }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Patient Details Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            <HStack spacing={3}>
+              <Icon as={FaUser} color="health.500" />
+              <Text>Patient Details</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {selectedPatient && (
+              <VStack spacing={6} align="stretch">
+                {/* Basic Info */}
+                <Card variant="outline">
+                  <CardHeader pb={3}>
+                    <Heading size="md" color={textColor}>
+                      Basic Information
+                    </Heading>
+                  </CardHeader>
+                  <CardBody pt={0}>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Full Name</Text>
+                        <Text fontWeight="bold">{selectedPatient.firstName} {selectedPatient.lastName}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Date of Birth</Text>
+                        <Text>{new Date(selectedPatient.dateOfBirth).toLocaleDateString()}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Gender</Text>
+                        <Badge colorScheme={selectedPatient.gender === 'Male' ? 'blue' : 'pink'}>
+                          {selectedPatient.gender}
+                        </Badge>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Blood Group</Text>
+                        <Badge colorScheme="red" variant="outline">{selectedPatient.bloodGroup}</Badge>
+                      </VStack>
+                    </SimpleGrid>
+                  </CardBody>
+                </Card>
+
+                {/* Contact Info */}
+                <Card variant="outline">
+                  <CardHeader pb={3}>
+                    <Heading size="md" color={textColor}>
+                      Contact Information
+                    </Heading>
+                  </CardHeader>
+                  <CardBody pt={0}>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Phone</Text>
+                        <Text>{selectedPatient.phone}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Email</Text>
+                        <Text>{selectedPatient.email}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Emergency Contact</Text>
+                        <Text>{selectedPatient.emergencyContact}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Emergency Phone</Text>
+                        <Text>{selectedPatient.emergencyPhone}</Text>
+                      </VStack>
+                    </SimpleGrid>
+                  </CardBody>
+                </Card>
+
+                {/* Medical Info */}
+                <Card variant="outline">
+                  <CardHeader pb={3}>
+                    <Heading size="md" color={textColor}>
+                      Medical Information
+                    </Heading>
+                  </CardHeader>
+                  <CardBody pt={0}>
+                    <VStack spacing={4} align="stretch">
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Allergies</Text>
+                        <Text>{selectedPatient.allergies}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Medical History</Text>
+                        <Text>{selectedPatient.medicalHistory}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color={textSecondary}>Current Medications</Text>
+                        <Text>{selectedPatient.currentMedications}</Text>
+                      </VStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose} variant="ghost">
+              Close
+            </Button>
+            <Button
+              colorScheme="health"
+              onClick={() => {
+                onClose();
+                navigate(`/patient/${selectedPatient?.id}`);
+              }}
+            >
+              View Full Profile
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
 

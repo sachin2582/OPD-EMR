@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // Database file path
-const dbPath = path.join(__dirname, '..', 'database.db');
+const dbPath = path.join(__dirname, '..', 'opd-emr.db');
 
 // Create database connection
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -556,6 +556,11 @@ async function initDatabase() {
         ('doctors', 'Doctor Management', 'Doctor registration and management', 'Staff'),
         ('clinical-notes', 'Clinical Notes', 'Patient clinical notes and records', 'Clinical'),
         ('lab-tests', 'Laboratory Tests', 'Laboratory test management and sample collection', 'Clinical'),
+        ('pharmacy', 'Pharmacy Management', 'Complete pharmacy inventory and sales management', 'Clinical'),
+        ('pharmacy-inventory', 'Pharmacy Inventory', 'Manage pharmacy stock, items, and suppliers', 'Clinical'),
+        ('pharmacy-sales', 'Pharmacy Sales', 'Process pharmacy sales and generate invoices', 'Clinical'),
+        ('pharmacy-purchases', 'Pharmacy Purchases', 'Manage purchase orders and supplier relationships', 'Clinical'),
+        ('pharmacy-reports', 'Pharmacy Reports', 'Pharmacy analytics and financial reports', 'Analytics'),
         ('admin-panel', 'Admin Panel', 'System administration and settings', 'Administration'),
         ('reports', 'Reports', 'System reports and analytics', 'Analytics'),
         ('settings', 'Settings', 'System configuration and preferences', 'Administration')
@@ -577,6 +582,112 @@ async function initDatabase() {
         ('LT010', 'Ultrasound Abdomen', 'USG-ABD', 'Radiology', 'Abdomen', 1200.00, 'Abdominal ultrasound for organ examination', 'Fasting for 6-8 hours', '2-3 hours')
       `);
 
+      // Function to insert sample pharmacy data
+      function insertSamplePharmacyData() {
+        console.log('📦 Inserting sample pharmacy data...');
+        
+        // Sample suppliers
+        const suppliers = [
+          {
+            name: 'ABC Pharmaceuticals Ltd',
+            contact_person: 'John Smith',
+            email: 'john@abcpharma.com',
+            phone: '+91-9876543210',
+            address: '123 Pharma Street, Mumbai, Maharashtra',
+            gst_number: '27ABCDE1234F1Z5'
+          },
+          {
+            name: 'XYZ Medical Supplies',
+            contact_person: 'Sarah Johnson',
+            email: 'sarah@xyzmedical.com',
+            phone: '+91-9876543211',
+            address: '456 Medical Avenue, Delhi, NCR',
+            gst_number: '07FGHIJ5678K9L2'
+          },
+          {
+            name: 'MediCare Solutions',
+            contact_person: 'Mike Wilson',
+            email: 'mike@medicare.com',
+            phone: '+91-9876543212',
+            address: '789 Healthcare Road, Bangalore, Karnataka',
+            gst_number: '29MNOPQ9012R3S6'
+          }
+        ];
+
+        suppliers.forEach(supplier => {
+          db.run(`
+            INSERT OR IGNORE INTO pharmacy_suppliers 
+            (name, contact_person, email, phone, address, gst_number) 
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, [supplier.name, supplier.contact_person, supplier.email, supplier.phone, supplier.address, supplier.gst_number]);
+        });
+
+        // Sample items
+        const items = [
+          {
+            sku: 'MED001',
+            name: 'Paracetamol 500mg',
+            generic_name: 'Acetaminophen',
+            brand: 'Crocin',
+            unit: 'Tablet',
+            item_type: 'Medicine',
+            hsn_sac: '3004',
+            mrp: 5.00,
+            purchase_price: 3.50,
+            selling_price: 4.50,
+            min_stock: 100,
+            reorder_level: 50,
+            tax_rate: 5.00,
+            is_prescription_required: false,
+            barcode: '8901234567890'
+          },
+          {
+            sku: 'MED002',
+            name: 'Amoxicillin 500mg',
+            generic_name: 'Amoxicillin',
+            brand: 'Novamox',
+            unit: 'Capsule',
+            item_type: 'Medicine',
+            hsn_sac: '3004',
+            mrp: 8.00,
+            purchase_price: 5.60,
+            selling_price: 7.20,
+            min_stock: 75,
+            reorder_level: 30,
+            tax_rate: 5.00,
+            is_prescription_required: true,
+            barcode: '8901234567891'
+          },
+          {
+            sku: 'MED003',
+            name: 'Omeprazole 20mg',
+            generic_name: 'Omeprazole',
+            brand: 'Omez',
+            unit: 'Capsule',
+            item_type: 'Medicine',
+            hsn_sac: '3004',
+            mrp: 12.00,
+            purchase_price: 8.40,
+            selling_price: 10.80,
+            min_stock: 50,
+            reorder_level: 25,
+            tax_rate: 5.00,
+            is_prescription_required: false,
+            barcode: '8901234567892'
+          }
+        ];
+
+        items.forEach(item => {
+          db.run(`
+            INSERT OR IGNORE INTO pharmacy_items 
+            (sku, name, generic_name, brand, unit, item_type, hsn_sac, mrp, purchase_price, selling_price, min_stock, reorder_level, tax_rate, is_prescription_required, barcode) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [item.sku, item.name, item.generic_name, item.brand, item.unit, item.item_type, item.hsn_sac, item.mrp, item.purchase_price, item.selling_price, item.min_stock, item.reorder_level, item.tax_rate, item.is_prescription_required, item.barcode]);
+        });
+
+        console.log('✅ Sample pharmacy data inserted successfully');
+      }
+
       // Create indexes for better performance
       db.run('CREATE INDEX IF NOT EXISTS idx_patients_patientId ON patients(patientId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_prescriptions_patientId ON prescriptions(patientId)');
@@ -590,9 +701,39 @@ async function initDatabase() {
       db.run('CREATE INDEX IF NOT EXISTS idx_lab_order_items_orderId ON lab_order_items(orderId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_sample_collection_orderId ON sample_collection(orderId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_sample_collection_patientId ON sample_collection(patientId)');
+      
+      // Pharmacy indexes (will be created when pharmacy schema is executed)
+      console.log('📊 Database indexes created successfully');
 
-      console.log('✅ Database tables created successfully');
-      resolve();
+      // Initialize Pharmacy Module Tables
+      console.log('🏥 Initializing Pharmacy Module...');
+      
+      // Read and execute pharmacy schema
+      const fs = require('fs');
+      const pharmacySchemaPath = path.join(__dirname, 'pharmacy-schema.sql');
+      
+      try {
+        const pharmacySchema = fs.readFileSync(pharmacySchemaPath, 'utf8');
+        
+        // Execute pharmacy schema synchronously
+        db.exec(pharmacySchema, (err) => {
+          if (err) {
+            console.error('❌ Error creating pharmacy schema:', err);
+            reject(err);
+          } else {
+            console.log('✅ Pharmacy tables created successfully');
+            
+            // Insert sample pharmacy data
+            insertSamplePharmacyData();
+            
+            console.log('✅ Database tables created successfully');
+            resolve();
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error reading pharmacy schema file:', error);
+        reject(error);
+      }
     });
   });
 }

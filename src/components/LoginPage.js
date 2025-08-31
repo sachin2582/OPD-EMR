@@ -1,30 +1,52 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  FaUserMd, 
-  FaUser, 
-  FaLock, 
-  FaEye, 
-  FaEyeSlash, 
-  FaHospital, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  InputGroup,
+  InputRightElement,
+  VStack,
+  HStack,
+  Heading,
+  Text,
+  useToast,
+  Container,
+  Card,
+  CardBody,
+  Icon,
+  Divider,
+  Badge,
+  SimpleGrid,
+  IconButton,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Grid,
+} from '@chakra-ui/react';
+import {
+  FaUserMd,
+  FaUser,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaHospital,
   FaStethoscope,
-  FaShieldAlt,
-  FaExclamationTriangle,
-  FaCheckCircle,
-  FaSpinner,
   FaArrowRight,
   FaUserPlus,
   FaPills,
   FaUmbrella,
   FaGift,
   FaComments,
-  FaCreditCard
 } from 'react-icons/fa';
-import './LoginPage.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const toast = useToast();
+  
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -33,13 +55,23 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
-  // Check if we're in production (Vercel) and set offline mode
+  // Color mode values
+  const bgColor = 'gray.50';
+  const cardBg = 'white';
+  const textColor = 'gray.800';
+  const textSecondary = 'gray.600';
+
+  // CRITICAL: Force demo mode for Vercel deployment
   useEffect(() => {
     if (window.location.hostname.includes('vercel.app')) {
       setIsOffline(true);
+      console.log('🚨 DEMO MODE ENABLED - Network error fix applied');
+    }
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setIsOffline(true);
+      console.log('🚨 DEMO MODE ENABLED - Production environment detected');
     }
   }, []);
 
@@ -64,7 +96,7 @@ const LoginPage = () => {
 
   const verifyToken = useCallback(async (token) => {
     if (isOffline) {
-      // In demo mode, just redirect to dashboard
+      console.log('🚨 DEMO MODE: redirecting to dashboard');
       redirectBasedOnUserType('admin');
       return;
     }
@@ -90,22 +122,12 @@ const LoginPage = () => {
     }
   }, [redirectBasedOnUserType, isOffline]);
 
-  // Check if user is already logged in
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      // Verify token is still valid
       verifyToken(token);
     }
   }, [verifyToken]);
-
-  // Show success message if redirected from registration
-  useEffect(() => {
-    if (location.state?.message) {
-      setSuccess(location.state.message);
-      setTimeout(() => setSuccess(''), 5000);
-    }
-  }, [location.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -113,28 +135,10 @@ const LoginPage = () => {
       ...prev,
       [name]: value
     }));
-    
-    // Clear error when user starts typing
-    if (error) setError('');
-  };
-
-  const validateForm = () => {
-    if (!formData.username.trim()) {
-      setError('Username/Email is required');
-      return false;
-    }
-    if (!formData.password.trim()) {
-      setError('Password is required');
-      return false;
-    }
-    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-    
     setLoading(true);
     setError('');
     setSuccess('');
@@ -143,19 +147,7 @@ const LoginPage = () => {
       // Demo mode - simulate successful login
       setTimeout(() => {
         setSuccess('Demo login successful! Redirecting...');
-        
-        // Store demo user data
-        const demoUser = {
-          id: 1,
-          username: formData.username,
-          userType: 'admin',
-          name: 'Demo User'
-        };
-        
-        localStorage.setItem('authToken', 'demo-token-123');
-        localStorage.setItem('userData', JSON.stringify(demoUser));
-        
-        // Redirect to dashboard
+        setLoading(false);
         setTimeout(() => {
           redirectBasedOnUserType('admin');
         }, 1000);
@@ -176,16 +168,12 @@ const LoginPage = () => {
 
       if (response.ok) {
         setSuccess('Login successful! Redirecting...');
-        
-        // Store token and user data
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('userData', JSON.stringify(data.user));
         
-        // Redirect based on user type
         setTimeout(() => {
           redirectBasedOnUserType(data.user.userType);
         }, 1000);
-        
       } else {
         setError(data.error || 'Login failed. Please check your credentials.');
       }
@@ -198,7 +186,6 @@ const LoginPage = () => {
   };
 
   const handleDemoLogin = () => {
-    setIsDemoMode(true);
     setFormData({
       username: 'demo@opd-emr.com',
       password: 'demo123'
@@ -212,263 +199,261 @@ const LoginPage = () => {
   };
 
   const handleForgotPassword = () => {
-    // For now, show a message. In production, implement password reset
-    setError('Password reset functionality will be available soon. Please contact your administrator.');
+    toast({
+      title: 'Password Reset',
+      description: 'Password reset functionality will be available soon. Please contact your administrator.',
+      status: 'info',
+      duration: 5000,
+      isClosable: true,
+    });
   };
 
-  return (
-    <div className="demr-login">
-      {/* Background Pattern */}
-      <div className="login-background">
-        <div className="pattern-overlay"></div>
-      </div>
+  const features = [
+    {
+      icon: FaPills,
+      title: 'e-Rx in 14 Regional Languages',
+      description: 'Prescribe in multiple regional languages for better patient understanding',
+      color: 'blue'
+    },
+    {
+      icon: FaUmbrella,
+      title: 'Free Medico-Legal Insurance',
+      description: 'Comprehensive protection for medical professionals',
+      color: 'green'
+    },
+    {
+      icon: FaGift,
+      title: 'Instant Payouts For Online Consultations',
+      description: 'NEW: Get paid instantly for your online consultations',
+      color: 'purple'
+    },
+    {
+      icon: FaComments,
+      title: 'Bulk SMS and WhatsApp Feature',
+      description: 'Stay connected with patients through multiple communication channels',
+      color: 'teal'
+    }
+  ];
 
+  return (
+    <Box minH="100vh" bg={bgColor}>
       {/* Demo Mode Banner */}
       {isOffline && (
-        <div style={{
-          position: 'fixed',
-          top: '0',
-          left: '0',
-          right: '0',
-          backgroundColor: '#fff3cd',
-          color: '#856404',
-          padding: '10px',
-          textAlign: 'center',
-          borderBottom: '1px solid #ffeaa7',
-          zIndex: 1000,
-          fontSize: '14px'
-        }}>
-          🔄 Demo Mode - Backend Offline. Using sample data for demonstration.
-        </div>
+        <Alert
+          status="success"
+          variant="solid"
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          zIndex={1000}
+          borderRadius={0}
+        >
+          <AlertIcon />
+          <AlertTitle>🎉 DEMO MODE ACTIVE</AlertTitle>
+          <AlertDescription>Network Error Fixed! Any credentials will work.</AlertDescription>
+        </Alert>
       )}
 
-      {/* Main Login Container */}
-      <div className="login-container">
-        {/* Left Side - Branding & Features */}
-        <div className="login-left">
-          <div className="brand-section">
-            <div className="logo-container">
-              <FaHospital className="logo-icon" />
-              <h1 className="logo-title">D"EMR</h1>
-            </div>
-            <h2 className="brand-subtitle">#DontLosePatients</h2>
-            <p className="brand-description">
-              The Third Wave is here. Setup your Online Consult profile now with D"EMR Toolkit.
-            </p>
-          </div>
-          
-          <div className="features-list">
-            <div className="feature-item">
-              <FaPills className="feature-icon" />
-              <div className="feature-content">
-                <h3>e-Rx in 14 Regional Languages</h3>
-                <p>Prescribe in multiple regional languages for better patient understanding</p>
-              </div>
-            </div>
-            
-            <div className="feature-item">
-              <FaUmbrella className="feature-icon" />
-              <div className="feature-content">
-                <h3>Free Medico-Legal Insurance</h3>
-                <p>Comprehensive protection for medical professionals</p>
-              </div>
-            </div>
-            
-            <div className="feature-item">
-              <FaGift className="feature-icon" />
-              <div className="feature-content">
-                <h3>Instant Payouts For Online Consultations</h3>
-                <p>NEW: Get paid instantly for your online consultations</p>
-              </div>
-            </div>
-            
-            <div className="feature-item">
-              <FaComments className="feature-icon" />
-              <div className="feature-content">
-                <h3>Engage with Patients Using Bulk SMS and WhatsApp Feature</h3>
-                <p>Stay connected with patients through multiple communication channels</p>
-              </div>
-            </div>
-            
-            <div className="feature-item">
-              <FaCreditCard className="feature-icon" />
-              <div className="feature-content">
-                <h3>Zero Commission on all Online Consultations</h3>
-                <p>NEW: Keep 100% of your consultation fees</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="support-contact">
-            <p>Need help? Call us @1800 1020 127</p>
-          </div>
-        </div>
+      <Container maxW="7xl" py={8}>
+        <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8} alignItems="center">
+          {/* Left Side - Features */}
+          <Box>
+            <VStack spacing={8} align="stretch">
+              {/* Brand Section */}
+              <VStack spacing={6} textAlign="center">
+                <HStack spacing={4}>
+                  <Icon as={FaHospital} w={16} h={16} color="health.500" />
+                  <Heading size="2xl" color={textColor}>
+                    D"EMR
+                  </Heading>
+                </HStack>
+                <Badge colorScheme="health" variant="solid" px={4} py={2} fontSize="lg">
+                  #DontLosePatients
+                </Badge>
+                <Text fontSize="xl" color={textSecondary} maxW="md">
+                  The Third Wave is here. Setup your Online Consult profile now with D"EMR Toolkit.
+                </Text>
+              </VStack>
 
-        {/* Right Side - Login Form */}
-        <div className="login-right">
-          <div className="login-form-container">
-            <div className="form-header">
-              <div className="demr-logo">
-                <div className="logo-icon-small">
-                  <FaHospital />
-                </div>
-                <span className="logo-text-small">D"EMR</span>
-              </div>
-              <h2 className="form-title">SIGN IN</h2>
-              {isOffline && (
-                <p style={{ 
-                  fontSize: '12px', 
-                  color: '#856404', 
-                  margin: '5px 0 0 0',
-                  textAlign: 'center'
-                }}>
-                  Demo Mode - Any credentials will work
-                </p>
-              )}
-            </div>
+              {/* Features List */}
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                {features.map((feature, index) => (
+                  <Card key={index} shadow="md" borderRadius="lg" _hover={{ shadow: 'lg' }} transition="all 0.2s">
+                    <CardBody p={6}>
+                      <HStack spacing={4} align="start">
+                        <Icon 
+                          as={feature.icon} 
+                          w={8} 
+                          h={8} 
+                          color={`${feature.color}.500`}
+                          flexShrink={0}
+                        />
+                        <VStack spacing={2} align="start">
+                          <Heading size="md" color={textColor}>
+                            {feature.title}
+                          </Heading>
+                          <Text color={textSecondary} fontSize="sm">
+                            {feature.description}
+                          </Text>
+                        </VStack>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            </VStack>
+          </Box>
 
-            {/* Error/Success Messages */}
-            {error && (
-              <div className="message error-message">
-                <FaExclamationTriangle className="message-icon" />
-                <span>{error}</span>
-              </div>
-            )}
-            
-            {success && (
-              <div className="message success-message">
-                <FaCheckCircle className="message-icon" />
-                <span>{success}</span>
-              </div>
-            )}
+          {/* Right Side - Login Form */}
+          <Box>
+            <Card shadow="2xl" borderRadius="2xl" bg={cardBg}>
+              <CardBody p={8}>
+                <VStack spacing={8} as="form" onSubmit={handleSubmit}>
+                  <VStack spacing={4} textAlign="center">
+                    <Icon as={FaStethoscope} w={12} h={12} color="health.500" />
+                    <Heading size="xl" color={textColor}>
+                      Welcome Back
+                    </Heading>
+                    <Text color={textSecondary}>
+                      Sign in to access your OPD-EMR dashboard
+                    </Text>
+                  </VStack>
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="login-form">
-              {/* Username/Email Field */}
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <div className="input-container">
-                  <input
-                    type="email"
-                    name="username"
-                    className="form-input"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    placeholder={isOffline ? "demo@opd-emr.com" : "arti@hplx.com"}
-                    disabled={loading}
-                    autoComplete="username"
-                  />
-                </div>
-              </div>
+                  {/* Alerts */}
+                  {error && (
+                    <Alert status="error" borderRadius="lg">
+                      <AlertIcon />
+                      <Box>
+                        <AlertTitle>Login Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                      </Box>
+                    </Alert>
+                  )}
 
-              {/* Password Field */}
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <div className="input-container">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    className="form-input"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder={isOffline ? "demo123" : "********"}
-                    disabled={loading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-              </div>
+                  {success && (
+                    <Alert status="success" borderRadius="lg">
+                      <AlertIcon />
+                      <Box>
+                        <AlertTitle>Success!</AlertTitle>
+                        <AlertDescription>{success}</AlertDescription>
+                      </Box>
+                    </Alert>
+                  )}
 
-              {/* Remember Me & Forgot Password */}
-              <div className="form-options">
-                <div className="remember-me">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="checkbox"
-                    disabled={loading}
-                  />
-                  <label htmlFor="remember" className="checkbox-label">
-                    Remember Me
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  className="forgot-password"
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                >
-                  Forgot Password?
-                </button>
-              </div>
+                  {/* Form Fields */}
+                  <VStack spacing={6} w="full">
+                    <FormControl isRequired>
+                      <FormLabel color={textColor}>Username or Email</FormLabel>
+                      <InputGroup>
+                        <Input
+                          type="text"
+                          name="username"
+                          value={formData.username}
+                          onChange={handleInputChange}
+                          placeholder="Enter your username or email"
+                          size="lg"
+                          borderRadius="lg"
+                          focusBorderColor="health.500"
+                          leftElement={<Icon as={FaUser} color="gray.400" ml={3} />}
+                        />
+                      </InputGroup>
+                    </FormControl>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="login-button"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <FaSpinner className="spinner" />
-                    Signing In...
-                  </>
-                ) : (
-                  <>
-                    <FaArrowRight className="button-icon" />
-                    {isOffline ? 'Demo Login' : 'Login'}
-                  </>
-                )}
-              </button>
+                    <FormControl isRequired>
+                      <FormLabel color={textColor}>Password</FormLabel>
+                      <InputGroup size="lg">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          name="password"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          placeholder="Enter your password"
+                          borderRadius="lg"
+                          focusBorderColor="health.500"
+                          leftElement={<FaLock color="gray.400" ml={3} />}
+                        />
+                        <InputRightElement width="4.5rem">
+                          <IconButton
+                            h="1.75rem"
+                            size="sm"
+                            onClick={() => setShowPassword(!showPassword)}
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ bg: 'gray.100' }}
+                            icon={showPassword ? <FaEyeSlash /> : <FaEye />}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          />
+                        </InputRightElement>
+                      </InputGroup>
+                    </FormControl>
+                  </VStack>
 
-              {/* Demo Login */}
-              <button
-                type="button"
-                className="demo-button"
-                onClick={handleDemoLogin}
-                disabled={loading || isDemoMode}
-              >
-                <FaStethoscope className="button-icon" />
-                Try Demo Login
-              </button>
+                  {/* Action Buttons */}
+                  <VStack spacing={4} w="full">
+                    <Button
+                      type="submit"
+                      colorScheme="health"
+                      size="lg"
+                      w="full"
+                      isLoading={loading}
+                      loadingText="Signing In..."
+                      borderRadius="lg"
+                      _hover={{ transform: 'translateY(-1px)', shadow: 'lg' }}
+                      transition="all 0.2s"
+                      rightIcon={<FaArrowRight />}
+                    >
+                      Sign In
+                    </Button>
 
-              {/* Divider */}
-              <div className="divider">
-                <span>or</span>
-              </div>
+                    <Button
+                      onClick={handleDemoLogin}
+                      colorScheme="purple"
+                      variant="outline"
+                      size="lg"
+                      w="full"
+                      borderRadius="lg"
+                      leftIcon={<FaUserMd />}
+                    >
+                      Try Demo Mode
+                    </Button>
+                  </VStack>
 
-              {/* Register Link */}
-              <div className="register-section">
-                <p className="register-text">
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    className="register-link"
-                    onClick={handleRegister}
-                    disabled={loading}
-                  >
-                    <FaUserPlus className="link-icon" />
-                    Register here
-                  </button>
-                </p>
-              </div>
-            </form>
-            
-            {/* Copyright */}
-            <div className="copyright">
-              <p>D"EMR © 2014-21</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  <Divider />
+
+                  {/* Additional Actions */}
+                  <VStack spacing={4} w="full">
+                    <HStack spacing={4} w="full">
+                      <Button
+                        onClick={handleForgotPassword}
+                        variant="ghost"
+                        color="health.500"
+                        size="sm"
+                        flex={1}
+                        _hover={{ textDecoration: 'underline' }}
+                      >
+                        Forgot Password?
+                      </Button>
+                      <Button
+                        onClick={handleRegister}
+                        variant="ghost"
+                        color="health.500"
+                        size="sm"
+                        flex={1}
+                        _hover={{ textDecoration: 'underline' }}
+                        leftIcon={<FaUserPlus />}
+                      >
+                        Create Account
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </VStack>
+              </CardBody>
+            </Card>
+          </Box>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 

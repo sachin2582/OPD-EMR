@@ -1,234 +1,456 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FaUserInjured, 
-  FaCalendarAlt, 
-  FaNotesMedical, 
+import {
+  Box,
+  Grid,
+  GridItem,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Card,
+  CardBody,
+  CardHeader,
+  Icon,
+  Badge,
+  Button,
+  Spinner,
+  SimpleGrid,
+  useColorModeValue,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  StatArrow,
+  Divider,
+  Container,
+  Flex,
+  Spacer,
+  Progress,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+} from '@chakra-ui/react';
+import {
+  FaUserInjured,
+  FaCalendarAlt,
+  FaNotesMedical,
   FaPills,
   FaPlus,
-  FaPrescriptionBottle
+  FaPrescriptionBottle,
+  FaHeartbeat,
+  FaStethoscope,
+  FaHospital,
+  FaUserMd,
+  FaChartLine,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaClock,
+  FaUsers,
+  FaFileMedical,
+  FaShieldAlt,
+  FaDatabase,
+  FaServer,
+  FaHdd,
+  FaCloud,
 } from 'react-icons/fa';
 
 const Dashboard = () => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    clinicalNotes: 0,
+    prescriptions: 0,
+    labTests: 0,
+    revenue: 0,
+  });
+
+  // Color mode values
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const textSecondary = useColorModeValue('gray.600', 'gray.400');
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('userData')) || {};
     if (user) {
       setUserData(user);
     }
-    setLoading(false);
+    
+    // Simulate loading and fetch stats
+    setTimeout(() => {
+      setStats({
+        totalPatients: 156,
+        todayAppointments: 8,
+        clinicalNotes: 23,
+        prescriptions: 45,
+        labTests: 12,
+        revenue: 12500,
+      });
+      setLoading(false);
+    }, 1000);
   }, []);
 
   if (loading) {
     return (
-      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
-        <div style={{textAlign: 'center'}}>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{borderColor: 'var(--primary-600)'}}></div>
-          <p style={{color: 'var(--neutral-600)'}}>Loading dashboard...</p>
-        </div>
-      </div>
+      <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="health.500" thickness="4px" />
+          <Text color={textSecondary} fontSize="lg">
+            Loading dashboard...
+          </Text>
+        </VStack>
+      </Box>
     );
   }
 
+  const statCards = [
+    {
+      title: 'Total Patients',
+      value: stats.totalPatients,
+      icon: FaUserInjured,
+      color: 'blue',
+      change: '+12%',
+      changeType: 'increase',
+      description: 'from last month',
+    },
+    {
+      title: "Today's Appointments",
+      value: stats.todayAppointments,
+      icon: FaCalendarAlt,
+      color: 'green',
+      change: '+25%',
+      changeType: 'increase',
+      description: 'from yesterday',
+    },
+    {
+      title: 'Clinical Notes',
+      value: stats.clinicalNotes,
+      icon: FaNotesMedical,
+      color: 'orange',
+      change: '+8%',
+      changeType: 'increase',
+      description: 'from last week',
+    },
+    {
+      title: 'Prescriptions',
+      value: stats.prescriptions,
+      icon: FaPills,
+      color: 'purple',
+      change: '+15%',
+      changeType: 'increase',
+      description: 'from last week',
+    },
+    {
+      title: 'Lab Tests',
+      value: stats.labTests,
+      icon: FaStethoscope,
+      color: 'teal',
+      change: '+5%',
+      changeType: 'increase',
+      description: 'from last week',
+    },
+    {
+      title: 'Monthly Revenue',
+      value: `₹${stats.revenue.toLocaleString()}`,
+      icon: FaChartLine,
+      color: 'green',
+      change: '+18%',
+      changeType: 'increase',
+      description: 'from last month',
+    },
+  ];
+
+  const quickActions = [
+    {
+      title: 'Add Patient',
+      description: 'Register a new patient',
+      icon: FaPlus,
+      color: 'blue',
+      link: '/add-patient',
+      buttonText: 'Add Patient',
+    },
+    {
+      title: 'Schedule Appointment',
+      description: 'Book patient appointments',
+      icon: FaCalendarAlt,
+      color: 'green',
+      link: '/appointments',
+      buttonText: 'Schedule',
+    },
+    {
+      title: 'Write Prescription',
+      description: 'Create e-prescriptions',
+      icon: FaPills,
+      color: 'purple',
+      link: '/e-prescription/new',
+      buttonText: 'Write Rx',
+    },
+    {
+      title: 'Lab Tests',
+      description: 'Order and manage lab tests',
+      icon: FaStethoscope,
+      color: 'teal',
+      link: '/lab-tests',
+      buttonText: 'Order Tests',
+    },
+  ];
+
+  const systemStatus = [
+    { name: 'Database', status: 'Online', icon: FaDatabase, color: 'green' },
+    { name: 'API Services', status: 'Online', icon: FaServer, color: 'green' },
+    { name: 'File Storage', status: 'Online', icon: FaHdd, color: 'green' },
+    { name: 'Backup System', status: 'Online', icon: FaCloud, color: 'green' },
+  ];
+
   return (
-    <div>
-      {/* Welcome Section */}
-      <div className="master-card mb-6">
-        <div className="card-content">
-          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-            <div>
-              <h2 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--spacing-2)', color: 'var(--neutral-900)'}}>
-                Welcome back, {userData.name || userData.username || 'Doctor'}! 👋
-              </h2>
-              <p style={{color: 'var(--neutral-600)'}}>
-                Here's what's happening in your practice today
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <Box bg={bgColor} minH="100vh" py={8}>
+      <Container maxW="7xl">
+        <VStack spacing={8} align="stretch">
+          {/* Welcome Section */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardBody p={8}>
+              <Flex alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={4}>
+                <VStack align="start" spacing={2}>
+                  <HStack spacing={3}>
+                    <Icon as={FaHospital} w={8} h={8} color="health.500" />
+                    <Heading size="xl" color={textColor}>
+                      Welcome back, {userData.name || userData.username || 'Doctor'}! 👋
+                    </Heading>
+                  </HStack>
+                  <Text color={textSecondary} fontSize="lg">
+                    Here's what's happening in your practice today
+                  </Text>
+                </VStack>
+                <Badge colorScheme="health" variant="solid" px={4} py={2} fontSize="lg">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </Badge>
+              </Flex>
+            </CardBody>
+          </Card>
 
-      {/* Quick Stats Cards */}
-      <div className="master-grid master-grid-5 mb-8">
-        <div className="master-card">
-          <div className="card-content">
-            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)'}}>
-              <div style={{width: '3rem', height: '3rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--primary-100)'}}>
-                <FaUserInjured style={{fontSize: 'var(--font-size-xl)', color: 'var(--primary-600)'}} />
-              </div>
-              <div>
-                <h3 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-900)'}}>0</h3>
-                <p style={{color: 'var(--neutral-600)'}}>Total Patients</p>
-                <span style={{color: 'var(--success-600)', fontSize: 'var(--font-size-sm)'}}>+0% from last month</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Stats Cards */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+            {statCards.map((stat, index) => (
+              <Card key={index} shadow="md" borderRadius="lg" bg={cardBg} _hover={{ shadow: 'lg' }} transition="all 0.2s">
+                <CardBody p={6}>
+                  <HStack spacing={4} align="start">
+                    <Box
+                      w={12}
+                      h={12}
+                      borderRadius="lg"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      bg={`${stat.color}.100`}
+                      color={`${stat.color}.600`}
+                    >
+                      <Icon as={stat.icon} w={6} h={6} />
+                    </Box>
+                    <Box flex={1}>
+                      <Stat>
+                        <StatNumber fontSize="2xl" fontWeight="bold" color={textColor}>
+                          {stat.value}
+                        </StatNumber>
+                        <StatLabel color={textSecondary} fontSize="sm">
+                          {stat.title}
+                        </StatLabel>
+                        <StatHelpText color={`${stat.color}.600`} fontSize="xs">
+                          <StatArrow type={stat.changeType} />
+                          {stat.change} {stat.description}
+                        </StatHelpText>
+                      </Stat>
+                    </Box>
+                  </HStack>
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
 
-        <div className="master-card">
-          <div className="card-content">
-            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)'}}>
-              <div style={{width: '3rem', height: '3rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--success-100)'}}>
-                <FaCalendarAlt style={{fontSize: 'var(--font-size-xl)', color: 'var(--success-600)'}} />
-              </div>
-              <div>
-                <h3 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-900)'}}>0</h3>
-                <p style={{color: 'var(--neutral-600)'}}>Today's Appointments</p>
-                <span style={{color: 'var(--success-600)', fontSize: 'var(--font-size-sm)'}}>+0% from yesterday</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Quick Actions */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardHeader pb={4}>
+              <Heading size="md" color={textColor}>
+                Quick Actions
+              </Heading>
+            </CardHeader>
+            <CardBody pt={0}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+                {quickActions.map((action, index) => (
+                  <Card key={index} shadow="sm" borderRadius="lg" _hover={{ shadow: 'md' }} transition="all 0.2s">
+                    <CardBody p={6} textAlign="center">
+                      <VStack spacing={4}>
+                        <Icon as={action.icon} w={10} h={10} color={`${action.color}.500`} />
+                        <VStack spacing={2}>
+                          <Heading size="sm" color={textColor}>
+                            {action.title}
+                          </Heading>
+                          <Text color={textSecondary} fontSize="sm">
+                            {action.description}
+                          </Text>
+                        </VStack>
+                        <Button
+                          as={Link}
+                          to={action.link}
+                          colorScheme={action.color}
+                          size="sm"
+                          w="full"
+                          borderRadius="lg"
+                        >
+                          {action.buttonText}
+                        </Button>
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            </CardBody>
+          </Card>
 
-        <div className="master-card">
-          <div className="card-content">
-            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)'}}>
-              <div style={{width: '3rem', height: '3rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--warning-100)'}}>
-                <FaNotesMedical style={{fontSize: 'var(--font-size-xl)', color: 'var(--warning-600)'}} />
-              </div>
-              <div>
-                <h3 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-900)'}}>0</h3>
-                <p style={{color: 'var(--neutral-600)'}}>Clinical Notes</p>
-                <span style={{color: 'var(--success-600)', fontSize: 'var(--font-size-sm)'}}>+0% from last week</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Recent Activity & System Status */}
+          <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={8}>
+            {/* Recent Patients */}
+            <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+              <CardHeader pb={4}>
+                <Flex alignItems="center" justifyContent="space-between">
+                  <Heading size="md" color={textColor}>
+                    Recent Patients
+                  </Heading>
+                  <Button as={Link} to="/patients" variant="ghost" color="health.500" size="sm">
+                    View All
+                  </Button>
+                </Flex>
+              </CardHeader>
+              <CardBody pt={0}>
+                <VStack spacing={6} py={8}>
+                  <Icon as={FaUserInjured} w={16} h={16} color="gray.400" />
+                  <VStack spacing={4}>
+                    <Text color={textSecondary} fontSize="lg">
+                      No recent patients
+                    </Text>
+                    <HStack spacing={3}>
+                      <Button as={Link} to="/add-patient" colorScheme="health" size="sm" borderRadius="lg">
+                        <Icon as={FaPlus} mr={2} />
+                        Add First Patient
+                      </Button>
+                      <Button as={Link} to="/patient-dashboard" variant="outline" size="sm" borderRadius="lg">
+                        View Sample Patient
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </VStack>
+              </CardBody>
+            </Card>
 
-        <div className="master-card">
-          <div className="card-content">
-            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)'}}>
-              <div style={{width: '3rem', height: '3rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--primary-100)'}}>
-                <FaPills style={{fontSize: 'var(--font-size-xl)', color: 'var(--primary-600)'}} />
-              </div>
-              <div>
-                <h3 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-900)'}}>0</h3>
-                <p style={{color: 'var(--neutral-600)'}}>Prescriptions</p>
-                <span style={{color: 'var(--success-600)', fontSize: 'var(--font-size-sm)'}}>+0% from last month</span>
-              </div>
-            </div>
-          </div>
-        </div>
+            {/* System Status */}
+            <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+              <CardHeader pb={4}>
+                <Heading size="md" color={textColor}>
+                  System Status
+                </Heading>
+              </CardHeader>
+              <CardBody pt={0}>
+                <VStack spacing={4}>
+                  {systemStatus.map((system, index) => (
+                    <Flex
+                      key={index}
+                      w="full"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      p={4}
+                      borderRadius="lg"
+                      bg="gray.50"
+                      _dark={{ bg: 'gray.700' }}
+                    >
+                      <HStack spacing={3}>
+                        <Icon as={system.icon} color={`${system.color}.500`} />
+                        <Text fontWeight="medium" color={textColor}>
+                          {system.name}
+                        </Text>
+                      </HStack>
+                      <Badge colorScheme={system.color} variant="solid">
+                        {system.status}
+                      </Badge>
+                    </Flex>
+                  ))}
+                </VStack>
+              </CardBody>
+            </Card>
+          </Grid>
 
-        {/* Pharmacy Module Card */}
-        <div className="master-card">
-          <div className="card-content">
-            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)'}}>
-              <div style={{width: '3rem', height: '3rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--success-100)'}}>
-                <FaPrescriptionBottle style={{fontSize: 'var(--font-size-xl)', color: 'var(--success-600)'}} />
-              </div>
-              <div>
-                <h3 style={{fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--neutral-900)'}}>🏥</h3>
-                <p style={{color: 'var(--neutral-600)'}}>Pharmacy</p>
-                <Link to="/pharmacy" style={{color: 'var(--success-600)', fontSize: 'var(--font-size-sm)', textDecoration: 'none'}}>
-                  Access Pharmacy →
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Pharmacy Operations */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardHeader pb={4}>
+              <Flex alignItems="center" justifyContent="space-between">
+                <Heading size="md" color={textColor}>
+                  Pharmacy Operations
+                </Heading>
+                <Button as={Link} to="/pharmacy" variant="ghost" color="health.500" size="sm">
+                  View All
+                </Button>
+              </Flex>
+            </CardHeader>
+            <CardBody pt={0}>
+              <VStack spacing={6} py={8}>
+                <Icon as={FaPrescriptionBottle} w={16} h={16} color="gray.400" />
+                <VStack spacing={4}>
+                  <Text color={textSecondary} fontSize="lg">
+                    Manage pharmacy operations
+                  </Text>
+                  <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} w="full">
+                    <Button as={Link} to="/pharmacy/pos" colorScheme="health" size="sm" borderRadius="lg">
+                      🏥 POS
+                    </Button>
+                    <Button as={Link} to="/pharmacy/purchases" variant="outline" size="sm" borderRadius="lg">
+                      📦 Purchases
+                    </Button>
+                    <Button as={Link} to="/pharmacy/returns" variant="outline" size="sm" borderRadius="lg">
+                      🔄 Returns
+                    </Button>
+                  </SimpleGrid>
+                </VStack>
+              </VStack>
+            </CardBody>
+          </Card>
 
-      {/* Recent Activity & Quick Actions */}
-      <div className="master-grid master-grid-2 gap-6">
-        <div className="master-card">
-          <div className="card-header">
-            <h3 className="card-title">Recent Patients</h3>
-            <Link to="/patients" style={{color: 'var(--primary-600)', fontSize: 'var(--font-size-sm)'}}>
-              View All
-            </Link>
-          </div>
-          <div className="card-content">
-            <div style={{textAlign: 'center', paddingTop: 'var(--spacing-8)', paddingBottom: 'var(--spacing-8)'}}>
-              <FaUserInjured style={{fontSize: 'var(--font-size-4xl)', marginLeft: 'auto', marginRight: 'auto', marginBottom: 'var(--spacing-4)', color: 'var(--neutral-400)'}} />
-              <p style={{marginBottom: 'var(--spacing-4)', color: 'var(--neutral-600)'}}>No patients yet</p>
-              <div style={{display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'center'}}>
-                <Link to="/add-patient" className="master-btn master-btn-primary master-btn-sm">
-                  Add First Patient
-                </Link>
-                <Link to="/patient-dashboard" className="master-btn master-btn-secondary master-btn-sm">
-                  View Sample Patient
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="master-card">
-          <div className="card-header">
-            <h3 className="card-title">Upcoming Appointments</h3>
-            <Link to="/appointments" style={{color: 'var(--primary-600)', fontSize: 'var(--font-size-sm)'}}>
-              View All
-            </Link>
-          </div>
-          <div className="card-content">
-            <div style={{textAlign: 'center', paddingTop: 'var(--spacing-8)', paddingBottom: 'var(--spacing-8)'}}>
-              <FaCalendarAlt style={{fontSize: 'var(--font-size-4xl)', marginLeft: 'auto', marginRight: 'auto', marginBottom: 'var(--spacing-4)', color: 'var(--neutral-400)'}} />
-              <p style={{marginBottom: 'var(--spacing-4)', color: 'var(--neutral-600)'}}>No appointments scheduled</p>
-              <Link to="/appointments" className="master-btn master-btn-primary master-btn-sm">
-                Schedule Appointment
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Pharmacy Quick Actions */}
-        <div className="master-card">
-          <div className="card-header">
-            <h3 className="card-title">Pharmacy Operations</h3>
-            <Link to="/pharmacy" style={{color: 'var(--primary-600)', fontSize: 'var(--font-size-sm)'}}>
-              View All
-            </Link>
-          </div>
-          <div className="card-content">
-            <div style={{textAlign: 'center', paddingTop: 'var(--spacing-8)', paddingBottom: 'var(--spacing-8)'}}>
-              <FaPrescriptionBottle style={{fontSize: 'var(--font-size-4xl)', marginLeft: 'auto', marginRight: 'auto', marginBottom: 'var(--spacing-4)', color: 'var(--neutral-400)'}} />
-              <p style={{marginBottom: 'var(--spacing-4)', color: 'var(--neutral-600)'}}>Manage pharmacy operations</p>
-              <div style={{display: 'flex', gap: 'var(--spacing-2)', justifyContent: 'center', flexWrap: 'wrap'}}>
-                <Link to="/pharmacy/pos" className="master-btn master-btn-primary master-btn-sm">
-                  🏥 POS
-                </Link>
-                <Link to="/pharmacy/purchases" className="master-btn master-btn-secondary master-btn-sm">
-                  📦 Purchases
-                </Link>
-                <Link to="/pharmacy/returns" className="master-btn master-btn-secondary master-btn-sm">
-                  🔄 Returns
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <div className="master-card mt-6">
-        <div className="card-header">
-          <h3 className="card-title">System Status</h3>
-        </div>
-        <div className="card-content">
-          <div className="master-grid master-grid-4 gap-4">
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--spacing-4)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--neutral-50)'}}>
-              <span style={{fontWeight: 'var(--font-weight-medium)', color: 'var(--neutral-700)'}}>Database</span>
-              <span className="master-badge badge-success">Online</span>
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--spacing-4)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--neutral-50)'}}>
-              <span style={{fontWeight: 'var(--font-weight-medium)', color: 'var(--neutral-700)'}}>API Services</span>
-              <span className="master-badge badge-success">Online</span>
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--spacing-4)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--neutral-50)'}}>
-              <span style={{fontWeight: 'var(--font-weight-medium)', color: 'var(--neutral-700)'}}>File Storage</span>
-              <span className="master-badge badge-success">Online</span>
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--spacing-4)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--neutral-50)'}}>
-              <span style={{fontWeight: 'var(--font-weight-medium)', color: 'var(--neutral-700)'}}>Backup System</span>
-              <span className="master-badge badge-success">Online</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          {/* Performance Overview */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardHeader pb={4}>
+              <Heading size="md" color={textColor}>
+                Performance Overview
+              </Heading>
+            </CardHeader>
+            <CardBody pt={0}>
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+                <VStack spacing={3} align="start">
+                  <Text color={textSecondary} fontSize="sm">Patient Satisfaction</Text>
+                  <Progress value={95} colorScheme="green" size="lg" borderRadius="lg" w="full" />
+                  <Text color="green.600" fontWeight="bold">95%</Text>
+                </VStack>
+                <VStack spacing={3} align="start">
+                  <Text color={textSecondary} fontSize="sm">Appointment Completion</Text>
+                  <Progress value={88} colorScheme="blue" size="lg" borderRadius="lg" w="full" />
+                  <Text color="blue.600" fontWeight="bold">88%</Text>
+                </VStack>
+                <VStack spacing={3} align="start">
+                  <Text color={textSecondary} fontSize="sm">Revenue Growth</Text>
+                  <Progress value={72} colorScheme="purple" size="lg" borderRadius="lg" w="full" />
+                  <Text color="purple.600" fontWeight="bold">72%</Text>
+                </VStack>
+              </SimpleGrid>
+            </CardBody>
+          </Card>
+        </VStack>
+      </Container>
+    </Box>
   );
 };
 

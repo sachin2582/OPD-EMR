@@ -45,7 +45,7 @@ const LabTestBilling = () => {
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [showBillModal, setShowBillModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedBill, setSelectedBill] = useState(null);
+  const [selectedBill, setSelectedBill] = useState(null); 
   const [stats, setStats] = useState({});
   const [userData, setUserData] = useState({});
 

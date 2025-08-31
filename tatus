@@ -1,0 +1,5 @@
+[33m8b74cdc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix network error on Vercel by adding demo mode to LoginPage and RegisterPage
+[33m89fe059[m Fix network error on Vercel by adding mock data and offline mode support
+[33m5aa377b[m Add Railway deployment configuration and guide for backend deployment
+[33m0c02ff0[m Add environment variable support for API URLs to fix Vercel deployment network errors
+[33m8e11ce7[m Fix PatientList filter error and update components to remove Chakra UI dependencies - Resolve patients.filter is not a function error - Update PatientForm and PatientList to use standard HTML/CSS - Add AdvancedDashboard and SmartAppointmentScheduler components - Fix API response handling for nested data structure - Improve error handling and array safety checks
