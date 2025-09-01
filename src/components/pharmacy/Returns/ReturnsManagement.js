@@ -44,14 +44,14 @@ const ReturnsManagement = () => {
         setLoading(true);
         try {
             // Load sales returns
-            const salesReturnResponse = await fetch('http://localhost:5000/api/pharmacy/returns/sales');
+            const salesReturnResponse = await fetch('/api/pharmacy/returns/sales');
             if (salesReturnResponse.ok) {
                 const salesReturnData = await salesReturnResponse.json();
                 setSalesReturns(salesReturnData);
             }
 
             // Load supplier returns
-            const supplierReturnResponse = await fetch('http://localhost:5000/api/pharmacy/returns/supplier');
+            const supplierReturnResponse = await fetch('/api/pharmacy/returns/supplier');
             if (supplierReturnResponse.ok) {
                 const supplierReturnData = await supplierReturnResponse.json();
                 setSupplierReturns(supplierReturnData);

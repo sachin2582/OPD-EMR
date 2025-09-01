@@ -134,7 +134,7 @@ const ClinicalNotes = () => {
     if (!patientId) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/clinical-notes?patientId=${patientId}`);
+      const response = await fetch(`/api/clinical-notes?patientId=${patientId}`);
       if (response.ok) {
         const data = await response.json();
         setNotes(data.notes || []);

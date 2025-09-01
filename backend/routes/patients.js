@@ -99,6 +99,10 @@ router.get('/:id', async (req, res) => {
 
 // POST create new patient
 router.post('/', async (req, res) => {
+  console.log('🔵 [BACKEND] POST /api/patients - Request received');
+  console.log('📥 [BACKEND] Request body:', JSON.stringify(req.body, null, 2));
+  console.log('📥 [BACKEND] Request headers:', req.headers);
+  
   try {
     const {
       firstName,
@@ -122,46 +126,117 @@ router.post('/', async (req, res) => {
       chiefComplaint
     } = req.body;
     
-    // Validation
-    if (!firstName || !lastName || !dateOfBirth || !age || !gender || !phone || !address) {
+    console.log('🔍 [BACKEND] Extracted fields:');
+    console.log('  - firstName:', firstName);
+    console.log('  - lastName:', lastName);
+    console.log('  - dateOfBirth:', dateOfBirth);
+    console.log('  - age:', age);
+    console.log('  - gender:', gender);
+    console.log('  - phone:', phone);
+    console.log('  - address:', address);
+    
+    // Enhanced validation with detailed logging
+    const requiredFields = { firstName, lastName, dateOfBirth, age, gender, phone, address };
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value || (typeof value === 'string' && value.trim() === ''))
+      .map(([key]) => key);
+    
+    if (missingFields.length > 0) {
+      console.log('❌ [BACKEND] Validation failed - Missing required fields:', missingFields);
       return res.status(400).json({ 
-        error: 'Missing required fields: firstName, lastName, dateOfBirth, age, gender, phone, address' 
+        error: 'Missing required fields',
+        missingFields: missingFields,
+        message: `Required fields missing: ${missingFields.join(', ')}`
       });
     }
     
+    console.log('✅ [BACKEND] All required fields present');
+    
     // Check if phone number already exists
-    const existingPatient = await getRow('SELECT id FROM patients WHERE phone = ?', [phone]);
+    console.log('🔍 [BACKEND] Checking for existing patient with phone:', phone);
+    const existingPatient = await getRow('SELECT id, firstName, lastName FROM patients WHERE phone = ?', [phone]);
     if (existingPatient) {
-      return res.status(400).json({ error: 'Phone number already registered' });
+      console.log('❌ [BACKEND] Phone number already exists for patient:', existingPatient);
+      return res.status(400).json({ 
+        error: 'Phone number already registered',
+        existingPatient: { id: existingPatient.id, name: `${existingPatient.firstName} ${existingPatient.lastName}` }
+      });
     }
     
-    const patientId = await generatePatientId();
-    const vitalSignsJson = vitalSigns ? JSON.stringify(vitalSigns) : null;
+    console.log('✅ [BACKEND] Phone number is unique');
     
-    const result = await runQuery(`
+    // Generate patient ID
+    console.log('🔄 [BACKEND] Generating patient ID...');
+    const patientId = await generatePatientId();
+    console.log('✅ [BACKEND] Generated patient ID:', patientId);
+    
+    // Prepare vital signs
+    const vitalSignsJson = vitalSigns ? JSON.stringify(vitalSigns) : null;
+    console.log('📊 [BACKEND] Vital signs JSON:', vitalSignsJson);
+    
+    // Database insertion
+    console.log('💾 [BACKEND] Inserting patient into database...');
+    const insertQuery = `
       INSERT INTO patients (
         patientId, firstName, middleName, lastName, dateOfBirth, age, gender,
         bloodGroup, phone, email, address, emergencyContact, emergencyPhone,
         medicalHistory, allergies, familyHistory, lifestyle, numberOfChildren,
         vitalSigns, chiefComplaint
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    `;
+    
+    const insertParams = [
       patientId, firstName, middleName, lastName, dateOfBirth, age, gender,
       bloodGroup, phone, email, address, emergencyContact, emergencyPhone,
       medicalHistory, allergies, familyHistory, lifestyle, numberOfChildren,
       vitalSignsJson, chiefComplaint
-    ]);
+    ];
+    
+    console.log('📝 [BACKEND] SQL Query:', insertQuery);
+    console.log('📝 [BACKEND] Parameters:', insertParams);
+    
+    const result = await runQuery(insertQuery, insertParams);
+    console.log('✅ [BACKEND] Database insert successful!');
+    console.log('📊 [BACKEND] Insert result:', result);
     
     // Get the created patient
+    console.log('🔍 [BACKEND] Fetching created patient with ID:', result.id);
     const newPatient = await getRow('SELECT * FROM patients WHERE id = ?', [result.id]);
     
-    res.status(201).json({
+    if (!newPatient) {
+      console.log('❌ [BACKEND] Failed to fetch created patient!');
+      return res.status(500).json({ error: 'Patient created but could not be retrieved' });
+    }
+    
+    console.log('✅ [BACKEND] Patient created and retrieved successfully!');
+    console.log('📋 [BACKEND] Created patient:', JSON.stringify(newPatient, null, 2));
+    
+    const response = {
       message: 'Patient created successfully',
-      patient: newPatient
-    });
+      patient: newPatient,
+      insertedId: result.id,
+      patientId: newPatient.patientId
+    };
+    
+    console.log('📤 [BACKEND] Sending response:', JSON.stringify(response, null, 2));
+    res.status(201).json(response);
+    
   } catch (error) {
-    console.error('Error creating patient:', error);
-    res.status(500).json({ error: 'Failed to create patient' });
+    console.log('❌ [BACKEND] Error creating patient:');
+    console.log('❌ [BACKEND] Error message:', error.message);
+    console.log('❌ [BACKEND] Error stack:', error.stack);
+    console.log('❌ [BACKEND] Error code:', error.code);
+    
+    // Detailed error response
+    const errorResponse = {
+      error: 'Failed to create patient',
+      details: error.message,
+      code: error.code,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('📤 [BACKEND] Sending error response:', JSON.stringify(errorResponse, null, 2));
+    res.status(500).json(errorResponse);
   }
 });
 

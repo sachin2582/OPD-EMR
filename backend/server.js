@@ -24,7 +24,7 @@ const pharmacyRoutes = require('./routes/pharmacy');
 const { initDatabase } = require('./database/database');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
@@ -103,18 +103,34 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    console.log('🔄 Initializing database...');
+    console.log('🔄 [SERVER] Initializing database...');
+    console.log('📁 [SERVER] Database path: opd-emr.db');
+    console.log('🔗 [SERVER] Database type: SQLite');
+    
     await initDatabase();
-    console.log('✅ Database initialized successfully');
+    console.log('✅ [SERVER] Database initialized successfully');
+    
+    console.log('🚀 [SERVER] Starting Express server...');
+    console.log(`🌐 [SERVER] Port: ${PORT}`);
+    console.log(`🌍 [SERVER] Environment: ${process.env.NODE_ENV || 'development'}`);
     
     app.listen(PORT, () => {
-      console.log(`🚀 OPD-EMR Backend Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`📡 CORS Origins: ${corsOrigins.join(', ')}`);
+      console.log('🎉 [SERVER] ===========================================');
+      console.log('🎉 [SERVER] OPD-EMR Backend Server Started Successfully!');
+      console.log('🎉 [SERVER] ===========================================');
+      console.log(`🚀 [SERVER] Server running on: http://localhost:${PORT}`);
+      console.log(`🔗 [SERVER] Health check: http://localhost:${PORT}/health`);
+      console.log(`📡 [SERVER] CORS Origins: ${corsOrigins.join(', ')}`);
+      console.log(`🗄️ [SERVER] Database: opd-emr.db (SQLite)`);
+      console.log(`⏰ [SERVER] Started at: ${new Date().toISOString()}`);
+      console.log('🎉 [SERVER] ===========================================');
+      console.log('✅ [SERVER] Ready to accept requests!');
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ [SERVER] Failed to start server:');
+    console.error('❌ [SERVER] Error message:', error.message);
+    console.error('❌ [SERVER] Error stack:', error.stack);
+    console.error('❌ [SERVER] Exiting process...');
     process.exit(1);
   }
 }

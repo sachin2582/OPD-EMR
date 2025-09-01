@@ -42,7 +42,7 @@ const PharmacyReports = () => {
                     endpoint = 'stock';
             }
 
-            const response = await fetch(`http://localhost:5000/api/pharmacy/reports/${endpoint}?start_date=${dateRange.start}&end_date=${dateRange.end}`);
+            const response = await fetch(`/api/pharmacy/reports/${endpoint}?start_date=${dateRange.start}&end_date=${dateRange.end}`);
             if (response.ok) {
                 const data = await response.json();
                 setReportData(data);

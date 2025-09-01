@@ -1,140 +1,119 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
   FormControl,
   FormLabel,
   Input,
-  InputGroup,
-  InputRightElement,
   VStack,
-  HStack,
   Heading,
   Text,
-  useToast,
-  Container,
-  Card,
-  CardBody,
-  Icon,
-  Divider,
-  Badge,
-  SimpleGrid,
-  IconButton,
   Alert,
   AlertIcon,
   AlertTitle,
   AlertDescription,
-  Grid,
+  useToast,
+  Flex,
+  Icon,
+  SimpleGrid,
+  Container,
+  useColorModeValue,
+  InputGroup,
+  InputRightElement,
+  IconButton,
+  Divider,
+  HStack,
+  Badge,
+  Image,
+  Center
 } from '@chakra-ui/react';
 import {
-  FaUserMd,
   FaUser,
   FaLock,
   FaEye,
   FaEyeSlash,
-  FaHospital,
-  FaStethoscope,
-  FaArrowRight,
-  FaUserPlus,
   FaPills,
   FaUmbrella,
   FaGift,
   FaComments,
+  FaHospital,
+  FaUserMd,
+  FaShieldAlt,
+  FaChartLine,
+  FaMobileAlt,
+  FaGlobe,
+  FaCheckCircle
 } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
-  
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking');
 
-  // Color mode values
-  const bgColor = 'gray.50';
-  const cardBg = 'white';
-  const textColor = 'gray.800';
-  const textSecondary = 'gray.600';
+  const navigate = useNavigate();
+  const toast = useToast();
 
-  // CRITICAL: Force demo mode for Vercel deployment
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
   useEffect(() => {
-    if (window.location.hostname.includes('vercel.app')) {
-      setIsOffline(true);
-      console.log('🚨 DEMO MODE ENABLED - Network error fix applied');
-    }
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      setIsOffline(true);
-      console.log('🚨 DEMO MODE ENABLED - Production environment detected');
-    }
+    checkBackendStatus();
   }, []);
 
-  const redirectBasedOnUserType = useCallback((userType) => {
-    switch (userType) {
-      case 'doctor':
-        navigate('/doctor');
-        break;
-      case 'admin':
-        navigate('/dashboard');
-        break;
-      case 'billing':
-        navigate('/billing');
-        break;
-      case 'reception':
-        navigate('/patients');
-        break;
-      default:
-        navigate('/dashboard');
-    }
-  }, [navigate]);
-
-  const verifyToken = useCallback(async (token) => {
-    if (isOffline) {
-      console.log('🚨 DEMO MODE: redirecting to dashboard');
-      redirectBasedOnUserType('admin');
-      return;
-    }
-
+  const checkBackendStatus = async () => {
     try {
-      const response = await fetch('/api/auth/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'test', password: 'test' })
       });
       
-      if (response.ok) {
-        const userType = JSON.parse(atob(token.split('.')[1])).userType;
-        redirectBasedOnUserType(userType);
+      if (response.status === 401) {
+        // Backend is working (401 is expected for invalid credentials)
+        setBackendStatus('online');
+        setIsOffline(false);
+        console.log('✅ Backend is online and responding');
       } else {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+        setBackendStatus('online');
+        setIsOffline(false);
+        console.log('✅ Backend is online');
       }
     } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
+      console.error('❌ Backend connection error:', error);
+      setBackendStatus('offline');
+      setIsOffline(true);
     }
-  }, [redirectBasedOnUserType, isOffline]);
+  };
 
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      verifyToken(token);
+  const redirectBasedOnUserType = (role) => {
+    switch (role) {
+      case 'admin':
+        navigate('/dashboard'); // Use the main dashboard route
+        break;
+      case 'doctor':
+        navigate('/doctor'); // Use the existing doctor route
+        break;
+      case 'pharmacist':
+        navigate('/pharmacy'); // Use the existing pharmacy route
+        break;
+      case 'lab_technician':
+        navigate('/lab-tests'); // Use the existing lab-tests route
+        break;
+      case 'receptionist':
+        navigate('/patients'); // Use the existing patients route
+        break;
+      default:
+        navigate('/dashboard'); // Default to main dashboard
     }
-  }, [verifyToken]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleSubmit = async (e) => {
@@ -143,25 +122,13 @@ const LoginPage = () => {
     setError('');
     setSuccess('');
 
-    if (isOffline) {
-      // Demo mode - simulate successful login
-      setTimeout(() => {
-        setSuccess('Demo login successful! Redirecting...');
-        setLoading(false);
-        setTimeout(() => {
-          redirectBasedOnUserType('admin');
-        }, 1000);
-      }, 1000);
-      return;
-    }
-
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), 
       });
 
       const data = await response.json();
@@ -172,10 +139,10 @@ const LoginPage = () => {
         localStorage.setItem('userData', JSON.stringify(data.user));
         
         setTimeout(() => {
-          redirectBasedOnUserType(data.user.userType);
+          redirectBasedOnUserType(data.user.role);
         }, 1000);
       } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+        setError(data.message || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -183,15 +150,6 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    setFormData({
-      username: 'demo@opd-emr.com',
-      password: 'demo123'
-    });
-    setError('');
-    setSuccess('');
   };
 
   const handleRegister = () => {
@@ -237,10 +195,10 @@ const LoginPage = () => {
 
   return (
     <Box minH="100vh" bg={bgColor}>
-      {/* Demo Mode Banner */}
-      {isOffline && (
+      {/* Backend Status Banner */}
+      {backendStatus === 'offline' && (
         <Alert
-          status="success"
+          status="error"
           variant="solid"
           position="fixed"
           top={0}
@@ -250,208 +208,227 @@ const LoginPage = () => {
           borderRadius={0}
         >
           <AlertIcon />
-          <AlertTitle>🎉 DEMO MODE ACTIVE</AlertTitle>
-          <AlertDescription>Network Error Fixed! Any credentials will work.</AlertDescription>
+          <AlertTitle>⚠️ Backend Connection Error</AlertTitle>
+          <AlertDescription>
+            Cannot connect to the database server. Please ensure the backend is running on port 3001.
+          </AlertDescription>
         </Alert>
       )}
 
       <Container maxW="7xl" py={8}>
-        <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8} alignItems="center">
+        <Flex direction={{ base: 'column', lg: 'row' }} gap={8} align="center">
           {/* Left Side - Features */}
-          <Box>
-            <VStack spacing={8} align="stretch">
-              {/* Brand Section */}
-              <VStack spacing={6} textAlign="center">
-                <HStack spacing={4}>
-                  <Icon as={FaHospital} w={16} h={16} color="health.500" />
-                  <Heading size="2xl" color={textColor}>
-                    D"EMR
+          <Box flex="1" textAlign="center" order={{ base: 2, lg: 1 }}>
+            <Heading size="2xl" mb={6} color="blue.600">
+              OPD-EMR System
+            </Heading>
+            <Text fontSize="lg" color="gray.600" mb={8}>
+              Comprehensive Electronic Medical Records Management System
+            </Text>
+            
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={8}>
+              {features.map((feature, index) => (
+                <Box
+                  key={index}
+                  p={6}
+                  bg={cardBg}
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor={borderColor}
+                  textAlign="center"
+                  _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+                  transition="all 0.3s"
+                >
+                  <Icon as={feature.icon} boxSize={8} color={`${feature.color}.500`} mb={4} />
+                  <Heading size="md" mb={2}>
+                    {feature.title}
                   </Heading>
-                </HStack>
-                <Badge colorScheme="health" variant="solid" px={4} py={2} fontSize="lg">
-                  #DontLosePatients
-                </Badge>
-                <Text fontSize="xl" color={textSecondary} maxW="md">
-                  The Third Wave is here. Setup your Online Consult profile now with D"EMR Toolkit.
-                </Text>
-              </VStack>
+                  <Text color="gray.600" fontSize="sm">
+                    {feature.description}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
 
-              {/* Features List */}
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                {features.map((feature, index) => (
-                  <Card key={index} shadow="md" borderRadius="lg" _hover={{ shadow: 'lg' }} transition="all 0.2s">
-                    <CardBody p={6}>
-                      <HStack spacing={4} align="start">
-                        <Icon 
-                          as={feature.icon} 
-                          w={8} 
-                          h={8} 
-                          color={`${feature.color}.500`}
-                          flexShrink={0}
-                        />
-                        <VStack spacing={2} align="start">
-                          <Heading size="md" color={textColor}>
-                            {feature.title}
-                          </Heading>
-                          <Text color={textSecondary} fontSize="sm">
-                            {feature.description}
-                          </Text>
-                        </VStack>
-                      </HStack>
-                    </CardBody>
-                  </Card>
-                ))}
+            <Box
+              p={6}
+              bg={cardBg}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor={borderColor}
+            >
+              <Heading size="md" mb={4} color="green.600">
+                System Features
+              </Heading>
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                <Flex align="center" justify="center">
+                  <Icon as={FaHospital} color="blue.500" mr={2} />
+                  <Text>Patient Management</Text>
+                </Flex>
+                <Flex align="center" justify="center">
+                  <Icon as={FaUserMd} color="green.500" mr={2} />
+                  <Text>Doctor Portal</Text>
+                </Flex>
+                <Flex align="center" justify="center">
+                  <Icon as={FaPills} color="purple.500" mr={2} />
+                  <Text>Pharmacy System</Text>
+                </Flex>
+                <Flex align="center" justify="center">
+                  <Icon as={FaShieldAlt} color="orange.500" mr={2} />
+                  <Text>Lab Management</Text>
+                </Flex>
+                <Flex align="center" justify="center">
+                  <Icon as={FaChartLine} color="teal.500" mr={2} />
+                  <Text>Billing & Reports</Text>
+                </Flex>
+                <Flex align="center" justify="center">
+                  <Icon as={FaMobileAlt} color="pink.500" mr={2} />
+                  <Text>Mobile Responsive</Text>
+                </Flex>
               </SimpleGrid>
-            </VStack>
+            </Box>
           </Box>
 
           {/* Right Side - Login Form */}
-          <Box>
-            <Card shadow="2xl" borderRadius="2xl" bg={cardBg}>
-              <CardBody p={8}>
-                <VStack spacing={8} as="form" onSubmit={handleSubmit}>
-                  <VStack spacing={4} textAlign="center">
-                    <Icon as={FaStethoscope} w={12} h={12} color="health.500" />
-                    <Heading size="xl" color={textColor}>
-                      Welcome Back
-                    </Heading>
-                    <Text color={textSecondary}>
-                      Sign in to access your OPD-EMR dashboard
-                    </Text>
-                  </VStack>
+          <Box flex="1" order={{ base: 1, lg: 2 }}>
+            <Box
+              bg={cardBg}
+              p={8}
+              borderRadius="xl"
+              border="1px solid"
+              borderColor={borderColor}
+              shadow="xl"
+              maxW="md"
+              mx="auto"
+            >
+              <VStack spacing={6}>
+                <Box textAlign="center">
+                  <Icon as={FaUserMd} boxSize={12} color="blue.500" mb={4} />
+                  <Heading size="lg" mb={2}>
+                    Welcome Back
+                  </Heading>
+                  <Text color="gray.600">
+                    Sign in to access your OPD-EMR account
+                  </Text>
+                </Box>
 
-                  {/* Alerts */}
-                  {error && (
-                    <Alert status="error" borderRadius="lg">
-                      <AlertIcon />
-                      <Box>
-                        <AlertTitle>Login Error</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                      </Box>
-                    </Alert>
-                  )}
-
-                  {success && (
-                    <Alert status="success" borderRadius="lg">
-                      <AlertIcon />
-                      <Box>
-                        <AlertTitle>Success!</AlertTitle>
-                        <AlertDescription>{success}</AlertDescription>
-                      </Box>
-                    </Alert>
-                  )}
-
-                  {/* Form Fields */}
-                  <VStack spacing={6} w="full">
+                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                  <VStack spacing={4}>
                     <FormControl isRequired>
-                      <FormLabel color={textColor}>Username or Email</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <InputGroup>
                         <Input
                           type="text"
-                          name="username"
                           value={formData.username}
-                          onChange={handleInputChange}
-                          placeholder="Enter your username or email"
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          placeholder="Enter your username"
                           size="lg"
-                          borderRadius="lg"
-                          focusBorderColor="health.500"
-                          leftElement={<Icon as={FaUser} color="gray.400" ml={3} />}
                         />
+                        <InputRightElement>
+                          <Icon as={FaUser} color="gray.400" />
+                        </InputRightElement>
                       </InputGroup>
                     </FormControl>
 
                     <FormControl isRequired>
-                      <FormLabel color={textColor}>Password</FormLabel>
-                      <InputGroup size="lg">
+                      <FormLabel>Password</FormLabel>
+                      <InputGroup>
                         <Input
                           type={showPassword ? 'text' : 'password'}
-                          name="password"
                           value={formData.password}
-                          onChange={handleInputChange}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                           placeholder="Enter your password"
-                          borderRadius="lg"
-                          focusBorderColor="health.500"
-                          leftElement={<FaLock color="gray.400" ml={3} />}
+                          size="lg"
                         />
-                        <InputRightElement width="4.5rem">
+                        <InputRightElement>
                           <IconButton
-                            h="1.75rem"
-                            size="sm"
+                            icon={showPassword ? <FaEyeSlash /> : <FaEye />}
                             onClick={() => setShowPassword(!showPassword)}
                             variant="ghost"
-                            color="gray.500"
-                            _hover={{ bg: 'gray.100' }}
-                            icon={showPassword ? <FaEyeSlash /> : <FaEye />}
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-label="Toggle password visibility"
                           />
                         </InputRightElement>
                       </InputGroup>
                     </FormControl>
-                  </VStack>
 
-                  {/* Action Buttons */}
-                  <VStack spacing={4} w="full">
+                    {error && (
+                      <Alert status="error" borderRadius="md">
+                        <AlertIcon />
+                        <Text>{error}</Text>
+                      </Alert>
+                    )}
+
+                    {success && (
+                      <Alert status="success" borderRadius="md">
+                        <AlertIcon />
+                        <Text>{success}</Text>
+                      </Alert>
+                    )}
+
                     <Button
                       type="submit"
-                      colorScheme="health"
+                      colorScheme="blue"
                       size="lg"
-                      w="full"
+                      width="100%"
                       isLoading={loading}
                       loadingText="Signing In..."
-                      borderRadius="lg"
-                      _hover={{ transform: 'translateY(-1px)', shadow: 'lg' }}
-                      transition="all 0.2s"
-                      rightIcon={<FaArrowRight />}
                     >
                       Sign In
                     </Button>
+                  </VStack>
+                </form>
 
+                <Divider />
+
+                <VStack spacing={3} width="100%">
+                  <Button
+                    variant="ghost"
+                    onClick={handleForgotPassword}
+                    width="100%"
+                    size="sm"
+                  >
+                    Forgot Password?
+                  </Button>
+                  
+                  <HStack spacing={2}>
+                    <Text color="gray.600">Don't have an account?</Text>
                     <Button
-                      onClick={handleDemoLogin}
-                      colorScheme="purple"
-                      variant="outline"
-                      size="lg"
-                      w="full"
-                      borderRadius="lg"
-                      leftIcon={<FaUserMd />}
+                      variant="link"
+                      colorScheme="blue"
+                      onClick={handleRegister}
+                      size="sm"
                     >
-                      Try Demo Mode
+                      Sign Up
                     </Button>
-                  </VStack>
-
-                  <Divider />
-
-                  {/* Additional Actions */}
-                  <VStack spacing={4} w="full">
-                    <HStack spacing={4} w="full">
-                      <Button
-                        onClick={handleForgotPassword}
-                        variant="ghost"
-                        color="health.500"
-                        size="sm"
-                        flex={1}
-                        _hover={{ textDecoration: 'underline' }}
-                      >
-                        Forgot Password?
-                      </Button>
-                      <Button
-                        onClick={handleRegister}
-                        variant="ghost"
-                        color="health.500"
-                        size="sm"
-                        flex={1}
-                        _hover={{ textDecoration: 'underline' }}
-                        leftIcon={<FaUserPlus />}
-                      >
-                        Create Account
-                      </Button>
-                    </HStack>
-                  </VStack>
+                  </HStack>
                 </VStack>
-              </CardBody>
-            </Card>
+
+                {/* Backend Status Indicator */}
+                <Box
+                  p={3}
+                  bg={backendStatus === 'online' ? 'green.50' : 'red.50'}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor={backendStatus === 'online' ? 'green.200' : 'red.200'}
+                  width="100%"
+                >
+                  <HStack justify="center" spacing={2}>
+                    <Icon 
+                      as={backendStatus === 'online' ? FaCheckCircle : FaHospital} 
+                      color={backendStatus === 'online' ? 'green.500' : 'red.500'} 
+                    />
+                    <Text fontSize="sm" color={backendStatus === 'online' ? 'green.700' : 'red.700'}>
+                      {backendStatus === 'online' 
+                        ? '✅ Backend Connected - Real Database Authentication' 
+                        : '❌ Backend Disconnected - Check Server Status'
+                      }
+                    </Text>
+                  </HStack>
+                </Box>
+              </VStack>
+            </Box>
           </Box>
-        </Grid>
+        </Flex>
       </Container>
     </Box>
   );

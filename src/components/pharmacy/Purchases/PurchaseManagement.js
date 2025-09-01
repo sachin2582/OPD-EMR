@@ -61,14 +61,14 @@ const PurchaseManagement = () => {
             }
 
             // Load GRN list
-            const grnResponse = await fetch('http://localhost:5000/api/pharmacy/grn');
+            const grnResponse = await fetch('/api/pharmacy/grn');
             if (grnResponse.ok) {
                 const grnData = await grnResponse.json();
                 setGrnList(grnData);
             }
 
             // Load suppliers
-            const supplierResponse = await fetch('http://localhost:5000/api/pharmacy/suppliers');
+            const supplierResponse = await fetch('/api/pharmacy/suppliers');
             if (supplierResponse.ok) {
                 const supplierData = await supplierResponse.json();
                 setSuppliers(supplierData);
@@ -82,7 +82,7 @@ const PurchaseManagement = () => {
 
     const handleCreatePO = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/purchase-orders', {
+            const response = await fetch('/api/pharmacy/purchase-orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(poForm)
@@ -104,7 +104,7 @@ const PurchaseManagement = () => {
 
     const handleCreateGRN = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/grn', {
+            const response = await fetch('/api/pharmacy/grn', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(grnForm)
@@ -126,7 +126,7 @@ const PurchaseManagement = () => {
 
     const handleCreateSupplier = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/suppliers', {
+            const response = await fetch('/api/pharmacy/suppliers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(supplierForm)
