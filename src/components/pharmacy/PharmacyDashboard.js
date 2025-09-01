@@ -118,105 +118,8 @@ const PharmacyDashboard = () => {
   const [showStockAdjustmentModal, setShowStockAdjustmentModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Enhanced mock data for demonstration
-  const mockInventory = [
-    {
-      id: 1,
-      name: 'Paracetamol 500mg',
-      category: 'Pain Relief',
-      stock: 150,
-      minStock: 50,
-      expiryDate: '2024-12-31',
-      price: 2.50,
-      costPrice: 1.80,
-      supplier: 'PharmaCorp',
-      barcode: '1234567890123',
-      location: 'Shelf A1',
-      status: 'active',
-      lastUpdated: '2024-01-15',
-      salesThisMonth: 45,
-      profitMargin: 35,
-      reorderPoint: 60,
-      maxStock: 200,
-      unit: 'Tablets',
-      prescription: false,
-      taxRate: 5.0
-    },
-    {
-      id: 2,
-      name: 'Amoxicillin 250mg',
-      category: 'Antibiotics',
-      stock: 75,
-      minStock: 30,
-      expiryDate: '2024-06-30',
-      price: 8.75,
-      costPrice: 6.20,
-      supplier: 'MedSupply Inc',
-      barcode: '9876543210987',
-      location: 'Shelf B2',
-      status: 'active',
-      lastUpdated: '2024-01-14',
-      salesThisMonth: 28,
-      profitMargin: 42,
-      reorderPoint: 40,
-      maxStock: 120,
-      unit: 'Capsules',
-      prescription: true,
-      taxRate: 0.0
-    },
-    {
-      id: 3,
-      name: 'Omeprazole 20mg',
-      category: 'Gastric',
-      stock: 25,
-      minStock: 40,
-      expiryDate: '2024-08-15',
-      price: 12.50,
-      costPrice: 9.10,
-      supplier: 'HealthPharm',
-      barcode: '4567891230456',
-      location: 'Shelf C3',
-      status: 'low-stock',
-      lastUpdated: '2024-01-13',
-      salesThisMonth: 32,
-      profitMargin: 38,
-      reorderPoint: 50,
-      maxStock: 100,
-      unit: 'Tablets',
-      prescription: false,
-      taxRate: 5.0
-    }
-  ];
-
-  const mockSuppliers = [
-    {
-      id: 1,
-      name: 'PharmaCorp',
-      contactPerson: 'John Smith',
-      email: 'john@pharmacorp.com',
-      phone: '+1-555-0123',
-      address: '123 Pharma St, Medical City, MC 12345',
-      rating: 4.5,
-      paymentTerms: 'Net 30',
-      creditLimit: 50000,
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'MedSupply Inc',
-      contactPerson: 'Sarah Johnson',
-      email: 'sarah@medsupply.com',
-      phone: '+1-555-0456',
-      address: '456 Medical Ave, Health Town, HT 67890',
-      rating: 4.8,
-      paymentTerms: 'Net 45',
-      creditLimit: 75000,
-      status: 'active'
-    }
-  ];
-
   useEffect(() => {
-    setInventoryData(mockInventory);
+    fetchInventoryData();
   }, []);
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
@@ -252,41 +155,136 @@ const PharmacyDashboard = () => {
   };
 
   // Enhanced functions for item management
-  const handleAddItem = (itemData) => {
-    const newItem = {
-      id: Date.now(),
-      ...itemData,
-      stock: 0,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      salesThisMonth: 0,
-      status: 'active'
-    };
-    setInventoryData([...inventoryData, newItem]);
-    setShowAddItemModal(false);
-    toast({
-      title: 'Item Added',
-      description: `${itemData.name} has been added to inventory`,
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
+  const fetchInventoryData = async () => {
+    try {
+      const response = await fetch('/api/pharmacy/items');
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Transform the database data to match the expected format
+        const transformedData = (data.items || []).map(item => ({
+          id: item.item_id,
+          name: item.name,
+          category: item.item_type,
+          description: item.generic_name,
+          costPrice: item.purchase_price,
+          price: item.selling_price,
+          minStock: item.min_stock,
+          reorderPoint: item.reorder_level,
+          unit: item.unit,
+          barcode: item.barcode,
+          supplier: item.brand,
+          prescription: item.is_prescription_required,
+          taxRate: item.tax_rate,
+          stock: 0, // Default stock for now
+          lastUpdated: item.updated_at ? new Date(item.updated_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          salesThisMonth: 0,
+          status: item.is_active ? 'active' : 'inactive'
+        }));
+        
+        setInventoryData(transformedData);
+      } else {
+        console.error('Failed to fetch inventory data:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching inventory data:', error);
+    }
   };
 
-  const handleAddSupplier = (supplierData) => {
-    const newSupplier = {
-      id: Date.now(),
-      ...supplierData,
-      rating: 0,
-      status: 'active'
-    };
-    setShowAddSupplierModal(false);
-    toast({
-      title: 'Supplier Added',
-      description: `${supplierData.name} has been added`,
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
+  const handleAddItem = async (itemData) => {
+    console.log('🚀 handleAddItem called with:', itemData);
+    
+    try {
+      console.log('📡 Sending request to /api/pharmacy/items');
+      
+      const response = await fetch('/api/pharmacy/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(itemData),
+      });
+
+      console.log('📥 Response received:', response.status, response.statusText);
+      
+      const data = await response.json();
+      console.log('📄 Response data:', data);
+
+      if (response.ok) {
+        console.log('✅ Item added successfully, refreshing data...');
+        // Refresh the inventory data from the database
+        fetchInventoryData();
+        
+        setShowAddItemModal(false);
+        toast({
+          title: 'Item Added',
+          description: `${itemData.name} has been added to inventory`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        console.error('❌ API error:', data.error);
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to add item',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('💥 Network error:', error);
+      toast({
+        title: 'Error',
+        description: 'Network error. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleAddSupplier = async (supplierData) => {
+    try {
+      const response = await fetch('/api/pharmacy/suppliers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(supplierData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowAddSupplierModal(false);
+        toast({
+          title: 'Supplier Added',
+          description: `${supplierData.name} has been added`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to add supplier',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding supplier:', error);
+      toast({
+        title: 'Error',
+        description: 'Network error. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleStockAdjustment = (itemId, adjustment, reason) => {

@@ -69,9 +69,11 @@ const AddEditItemForm = ({ item, onSubmit, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log('📝 Form submitted with data:', formData);
     
     // Validation
     if (!formData.name || !formData.category || !formData.price) {
+      console.log('❌ Validation failed - missing required fields');
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -82,7 +84,24 @@ const AddEditItemForm = ({ item, onSubmit, onCancel }) => {
       return;
     }
 
-    onSubmit(formData);
+    // Map form fields to API expected fields
+    const apiData = {
+      name: formData.name,
+      item_type: formData.category, // Map category to item_type
+      generic_name: formData.description, // Map description to generic_name
+      purchase_price: parseFloat(formData.costPrice) || parseFloat(formData.price),
+      selling_price: parseFloat(formData.price),
+      min_stock: parseInt(formData.minStock) || 0,
+      reorder_level: parseInt(formData.reorderPoint) || 10,
+      unit: formData.unit || 'Piece',
+      barcode: formData.barcode || '',
+      brand: formData.supplier || 'Generic',
+      is_prescription_required: formData.prescription ? 1 : 0,
+      tax_rate: parseFloat(formData.taxRate) || 0
+    };
+
+    console.log('✅ Validation passed, calling onSubmit with mapped data:', apiData);
+    onSubmit(apiData);
   };
 
   const categories = [

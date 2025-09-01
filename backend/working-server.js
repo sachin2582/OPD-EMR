@@ -1,94 +1,72 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
 const app = express();
-const PORT = 5000;
+const PORT = 8080;
 
-// Basic middleware
-app.use(cors());
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true
+}));
 app.use(bodyParser.json());
 
-// Health check endpoint
+// Test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'Working server is running!' });
+});
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    message: 'Working server running'
+    uptime: process.uptime()
   });
 });
 
-// Test endpoint
-app.get('/test', (req, res) => {
-  res.json({ message: 'Working server test endpoint working!' });
-});
+// Database connection
+const dbPath = path.join(__dirname, 'opd-emr.db');
+console.log('📊 Database path:', dbPath);
 
-// Start server first
-app.listen(PORT, () => {
-  console.log(`🚀 Working Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🧪 Test endpoint: http://localhost:${PORT}/test`);
-  
-  // Now try to initialize database
-  console.log('🔄 Attempting to initialize database...');
-  
-  try {
-    const { initDatabase } = require('./database/database');
-    initDatabase().then(() => {
-      console.log('✅ Database initialized successfully');
-      
-      // Now try to load routes one by one
-      console.log('🔄 Loading routes...');
-      
-      try {
-        // Test admin routes first
-        const adminRoutes = require('./routes/admin');
-        app.use('/api/admin', adminRoutes);
-        console.log('✅ Admin routes loaded successfully');
-        
-        // Test other routes
-        try {
-          const authRoutes = require('./routes/auth');
-          app.use('/api/auth', authRoutes);
-          console.log('✅ Auth routes loaded successfully');
-        } catch (e) {
-          console.log('⚠️ Auth routes failed:', e.message);
-        }
-        
-        try {
-          const patientRoutes = require('./routes/patients');
-          app.use('/api/patients', patientRoutes);
-          console.log('✅ Patient routes loaded successfully');
-        } catch (e) {
-          console.log('⚠️ Patient routes failed:', e.message);
-        }
-        
-        console.log(`🔗 Admin API: http://localhost:${PORT}/api/admin`);
-        console.log(`🔗 Auth API: http://localhost:${PORT}/api/auth`);
-        console.log(`🔗 Patient API: http://localhost:${PORT}/api/patients`);
-        
-      } catch (routeError) {
-        console.error('❌ Failed to load routes:', routeError);
-        console.error('Route error details:', routeError.stack);
-      }
-    }).catch((dbError) => {
-      console.error('❌ Failed to initialize database:', dbError);
-      console.error('Database error details:', dbError.stack);
-    });
-  } catch (importError) {
-    console.error('❌ Failed to import database module:', importError);
-    console.error('Import error details:', importError.stack);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Connected to SQLite database');
   }
 });
 
-// Global error handlers
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('Error stack:', error.stack);
+// Simple auth endpoint for testing
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  
+  // For now, just return success (you can add real authentication later)
+  res.json({ 
+    success: true, 
+    message: 'Login successful',
+    user: { username, role: 'doctor' }
+  });
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Working server running on port ${PORT}`);
+  console.log(`🔗 Test endpoint: http://localhost:${PORT}/test`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔐 Auth endpoint: http://localhost:${PORT}/api/auth/login`);
+  console.log(`🌐 Also accessible at: http://127.0.0.1:${PORT}/test`);
+}).on('error', (err) => {
+  console.error('❌ Server error:', err.message);
+  console.error('Error code:', err.code);
+  console.error('Error details:', err);
 });
 
 module.exports = app;
