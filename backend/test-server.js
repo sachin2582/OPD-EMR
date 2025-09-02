@@ -1,14 +1,23 @@
+console.log('Starting server...');
+
 const express = require('express');
 const app = express();
-const PORT = 3001;
+const PORT = 3002;
 
-app.get('/test', (req, res) => {
-  res.json({ message: 'Test server is working!' });
+console.log('Express loaded');
+
+app.get('/health', (req, res) => {
+  console.log('Health check requested');
+  res.json({ status: 'OK' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Test server running on port ${PORT}`);
-  console.log(`Test endpoint: http://localhost:${PORT}/test`);
-}).on('error', (err) => {
-  console.error('Server error:', err.message);
+app.post('/api/auth/login', (req, res) => {
+  console.log('Login requested');
+  res.json({ success: true });
+});
+
+console.log('Routes defined');
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

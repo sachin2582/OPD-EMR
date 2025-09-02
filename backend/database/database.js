@@ -533,6 +533,27 @@ async function initDatabase() {
         )
       `);
 
+      // Create clinic_setup table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS clinic_setup (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          clinicName TEXT NOT NULL,
+          address TEXT NOT NULL,
+          city TEXT NOT NULL,
+          state TEXT NOT NULL,
+          pincode TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          email TEXT,
+          website TEXT,
+          license TEXT,
+          registration TEXT,
+          prescriptionValidity INTEGER DEFAULT 30,
+          isActive BOOLEAN DEFAULT 1,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Insert default specializations
       db.run(`
         INSERT OR IGNORE INTO specializations (specializationId, specializationName, description, category)
@@ -557,6 +578,12 @@ async function initDatabase() {
       db.run(`
         INSERT OR IGNORE INTO users (userId, username, password, fullName, email, role, department)
         VALUES ('ADMIN001', 'admin', '$2a$10$demo.hash.for.admin', 'System Administrator', 'admin@opd-emr.com', 'admin', 'Administration')
+      `);
+
+      // Insert default clinic setup
+      db.run(`
+        INSERT OR IGNORE INTO clinic_setup (clinicName, address, city, state, pincode, phone, email, website, license, registration, prescriptionValidity)
+        VALUES ('Your Clinic Name', 'Your Clinic Address', 'Your City', 'Your State', '123456', 'Your Phone Number', 'clinic@email.com', 'www.yourclinic.com', 'CLINIC-LICENSE-001', 'REG-001', 30)
       `);
 
       // Insert default system pages for rights management

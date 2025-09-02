@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { 
+  getAllCities, 
+  getAreasByCity, 
+  getPincodeByCityAndArea, 
+  getStateByCity,
+  searchCities,
+  searchAreas 
+} from '../data/indianCitiesData';
 
 // Get API base URL from environment variables
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
@@ -18,6 +26,7 @@ const mockPatients = [
     email: 'john.doe@email.com',
     address: '123 Main Street',
     city: 'Mumbai',
+    area: 'Andheri West',
     state: 'Maharashtra',
     pinCode: '400001',
     bloodGroup: 'O+',
@@ -46,6 +55,7 @@ const PatientForm = () => {
     email: '',
     address: '',
     city: '',
+    area: '',
     state: '',
     pinCode: '',
     bloodGroup: '',
@@ -62,6 +72,14 @@ const PatientForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isOffline, setIsOffline] = useState(false);
+  
+  // State for dynamic city/area/pincode functionality
+  const [availableCities, setAvailableCities] = useState([]);
+  const [availableAreas, setAvailableAreas] = useState([]);
+  const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [areaSearchQuery, setAreaSearchQuery] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -74,7 +92,41 @@ const PatientForm = () => {
       // For local development, test backend connection
       testBackendConnection();
     }
+    
+    // Initialize cities list
+    const cities = getAllCities();
+    setAvailableCities(cities);
   }, [id]);
+
+  // Update areas when city changes
+  useEffect(() => {
+    if (formData.city) {
+      const areas = getAreasByCity(formData.city);
+      setAvailableAreas(areas);
+      // Auto-fill state when city is selected
+      const state = getStateByCity(formData.city);
+      if (state) {
+        setFormData(prev => ({ ...prev, state }));
+      }
+    } else {
+      setAvailableAreas([]);
+    }
+  }, [formData.city]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('[data-dropdown]')) {
+        setShowCityDropdown(false);
+        setShowAreaDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const testBackendConnection = async () => {
     try {
@@ -149,6 +201,114 @@ const PatientForm = () => {
     });
   };
 
+  // Handler for city selection
+  const handleCityChange = (e) => {
+    const { value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      city: value,
+      area: '', // Reset area when city changes
+      pinCode: '' // Reset pincode when city changes
+    }));
+    setShowCityDropdown(false);
+  };
+
+  // Handler for city search input
+  const handleCitySearch = (e) => {
+    const query = e.target.value;
+    setCitySearchQuery(query);
+    setFormData(prev => ({ ...prev, city: query }));
+    
+    if (query.length > 0) {
+      const filteredCities = searchCities(query);
+      setAvailableCities(filteredCities);
+      setShowCityDropdown(true);
+    } else {
+      const allCities = getAllCities();
+      setAvailableCities(allCities);
+      setShowCityDropdown(false);
+    }
+  };
+
+  // Handler for area selection
+  const handleAreaChange = (e) => {
+    const { value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      area: value
+    }));
+    
+    // Auto-fill pincode when area is selected
+    if (formData.city && value) {
+      const pincode = getPincodeByCityAndArea(formData.city, value);
+      if (pincode) {
+        setFormData(prev => ({
+          ...prev,
+          area: value,
+          pinCode: pincode
+        }));
+      }
+    }
+    setShowAreaDropdown(false);
+  };
+
+  // Handler for area search input
+  const handleAreaSearch = (e) => {
+    const query = e.target.value;
+    setAreaSearchQuery(query);
+    setFormData(prev => ({ ...prev, area: query }));
+    
+    if (query.length > 0 && formData.city) {
+      const filteredAreas = searchAreas(formData.city, query);
+      setAvailableAreas(filteredAreas);
+      setShowAreaDropdown(true);
+    } else {
+      if (formData.city) {
+        setAvailableAreas(getAreasByCity(formData.city));
+      }
+      setShowAreaDropdown(false);
+    }
+  };
+
+  // Handler for selecting city from dropdown
+  const selectCity = (city) => {
+    setFormData(prev => ({
+      ...prev,
+      city: city,
+      area: '', // Reset area when city changes
+      pinCode: '' // Reset pincode when city changes
+    }));
+    setCitySearchQuery(city);
+    setShowCityDropdown(false);
+    
+    // Auto-fill state when city is selected
+    const state = getStateByCity(city);
+    if (state) {
+      setFormData(prev => ({ ...prev, state }));
+    }
+  };
+
+  // Handler for selecting area from dropdown
+  const selectArea = (area) => {
+    setFormData(prev => ({
+      ...prev,
+      area: area
+    }));
+    setAreaSearchQuery(area);
+    setShowAreaDropdown(false);
+    
+    // Auto-fill pincode when area is selected
+    if (formData.city && area) {
+      const pincode = getPincodeByCityAndArea(formData.city, area);
+      if (pincode) {
+        setFormData(prev => ({
+          ...prev,
+          pinCode: pincode
+        }));
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('🔵 [FRONTEND] Patient form submission started');
@@ -187,6 +347,7 @@ const PatientForm = () => {
         email: formData.email || null,
         address: formData.address,
         city: formData.city || null,
+        area: formData.area || null,
         state: formData.state || null,
         pinCode: formData.pinCode || null,
         bloodGroup: formData.bloodGroup || null,
@@ -542,16 +703,42 @@ const PatientForm = () => {
                 />
               </div>
 
-              <div>
+              <div style={{ position: 'relative' }} data-dropdown>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' }}>
-                  City
+                  City * 
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const allCities = getAllCities();
+                      setAvailableCities(allCities);
+                      setShowCityDropdown(true);
+                    }}
+                    style={{ 
+                      marginLeft: '10px', 
+                      padding: '2px 8px', 
+                      fontSize: '12px',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Show All Cities ({availableCities.length})
+                  </button>
                 </label>
                 <input
                   type="text"
                   name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="City"
+                  value={citySearchQuery || formData.city}
+                  onChange={handleCitySearch}
+                  onFocus={() => {
+                    const allCities = getAllCities();
+                    setAvailableCities(allCities);
+                    setShowCityDropdown(true);
+                  }}
+                  placeholder="Search and select city..."
+                  required
                   style={{
                     width: '100%',
                     padding: '10px',
@@ -560,6 +747,95 @@ const PatientForm = () => {
                     fontSize: '16px'
                   }}
                 />
+                {showCityDropdown && availableCities.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderTop: 'none',
+                    borderRadius: '0 0 4px 4px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    {availableCities.map((city, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectCity(city)}
+                        style={{
+                          padding: '10px',
+                          cursor: 'pointer',
+                          borderBottom: index < availableCities.length - 1 ? '1px solid #eee' : 'none'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                      >
+                        {city}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ position: 'relative' }} data-dropdown>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' }}>
+                  Area *
+                </label>
+                <input
+                  type="text"
+                  name="area"
+                  value={areaSearchQuery || formData.area}
+                  onChange={handleAreaSearch}
+                  onFocus={() => formData.city && setShowAreaDropdown(true)}
+                  placeholder={formData.city ? "Search and select area..." : "Please select a city first"}
+                  disabled={!formData.city}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    backgroundColor: formData.city ? 'white' : '#f5f5f5',
+                    cursor: formData.city ? 'text' : 'not-allowed'
+                  }}
+                />
+                {showAreaDropdown && availableAreas.length > 0 && formData.city && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderTop: 'none',
+                    borderRadius: '0 0 4px 4px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    {availableAreas.map((area, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectArea(area)}
+                        style={{
+                          padding: '10px',
+                          cursor: 'pointer',
+                          borderBottom: index < availableAreas.length - 1 ? '1px solid #eee' : 'none'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                      >
+                        {area}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -587,22 +863,28 @@ const PatientForm = () => {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' }}>
-                  PIN Code
+                  PIN Code *
                 </label>
                 <input
                   type="text"
                   name="pinCode"
                   value={formData.pinCode}
-                  onChange={handleChange}
-                  placeholder="400001"
+                  readOnly
+                  placeholder="Auto-filled when area is selected"
+                  required
                   style={{
                     width: '100%',
                     padding: '10px',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    fontSize: '16px'
+                    fontSize: '16px',
+                    backgroundColor: '#f5f5f5',
+                    cursor: 'not-allowed'
                   }}
                 />
+                <small style={{ color: '#666', fontSize: '12px' }}>
+                  PIN code will be automatically filled when you select an area
+                </small>
               </div>
             </div>
           </div>

@@ -160,18 +160,14 @@ const PatientList = () => {
     console.log('🌐 Current hostname:', window.location.hostname);
     console.log('🔌 Offline mode:', isOffline);
     
-    // Check if we're in production (Vercel) and set offline mode
-    if (window.location.hostname.includes('vercel.app')) {
-      console.log('🚨 Setting offline mode for Vercel deployment');
-      setIsOffline(true);
-    }
-    
+    // Always try to fetch from API first
     fetchPatients();
-  }, [isOffline]);
+  }, []);
 
   const fetchPatients = async () => {
     if (isOffline) {
       // Use mock data for demo
+      console.log('🚨 OFFLINE MODE: Using mock data');
       setPatients(mockPatients);
       setLoading(false);
       return;
@@ -179,21 +175,39 @@ const PatientList = () => {
 
     try {
       console.log('🔍 Fetching patients from API...');
-      const response = await fetch('/api/patients');
+      console.log('🌐 API URL: http://localhost:3001/api/patients');
+      const response = await fetch('http://localhost:3001/api/patients');
       console.log('📡 API Response status:', response.status);
+      console.log('📡 API Response headers:', response.headers);
       
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Patients data received:', data);
-        setPatients(data.patients || data); // Handle both formats
+        console.log('📊 Data type:', typeof data);
+        console.log('📊 Is array:', Array.isArray(data));
+        console.log('📊 Data length:', data.length);
+        
+        // Handle both array format and object with patients property
+        if (Array.isArray(data)) {
+          console.log('✅ Setting patients array directly');
+          setPatients(data);
+        } else if (data.patients && Array.isArray(data.patients)) {
+          console.log('✅ Setting patients from data.patients property');
+          setPatients(data.patients);
+        } else {
+          console.log('⚠️ No valid patients data found, setting empty array');
+          setPatients([]);
+        }
       } else {
         console.error('❌ API Error:', response.status, response.statusText);
-        throw new Error(`Failed to fetch patients: ${response.status}`);
+        // Don't fall back to mock data, show empty state instead
+        setPatients([]);
       }
     } catch (error) {
       console.error('❌ Error fetching patients:', error);
-      console.log('🔄 Falling back to mock data...');
-      setPatients(mockPatients);
+      console.error('❌ Error details:', error.message);
+      // Don't fall back to mock data, show empty state instead
+      setPatients([]);
     } finally {
       setLoading(false);
     }
@@ -214,7 +228,7 @@ const PatientList = () => {
     }
 
     try {
-      const response = await fetch(`/api/patients/${patientId}`, {
+      const response = await fetch(`http://localhost:3001/api/patients/${patientId}`, {
         method: 'DELETE',
       });
       
@@ -309,19 +323,11 @@ const PatientList = () => {
                     </Heading>
                   </HStack>
                   <Text color={textSecondary} fontSize="lg">
-                    {isOffline ? 'Demo Mode: Managing sample patient data' : 'Manage your patient records'}
+                    Manage your patient records
                   </Text>
-                  {isOffline && (
-                    <Alert status="info" borderRadius="md" maxW="md">
-                      <AlertIcon />
-                      <Box>
-                        <AlertTitle>Demo Mode</AlertTitle>
-                        <AlertDescription>
-                          Using mock data for demonstration
-                        </AlertDescription>
-                      </Box>
-                    </Alert>
-                  )}
+                  <Badge colorScheme={patients.length > 0 && patients[0].firstName === 'John' && patients[0].lastName === 'Doe' ? 'red' : 'green'} variant="solid">
+                    {patients.length > 0 && patients[0].firstName === 'John' && patients[0].lastName === 'Doe' ? 'Mock Data' : 'Real Database Data'}
+                  </Badge>
                 </VStack>
                 <Button
                   onClick={() => navigate('/add-patient')}

@@ -1,134 +1,62 @@
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
+// Import routes
+const clinicRoutes = require('./routes/clinic');
+
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// Database connection
-const dbPath = path.join(__dirname, 'simple.db');
-const db = new sqlite3.Database(dbPath);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Initialize simple database
-db.serialize(() => {
-  // Create basic tables
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      role TEXT NOT NULL
-    )
-  `);
-  
-  db.run(`
-    CREATE TABLE IF NOT EXISTS pharmacy_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      sku TEXT UNIQUE NOT NULL,
-      price REAL NOT NULL,
-      stock INTEGER DEFAULT 0
-    )
-  `);
-  
-  // Insert test user
-  db.run(`
-    INSERT OR IGNORE INTO users (username, password, role)
-    VALUES ('admin', 'admin123', 'admin')
-  `);
-  
-  // Insert test pharmacy items
-  db.run(`
-    INSERT OR IGNORE INTO pharmacy_items (name, sku, price, stock)
-    VALUES ('Paracetamol 500mg', 'MED001', 5.00, 100)
-  `);
-  
-  console.log('✅ Database initialized successfully');
-});
-
-// Routes
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running!' });
-});
-
-// Auth routes
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
-  
-  db.get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (err, user) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    res.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role
-      }
-    });
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    port: PORT
   });
 });
 
-app.get('/api/auth/verify', (req, res) => {
-  res.json({ valid: true, message: 'Token verification endpoint' });
-});
+// API routes
+app.use('/api/clinic', clinicRoutes);
 
-// Pharmacy routes
-app.get('/api/pharmacy/items', (req, res) => {
-  db.all('SELECT * FROM pharmacy_items', (err, items) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message || 'Internal Server Error'
     }
-    res.json(items);
   });
 });
 
-app.post('/api/pharmacy/items', (req, res) => {
-  const { name, sku, price, stock } = req.body;
-  
-  if (!name || !sku || !price) {
-    return res.status(400).json({ error: 'Name, SKU, and price required' });
-  }
-  
-  db.run(
-    'INSERT INTO pharmacy_items (name, sku, price, stock) VALUES (?, ?, ?, ?)',
-    [name, sku, price, stock || 0],
-    function(err) {
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      res.status(201).json({
-        message: 'Item created successfully',
-        id: this.lastID
-      });
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: {
+      message: 'Route not found',
+      path: req.originalUrl
     }
-  );
+  });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Simple server running on port ${PORT}`);
+  console.log('🎉 Simple Backend Server Started!');
+  console.log(`🚀 Server running on: http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
-  console.log(`📦 Pharmacy: GET http://localhost:${PORT}/api/pharmacy/items`);
+  console.log(`📡 CORS Origins: http://localhost:3000, http://localhost:3001, http://127.0.0.1:3000`);
+  console.log('✅ Ready to accept requests!');
 });

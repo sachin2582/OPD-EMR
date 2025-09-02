@@ -1,37 +1,145 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserMd, FaUsers, FaStethoscope, FaCalendarAlt, FaSearch, FaEye, FaPrescription, FaClock, FaUser, FaHeartbeat, FaPhone, FaIdCard, FaThermometerHalf, FaTachometerAlt, FaWeight, FaNotesMedical } from 'react-icons/fa';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Button,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  Card,
+  CardHeader,
+  CardBody,
+  Badge,
+  Flex,
+  Spacer,
+  Icon,
+  Divider,
+  SimpleGrid,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  StatArrow,
+  useColorModeValue,
+  Container,
+  Grid,
+  GridItem,
+  Avatar,
+  Tag,
+  TagLabel,
+  TagLeftIcon,
+  useToast,
+  Skeleton,
+  SkeletonText,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Tooltip,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  IconButton,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Progress,
+  CircularProgress,
+  CircularProgressLabel
+} from '@chakra-ui/react';
 import '../styles/MasterTheme.css';
-import './DoctorDashboard.css';
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list'); // Only list view
+  
+  // Color mode values
+  const bg = useColorModeValue('white', 'gray.800');
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   // Fetch patients from backend API
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        console.log('Fetching patients from backend...');
-        const response = await fetch('/api/patients');
+        console.log('🚀 DoctorDashboard: Fetching patients from backend...');
+        console.log('🌐 API URL: http://localhost:3001/api/patients');
+        const response = await fetch('http://localhost:3001/api/patients');
+        console.log('📡 Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
-          const allPatients = data.patients || [];
-          console.log('All patients from backend:', allPatients);
-          setPatients(allPatients);
+          console.log('✅ Raw data from backend:', data);
+          console.log('📊 Data type:', typeof data);
+          console.log('📊 Is array:', Array.isArray(data));
+          console.log('📊 Data length:', data.length);
+          
+          // Handle both array format and object with patients property
+          const allPatients = Array.isArray(data) ? data : (data.patients || []);
+          console.log('✅ All patients processed:', allPatients);
+          console.log('📊 Patients count:', allPatients.length);
+          
+          // Check for existing prescriptions and update patient status
+          const patientsWithStatus = await Promise.all(
+            allPatients.map(async (patient) => {
+              try {
+                // Check if prescription exists for this patient
+                const prescriptionResponse = await fetch(`http://localhost:3001/api/prescriptions/patient/${patient.id}`);
+                if (prescriptionResponse.ok) {
+                  const prescriptions = await prescriptionResponse.json();
+                  if (prescriptions && prescriptions.length > 0) {
+                    // Patient has prescriptions, mark as completed
+                    return { ...patient, status: 'completed', hasPrescription: true };
+                  }
+                }
+                // No prescriptions found, keep original status or set to waiting
+                return { ...patient, status: patient.status || 'waiting', hasPrescription: false };
+              } catch (error) {
+                console.warn(`Failed to check prescriptions for patient ${patient.id}:`, error);
+                return { ...patient, status: patient.status || 'waiting', hasPrescription: false };
+              }
+            })
+          );
+          
+          setPatients(patientsWithStatus);
         } else {
-          console.error('Failed to fetch patients');
+          console.error('❌ Failed to fetch patients:', response.status, response.statusText);
           setPatients([]);
         }
       } catch (error) {
-        console.error('Error fetching patients:', error);
+        console.error('❌ Error fetching patients:', error);
         setPatients([]);
       } finally {
+        console.log('🏁 Setting loading to false');
         setLoading(false);
       }
     };
@@ -53,6 +161,14 @@ const DoctorDashboard = () => {
     return statusMatch && searchMatch;
   });
 
+  // Debug logging
+  console.log('🔍 DoctorDashboard Debug:');
+  console.log('📊 Total patients:', patients.length);
+  console.log('🔍 Filtered patients:', filteredPatients.length);
+  console.log('🔍 Search term:', searchTerm);
+  console.log('🔍 Filter status:', filterStatus);
+  console.log('⏳ Loading state:', loading);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'waiting': return 'var(--warning-500)';
@@ -62,32 +178,7 @@ const DoctorDashboard = () => {
     }
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'waiting': return 'Waiting';
-      case 'in-progress': return 'In Progress';
-      case 'completed': return 'Completed';
-      default: return 'Unknown';
-    }
-  };
 
-  const handleStartConsultation = (patientId) => {
-    navigate(`/e-prescription/${patientId}`, { 
-      state: { 
-        patientData: patients.find(p => p.id === patientId),
-        mode: 'new'
-      } 
-    });
-  };
-
-  const handleViewPrescription = (patientId) => {
-    navigate(`/e-prescription/${patientId}`, { 
-      state: { 
-        patientData: patients.find(p => p.id === patientId),
-        mode: 'view'
-      } 
-    });
-  };
 
   const updatePatientStatus = (patientId, newStatus) => {
     setPatients(patients.map(patient => 
@@ -104,216 +195,351 @@ const DoctorDashboard = () => {
     return { total, waiting, inProgress, completed };
   };
 
+  // Helper functions for status
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'waiting': return 'Waiting';
+      case 'in-progress': return 'In Progress';
+      case 'completed': return 'Completed';
+      default: return 'Unknown';
+    }
+  };
+
+  const handleStartConsultation = async (patient) => {
+    try {
+      if (patient.hasPrescription) {
+        // Patient has existing prescription, fetch the latest one for editing
+        const prescriptionResponse = await fetch(`http://localhost:3001/api/prescriptions/patient/${patient.id}`);
+        if (prescriptionResponse.ok) {
+          const prescriptions = await prescriptionResponse.json();
+          if (prescriptions && prescriptions.length > 0) {
+            // Get the latest prescription
+            const latestPrescription = prescriptions[0];
+            // Navigate to edit mode with prescription data
+            navigate(`/e-prescription/${patient.id}`, {
+              state: {
+                patientData: patient,
+                prescriptionData: latestPrescription,
+                mode: 'edit'
+              }
+            });
+            return;
+          }
+        }
+      }
+      // No existing prescription, start new consultation
+      navigate(`/e-prescription/${patient.id}`, {
+        state: {
+          patientData: patient,
+          mode: 'new'
+        }
+      });
+    } catch (error) {
+      console.error('Error handling consultation:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start consultation. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleViewPrescription = (patientId) => {
+    navigate(`/view-prescription/${patientId}`);
+  };
+
   const stats = getTodayStats();
+
+  const getStatusColorScheme = (status) => {
+    switch (status) {
+      case 'waiting': return 'yellow';
+      case 'in-progress': return 'blue';
+      case 'completed': return 'green';
+      default: return 'gray';
+    }
+  };
 
 
 
   return (
-    <div className="doctor-dashboard">
-      <div className="dashboard-container">
-        {/* Header */}
-        
+    <Box minH="100vh" bg="gray.50" p={6}>
+      <Container maxW="7xl">
+        <VStack spacing={8} align="stretch">
+          {/* Header */}
+          <Box>
+            <Heading size="xl" color="health.600" mb={2}>
+              <HStack>
+                <Icon as={FaUserMd} />
+                <Text>Doctor Dashboard</Text>
+              </HStack>
+            </Heading>
+            <HStack spacing={4}>
+              <Text color="gray.600" fontSize="lg">
+                Manage your patients and consultations efficiently
+              </Text>
+              <Badge colorScheme={patients.length > 0 ? 'green' : 'red'} variant="solid">
+                {patients.length > 0 ? `${patients.length} Patients Loaded` : 'No Patients'}
+              </Badge>
+            </HStack>
+          </Box>
 
-        {/* Date Selection */}
-        <div className="date-selection">
-          <label className="date-label">
-            <FaCalendarAlt />
-            Select Date:
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="date-input"
-          />
-        </div>
+          {/* Date Selection */}
+          <Card>
+            <CardBody>
+              <HStack spacing={4}>
+                <Icon as={FaCalendarAlt} color="health.500" />
+                <Text fontWeight="semibold">Select Date:</Text>
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  maxW="200px"
+                />
+              </HStack>
+            </CardBody>
+          </Card>
 
-        {/* Statistics Cards */}
-        <div className="stats-grid">
-          <div className="stat-card total">
-            <div className="stat-icon">👥</div>
-            <div className="stat-content">
-              <div className="stat-number">{stats.total}</div>
-              <div className="stat-label">Total Patients</div>
-            </div>
-          </div>
-          <div className="stat-card waiting">
-            <div className="stat-icon">🕐</div>
-            <div className="stat-content">
-              <div className="stat-number">{stats.waiting}</div>
-              <div className="stat-label">Waiting</div>
-            </div>
-          </div>
-          <div className="stat-card in-progress">
-            <div className="stat-icon">⚡</div>
-            <div className="stat-content">
-              <div className="stat-number">{stats.inProgress}</div>
-              <div className="stat-label">In Progress</div>
-            </div>
-          </div>
-          <div className="stat-card completed">
-            <div className="stat-icon">✅</div>
-            <div className="stat-content">
-              <div className="stat-number">{stats.completed}</div>
-              <div className="stat-label">Completed</div>
-            </div>
-          </div>
-        </div>
+          {/* Statistics Cards */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+            <Card bg="health.50" borderColor="health.200">
+              <CardBody>
+                <Stat>
+                  <HStack>
+                    <Icon as={FaUsers} color="health.500" boxSize={6} />
+                    <StatLabel color="health.700">Total Patients</StatLabel>
+                  </HStack>
+                  <StatNumber color="health.600">{stats.total}</StatNumber>
+                  <StatHelpText>
+                    <StatArrow type="increase" />
+                    All registered patients
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-        {/* Search and Filters */}
-        <div className="search-filters">
-          <div className="search-container">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="🔍 Search patients by name, phone, complaint, or patient ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          
-          <div className="filter-controls">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">📋 All Status</option>
-              <option value="waiting">🕐 Waiting</option>
-              <option value="in-progress">⚡ In Progress</option>
-              <option value="completed">✅ Completed</option>
-            </select>
-            
+            <Card bg="warning.50" borderColor="warning.200">
+              <CardBody>
+                <Stat>
+                  <HStack>
+                    <Icon as={FaClock} color="warning.500" boxSize={6} />
+                    <StatLabel color="warning.700">Waiting</StatLabel>
+                  </HStack>
+                  <StatNumber color="warning.600">{stats.waiting}</StatNumber>
+                  <StatHelpText>
+                    Patients waiting for consultation
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-          </div>
-        </div>
+            <Card bg="blue.50" borderColor="blue.200">
+              <CardBody>
+                <Stat>
+                  <HStack>
+                    <Icon as={FaStethoscope} color="blue.500" boxSize={6} />
+                    <StatLabel color="blue.700">In Progress</StatLabel>
+                  </HStack>
+                  <StatNumber color="blue.600">{stats.inProgress}</StatNumber>
+                  <StatHelpText>
+                    Currently being consulted
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-        {/* Patient List */}
-        <div className="patient-list-section">
-          <div className="section-title">
-            <FaUsers className="title-icon" />
-            <h2>Patient Management</h2>
-            <span className="patient-count">({filteredPatients.length} patients)</span>
-          </div>
+            <Card bg="success.50" borderColor="success.200">
+              <CardBody>
+                <Stat>
+                  <HStack>
+                    <Icon as={FaPrescription} color="success.500" boxSize={6} />
+                    <StatLabel color="success.700">Completed</StatLabel>
+                  </HStack>
+                  <StatNumber color="success.600">{stats.completed}</StatNumber>
+                  <StatHelpText>
+                    Consultations completed
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
 
-          {loading ? (
-            <div className="loading-state">
-              <div className="loading-spinner"></div>
-              <p>Loading patients...</p>
-            </div>
-          ) : patients.length === 0 ? (
-            <div className="empty-state">
-              <FaUsers style={{ fontSize: '3rem', marginBottom: 'var(--spacing-3)', opacity: 0.5 }} />
-              <h3>No patients in the system</h3>
-              <p>Start by adding your first patient to the system.</p>
-              <button 
-                onClick={() => navigate('/add-patient')}
-                className="btn btn-primary"
-                style={{ marginTop: 'var(--spacing-3)' }}
-              >
-                <FaUser style={{ marginRight: 'var(--spacing-2)' }} />
-                Add First Patient
-              </button>
-            </div>
-          ) : filteredPatients.length === 0 ? (
-            <div className="empty-state">
-              <FaSearch style={{ fontSize: '3rem', marginBottom: 'var(--spacing-3)', opacity: 0.5 }} />
-              <h3>No patients found</h3>
-              <p>No patients match your current search criteria.</p>
-              <p>Try adjusting your search terms or filters.</p>
-            </div>
-          ) : (
-            <div className="patient-container list">
-              <div className="patient-list-table">
-                <table className="patient-table">
-                  <thead>
-                    <tr>
-                      <th>Patient Info</th>
-                      <th>Demographics</th>
-                      <th>Appointment</th>
-                      <th>Chief Complaint</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPatients.length > 0 ? (
-                      filteredPatients.map(patient => (
-                        <tr key={patient.id}>
-                          <td>
-                            <div className="patient-info-compact">
-                              <div className="patient-name">{patient.firstName} {patient.lastName}</div>
-                              <div className="patient-id">ID: {patient.patientId || patient.id}</div>
-                              <div className="patient-contact">{patient.phone || 'No phone'}</div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="demographics-compact">
-                              <div className="patient-age">{patient.age || 'N/A'} years</div>
-                              <div className="patient-gender">{patient.gender || 'N/A'}</div>
-                              <div className="patient-blood">{patient.bloodGroup || 'N/A'}</div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="appointment-time-compact">
+          {/* Search and Filters */}
+          <Card>
+            <CardBody>
+              <VStack spacing={4}>
+                <HStack w="full" spacing={4}>
+                  <InputGroup flex={1}>
+                    <InputLeftElement>
+                      <Icon as={FaSearch} color="gray.400" />
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search patients by name, phone, complaint, or patient ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </InputGroup>
+                  
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    maxW="200px"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </Select>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
+
+          {/* Patient List */}
+          <Card>
+            <CardHeader>
+              <HStack>
+                <Icon as={FaUsers} color="health.500" />
+                <Heading size="md">Patient Management</Heading>
+                <Badge colorScheme="health" variant="subtle">
+                  {filteredPatients.length} patients
+                </Badge>
+              </HStack>
+            </CardHeader>
+            <CardBody>
+              {loading ? (
+                <VStack spacing={4}>
+                  <CircularProgress isIndeterminate color="health.500" />
+                  <Text>Loading patients...</Text>
+                </VStack>
+              ) : patients.length === 0 ? (
+                <VStack spacing={4} py={8}>
+                  <Icon as={FaUsers} boxSize={16} color="gray.400" />
+                  <Heading size="md" color="gray.600">No patients in the system</Heading>
+                  <Text color="gray.500" textAlign="center">
+                    Start by adding your first patient to the system.
+                  </Text>
+                  <Button
+                    colorScheme="health"
+                    leftIcon={<Icon as={FaUser} />}
+                    onClick={() => navigate('/add-patient')}
+                    size="lg"
+                  >
+                    Add First Patient
+                  </Button>
+                </VStack>
+              ) : filteredPatients.length === 0 ? (
+                <VStack spacing={4} py={8}>
+                  <Icon as={FaSearch} boxSize={16} color="gray.400" />
+                  <Heading size="md" color="gray.600">No patients found</Heading>
+                  <Text color="gray.500" textAlign="center">
+                    No patients match your current search criteria.
+                    <br />
+                    Try adjusting your search terms or filters.
+                  </Text>
+                </VStack>
+              ) : (
+                <TableContainer>
+                  <Table variant="simple" size="md">
+                    <Thead>
+                      <Tr>
+                        <Th>Patient Info</Th>
+                        <Th>Demographics</Th>
+                        <Th>Appointment</Th>
+                        <Th>Chief Complaint</Th>
+                        <Th>Status</Th>
+                        <Th>Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {console.log('🎯 Rendering patients:', filteredPatients.length, 'patients')}
+                      {filteredPatients.map(patient => (
+                        <Tr key={patient.id} _hover={{ bg: 'gray.50' }}>
+                          <Td>
+                            <VStack align="start" spacing={1}>
+                              <Text fontWeight="semibold">
+                                {patient.firstName} {patient.lastName}
+                              </Text>
+                              <Text fontSize="sm" color="gray.600">
+                                ID: {patient.patientId || patient.id}
+                              </Text>
+                              <HStack>
+                                <Icon as={FaPhone} boxSize={3} color="gray.400" />
+                                <Text fontSize="sm" color="gray.600">
+                                  {patient.phone || 'No phone'}
+                                </Text>
+                              </HStack>
+                            </VStack>
+                          </Td>
+                          <Td>
+                            <VStack align="start" spacing={1}>
+                              <HStack>
+                                <Icon as={FaUser} boxSize={3} color="gray.400" />
+                                <Text fontSize="sm">{patient.age || 'N/A'} years</Text>
+                              </HStack>
+                              <Text fontSize="sm" color="gray.600">
+                                {patient.gender || 'N/A'}
+                              </Text>
+                              <HStack>
+                                <Icon as={FaHeartbeat} boxSize={3} color="gray.400" />
+                                <Text fontSize="sm" color="gray.600">
+                                  {patient.bloodGroup || 'N/A'}
+                                </Text>
+                              </HStack>
+                            </VStack>
+                          </Td>
+                          <Td>
+                            <Text fontSize="sm">
                               {patient.appointmentTime || 'Not specified'}
-                            </div>
-                          </td>
-                          <td>
-                            <div className="complaint-compact">
+                            </Text>
+                          </Td>
+                          <Td>
+                            <Text fontSize="sm" noOfLines={2}>
                               {patient.chiefComplaint || 'Not specified'}
-                            </div>
-                          </td>
-                          <td>
-                            <span 
-                              className="status-badge-compact"
-                              style={{ backgroundColor: getStatusColor(patient.status || 'waiting') }}
+                            </Text>
+                          </Td>
+                          <Td>
+                            <Badge
+                              colorScheme={getStatusColorScheme(patient.status || 'waiting')}
+                              variant="subtle"
                             >
                               {getStatusText(patient.status || 'waiting')}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="actions-compact">
-                              <button 
-                                className="action-btn-compact primary"
-                                onClick={() => handleStartConsultation(patient.id)}
-                                title="Start Consultation"
-                              >
-                                <FaPrescription />
-                              </button>
-                              <button 
-                                className="action-btn-compact secondary"
-                                onClick={() => handleViewPrescription(patient.id)}
-                                title="View Prescription"
-                              >
-                                <FaEye />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: 'var(--spacing-6)' }}>
-                          <div style={{ color: 'var(--neutral-500)' }}>
-                            <FaUsers style={{ fontSize: '2rem', marginBottom: 'var(--spacing-2)' }} />
-                            <p>No patients found matching your criteria</p>
-                            <p style={{ fontSize: 'var(--font-size-sm)', marginTop: 'var(--spacing-1)' }}>
-                              Try adjusting your search terms or filters
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <HStack spacing={2}>
+                              <Tooltip label={patient.hasPrescription ? "Edit Prescription" : "Start Consultation"}>
+                                <IconButton
+                                  icon={<Icon as={FaPrescription} />}
+                                  colorScheme={patient.hasPrescription ? "orange" : "health"}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleStartConsultation(patient)}
+                                />
+                              </Tooltip>
+                              <Tooltip label="View Prescription">
+                                <IconButton
+                                  icon={<Icon as={FaEye} />}
+                                  colorScheme="gray"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewPrescription(patient.id)}
+                                />
+                              </Tooltip>
+                            </HStack>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardBody>
+          </Card>
+        </VStack>
+      </Container>
+    </Box>
   );
 };
 

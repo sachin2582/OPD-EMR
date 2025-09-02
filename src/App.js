@@ -1,7 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChakraUIProvider } from './ChakraProvider';
-
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
@@ -19,6 +18,7 @@ import PatientDashboard from './components/PatientDashboard';
 import AppLayout from './components/AppLayout';
 import AdvancedDashboard from './components/AdvancedDashboard';
 import SmartAppointmentScheduler from './components/SmartAppointmentScheduler';
+import ClinicSetup from './components/ClinicSetup';
 // Pharmacy Module Imports
 import PharmacyDashboard from './components/pharmacy/PharmacyDashboard';
 import PharmacyPOS from './components/pharmacy/POS/PharmacyPOS';
@@ -28,6 +28,31 @@ import PharmacyReports from './components/pharmacy/Reports/PharmacyReports';
 import './styles/MasterTheme.css';
 import './styles/GlobalComponents.css';
 import './App.css';
+
+// Component to redirect users who access e-prescription without a patient ID
+const EPrescriptionRedirect = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h2>E-Prescription</h2>
+      <p>Please select a patient from the Doctor Dashboard to create a prescription.</p>
+      <button 
+        onClick={() => navigate('/doctor')}
+        style={{ 
+          padding: '10px 20px', 
+          backgroundColor: '#2563eb', 
+          color: 'white', 
+          border: 'none', 
+          borderRadius: '5px', 
+          cursor: 'pointer' 
+        }}
+      >
+        Go to Doctor Dashboard
+      </button>
+    </div>
+  );
+};
 
 function App() {
   return (
@@ -91,6 +116,11 @@ function App() {
                   <EPrescription />
                 </AppLayout>
               } />
+              <Route path="/e-prescription" element={
+                <AppLayout>
+                  <EPrescriptionRedirect />
+                </AppLayout>
+              } />
               <Route path="/billing" element={
                 <AppLayout>
                   <Billing />
@@ -136,6 +166,13 @@ function App() {
               <Route path="/pharmacy/reports" element={
                 <AppLayout>
                   <PharmacyReports />
+                </AppLayout>
+              } />
+              
+              {/* Clinic Setup Route */}
+              <Route path="/clinic-setup" element={
+                <AppLayout>
+                  <ClinicSetup />
                 </AppLayout>
               } />
             </Routes>

@@ -19,6 +19,7 @@ const labBillingRoutes = require('./routes/lab-billing');
 const icd10Routes = require('./routes/icd10');
 const dosePatternsRoutes = require('./routes/dose-patterns');
 const pharmacyRoutes = require('./routes/pharmacy');
+const clinicRoutes = require('./routes/clinic');
 
 // Import database
 const { initDatabase } = require('./database/database');
@@ -83,6 +84,7 @@ app.use('/api/lab-billing', labBillingRoutes);
 app.use('/api/icd10', icd10Routes);
 app.use('/api/dose-patterns', dosePatternsRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
+app.use('/api/clinic', clinicRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

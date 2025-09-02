@@ -1,13 +1,160 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { FaPrescription, FaPrint, FaSave, FaArrowLeft, FaPlus, FaTrash, FaStethoscope, FaPills, FaNotesMedical, FaUser, FaHeartbeat, FaFlask } from 'react-icons/fa';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Button,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  Card,
+  CardHeader,
+  CardBody,
+  Badge,
+  Flex,
+  Spacer,
+  Icon,
+  Divider,
+  SimpleGrid,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  StatArrow,
+  useColorModeValue,
+  Container,
+  Grid,
+  GridItem,
+  Avatar,
+  Tag,
+  TagLabel,
+  TagLeftIcon,
+  useToast,
+  Skeleton,
+  SkeletonText,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Tooltip,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  IconButton,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Progress,
+  CircularProgress,
+  CircularProgressLabel,
+  Textarea,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  FormErrorMessage,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Checkbox,
+  CheckboxGroup,
+  Stack,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  Switch,
+  Radio,
+  RadioGroup,
+  RadioStack,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
+  SliderMark,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverFooter,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverAnchor,
+  Editable,
+  EditablePreview,
+  EditableInput,
+  EditableTextarea,
+  Code,
+  Kbd,
+  List,
+  ListItem,
+  ListIcon,
+  OrderedList,
+  UnorderedList,
+  Link,
+  LinkBox,
+  LinkOverlay,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  CloseButton,
+  Portal,
+  useBreakpointValue,
+  useMediaQuery,
+  useClipboard,
+  useDisclosure as useDisclosureHook
+} from '@chakra-ui/react';
 import './EPrescription.css';
 
 const EPrescription = () => {
   const { patientId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
+
+  // Debug logging
+  console.log('🔍 EPrescription component mounted with patientId:', patientId);
+  console.log('🔍 Location state:', location.state);
+  
+  // Color mode values
+  const bg = useColorModeValue('white', 'gray.800');
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const [patientData, setPatientData] = useState(null);
+  const [clinicData, setClinicData] = useState(null);
   const [mode, setMode] = useState('new');
   const [prescription, setPrescription] = useState({
     prescriptionId: '',
@@ -27,6 +174,10 @@ const EPrescription = () => {
 
   const [pastPrescriptions, setPastPrescriptions] = useState([]);
   const [showPastPrescriptions, setShowPastPrescriptions] = useState(false);
+
+  // Debug logging after state is defined
+  console.log('🔍 Current pastPrescriptions state:', pastPrescriptions);
+  console.log('🔍 Current pastPrescriptions length:', pastPrescriptions.length);
   const [selectedLabTests, setSelectedLabTests] = useState([]);
   
   // New state for dynamic lab tests from database
@@ -323,13 +474,105 @@ const EPrescription = () => {
     { name: 'Omeprazole', dosage: '20mg', frequency: 'Once daily', duration: '4-8 weeks' }
   ];
 
+  // Fetch patient data based on patientId from URL
   useEffect(() => {
+    const fetchPatientData = async () => {
+      if (patientId) {
+        try {
+          console.log('🚀 EPrescription: Fetching patient data for ID:', patientId);
+          console.log('🌐 API URL: http://localhost:3001/api/patients/' + patientId);
+          const response = await fetch(`http://localhost:3001/api/patients/${patientId}`);
+          console.log('📡 Response status:', response.status);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Patient data fetched:', data);
+            console.log('📊 Patient data type:', typeof data);
+            console.log('📊 Patient data keys:', Object.keys(data));
+            setPatientData(data);
+            setMode('new');
+            
+            // Initialize prescription data for new prescriptions
+            const newPrescription = {
+              prescriptionId: `PRESC-${Date.now().toString().slice(-6)}`,
+              date: new Date().toISOString().split('T')[0],
+              diagnosis: '',
+              symptoms: data.chiefComplaint || '',
+              examination: '',
+              medications: [],
+              instructions: '',
+              followUp: '',
+              doctorName: 'Dr. [Your Name]',
+              doctorSpecialization: 'General Physician',
+              doctorLicense: 'MD[Your License]',
+              notes: '',
+              status: 'in-progress'
+            };
+            setPrescription(newPrescription);
+            
+            // Load past prescriptions for this patient
+            loadPastPrescriptions();
+          } else {
+            console.error('Failed to fetch patient data');
+            toast({
+              title: 'Error',
+              description: 'Failed to load patient data',
+              status: 'error',
+              duration: 3000,
+              isClosable: true,
+            });
+            navigate('/doctor');
+          }
+        } catch (error) {
+          console.error('Error fetching patient data:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load patient data',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+          });
+          navigate('/doctor');
+        }
+      }
+    };
+
+    // If patient data is passed through location.state, use it
     if (location.state?.patientData) {
       setPatientData(location.state.patientData);
       setMode(location.state.mode || 'new');
       
-      // Initialize prescription data properly for new prescriptions
-      if (location.state.mode === 'new') {
+      // Initialize prescription data based on mode
+      if (location.state.mode === 'edit' && location.state.prescriptionData) {
+        // Load existing prescription data for editing
+        const existingPrescription = {
+          prescriptionId: location.state.prescriptionData.prescriptionId,
+          date: location.state.prescriptionData.date,
+          diagnosis: location.state.prescriptionData.diagnosis || '',
+          symptoms: location.state.prescriptionData.symptoms || '',
+          examination: location.state.prescriptionData.examination || '',
+          medications: location.state.prescriptionData.medications || [],
+          instructions: location.state.prescriptionData.instructions || '',
+          followUp: location.state.prescriptionData.followUp || '',
+          doctorName: location.state.prescriptionData.doctorName || 'Dr. [Your Name]',
+          doctorSpecialization: location.state.prescriptionData.doctorSpecialization || 'General Physician',
+          doctorLicense: location.state.prescriptionData.doctorLicense || 'MD[Your License]',
+          notes: location.state.prescriptionData.notes || '',
+          status: location.state.prescriptionData.status || 'in-progress'
+        };
+        setPrescription(existingPrescription);
+        
+        // Load lab test recommendations if they exist
+        if (location.state.prescriptionData.labTestRecommendations) {
+          try {
+            const labTests = JSON.parse(location.state.prescriptionData.labTestRecommendations);
+            setSelectedLabTests(labTests);
+          } catch (error) {
+            console.warn('Failed to parse lab test recommendations:', error);
+          }
+        }
+      } else if (location.state.mode === 'new') {
+        // Initialize new prescription
         const newPrescription = {
           prescriptionId: `PRESC-${Date.now().toString().slice(-6)}`,
           date: new Date().toISOString().split('T')[0],
@@ -342,17 +585,134 @@ const EPrescription = () => {
           doctorName: 'Dr. [Your Name]',
           doctorSpecialization: 'General Physician',
           doctorLicense: 'MD[Your License]',
-          notes: ''
+          notes: '',
+          status: 'in-progress'
         };
         setPrescription(newPrescription);
       }
       
       // Load past prescriptions for this patient
       loadPastPrescriptions();
+    } else if (patientId) {
+      // If no patient data is passed but patientId exists, fetch it
+      fetchPatientData();
     } else {
+      // If no patient data and no patientId, redirect back to doctor dashboard
       navigate('/doctor');
     }
-  }, [location.state, navigate]);
+  }, [patientId, location.state, navigate, toast]);
+
+  const loadPastPrescriptions = useCallback(async () => {
+    try {
+      console.log('🔄 Loading past prescriptions for patient:', patientId);
+      console.log('🔄 Current mode:', mode);
+      console.log('🔄 Current prescription ID:', prescription.prescriptionId);
+      
+      const response = await fetch(`http://localhost:3001/api/prescriptions/patient/${patientId}`);
+      
+      if (response.ok) {
+        const prescriptions = await response.json();
+        console.log('✅ Past prescriptions loaded:', prescriptions);
+        console.log('✅ Number of prescriptions found:', prescriptions.length);
+        
+        // Filter out the current prescription if we're editing
+        const pastPrescriptions = prescriptions.filter(p => 
+          mode !== 'edit' || p.prescriptionId !== prescription.prescriptionId
+        );
+        
+        console.log('✅ Filtered past prescriptions:', pastPrescriptions);
+        console.log('✅ Number of past prescriptions after filtering:', pastPrescriptions.length);
+        
+        setPastPrescriptions(pastPrescriptions);
+      } else {
+        console.warn('⚠️ Failed to load past prescriptions:', response.status);
+        setPastPrescriptions([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading past prescriptions:', error);
+      setPastPrescriptions([]);
+    }
+  }, [patientId, mode, prescription.prescriptionId]);
+
+  // Debug effect to monitor pastPrescriptions changes
+  useEffect(() => {
+    console.log('📊 pastPrescriptions state changed:', pastPrescriptions);
+    console.log('📊 pastPrescriptions length:', pastPrescriptions.length);
+  }, [pastPrescriptions]);
+
+  // Fetch clinic data
+  useEffect(() => {
+    const fetchClinicData = async () => {
+      try {
+        console.log('🏥 Fetching clinic data...');
+        const response = await fetch('http://localhost:3001/api/clinic');
+        console.log('📡 Response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Clinic data fetched:', data);
+          console.log('📊 Data type:', typeof data);
+          console.log('📊 Data keys:', Object.keys(data));
+          
+          // Handle both direct data and wrapped data formats
+          if (data.success && data.data) {
+            setClinicData(data.data);
+            console.log('🎯 Clinic data set from data.data:', data.data);
+          } else if (data.clinicName || data.id) {
+            setClinicData(data);
+            console.log('🎯 Clinic data set directly:', data);
+          } else {
+            console.log('⚠️ No valid clinic data in response');
+            // Set fallback data
+            setClinicData({
+              clinicName: 'Your Clinic Name',
+              address: 'Your Clinic Address',
+              city: 'Your City',
+              state: 'Your State',
+              pincode: '123456',
+              phone: 'Your Phone Number',
+              email: 'clinic@email.com',
+              website: 'www.yourclinic.com',
+              license: 'CLINIC-LICENSE-001',
+              prescriptionValidity: 30
+            });
+          }
+        } else {
+          console.error('❌ Failed to fetch clinic data, status:', response.status);
+          // Set fallback data
+          setClinicData({
+            clinicName: 'Your Clinic Name',
+            address: 'Your Clinic Address',
+            city: 'Your City',
+            state: 'Your State',
+            pincode: '123456',
+            phone: 'Your Phone Number',
+            email: 'clinic@email.com',
+            website: 'www.yourclinic.com',
+            license: 'CLINIC-LICENSE-001',
+            prescriptionValidity: 30
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error fetching clinic data:', error);
+        // Set fallback data
+        setClinicData({
+          clinicName: 'Your Clinic Name',
+          address: 'Your Clinic Address',
+          city: 'Your City',
+          state: 'Your State',
+          pincode: '123456',
+          phone: 'Your Phone Number',
+          email: 'clinic@email.com',
+          website: 'www.yourclinic.com',
+          license: 'CLINIC-LICENSE-001',
+          prescriptionValidity: 30
+        });
+      }
+    };
+
+    fetchClinicData();
+  }, []);
 
      // Load existing prescription data if editing or viewing
    useEffect(() => {
@@ -372,23 +732,7 @@ const EPrescription = () => {
           }
         }
      }
-   // eslint-disable-next-line react-hooks/exhaustive-deps
-   }, [mode, prescription.prescriptionId, patientId]);
-
-  const loadPastPrescriptions = () => {
-    // TODO: Replace with backend API call
-    // const savedPrescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
-    // const patientPastPrescriptions = savedPrescriptions.filter(p => 
-    //   p.patientId === parseInt(patientId) && p.prescriptionId !== prescription.prescriptionId
-    // );
-    // setPastPrescriptions(patientPastPrescriptions);
-    // Load saved prescriptions from localStorage
-    const savedPrescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
-    const patientPastPrescriptions = savedPrescriptions.filter(p => 
-      p.patientId === parseInt(patientId) && p.prescriptionId !== prescription.prescriptionId
-    );
-    setPastPrescriptions(patientPastPrescriptions);
-  };
+   }, [mode, prescription.prescriptionId, patientId, loadPastPrescriptions]);
 
   const addMedication = () => {
     const newMedication = {
@@ -494,7 +838,7 @@ const EPrescription = () => {
     
     // Validate that all medications have required fields
     const invalidMedications = prescription.medications.filter(med => 
-      !med.name || !med.dosage || !med.frequency || !med.duration
+      !med.name || !med.dosage || !med.frequency || !med.durationValue || !med.durationUnit
     );
     
     if (invalidMedications.length > 0) {
@@ -519,8 +863,13 @@ const EPrescription = () => {
 
       console.log('Saving prescription to backend:', prescriptionData);
 
-      const prescriptionResponse = await fetch('/api/prescriptions', {
-        method: 'POST',
+      // Determine if this is a new prescription or an update
+      const isUpdate = mode === 'edit' && prescription.id;
+      const url = isUpdate ? `/api/prescriptions/${prescription.id}` : '/api/prescriptions';
+      const method = isUpdate ? 'PUT' : 'POST';
+
+      const prescriptionResponse = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -537,17 +886,20 @@ const EPrescription = () => {
       const savedPrescription = await prescriptionResponse.json();
       console.log('Prescription saved successfully:', savedPrescription);
 
+      // Handle response format for both POST and PUT
+      const savedPrescriptionData = isUpdate ? savedPrescription.prescription : savedPrescription.prescription;
+
       // Update the current prescription state with the saved data from backend
       const updatedPrescription = {
         ...prescription,
-        prescriptionId: savedPrescription.prescription.prescriptionId,
-        id: savedPrescription.prescription.id,
+        prescriptionId: savedPrescriptionData.prescriptionId,
+        id: savedPrescriptionData.id,
         patientId: parseInt(patientId),
         patientData,
         labTestRecommendations: selectedLabTests,
         icd10Codes: selectedIcd10Codes,
-        createdAt: savedPrescription.prescription.createdAt,
-        updatedAt: savedPrescription.prescription.updatedAt,
+        createdAt: savedPrescriptionData.createdAt,
+        updatedAt: savedPrescriptionData.updatedAt,
         status: 'completed'
       };
       
@@ -710,125 +1062,188 @@ const EPrescription = () => {
   }
 
   return (
-    <div className="container fade-in-up">
+    <Box minH="100vh" bg="gray.50" display="flex" flexDirection="column">
+      <Container maxW="7xl" flex="1" p={6} pb={24}>
+        <VStack spacing={6} align="stretch">
       {/* Header */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <button 
+          <Card>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <Button
+                  leftIcon={<Icon as={FaArrowLeft} />}
+                  variant="outline"
+                  colorScheme="gray"
               onClick={() => navigate('/doctor')} 
-              className="btn btn-secondary"
-              style={{ marginBottom: '1rem' }}
+                  alignSelf="flex-start"
             >
-              <FaArrowLeft style={{ marginRight: '0.5rem' }} />
               Back to Doctor Dashboard
-            </button>
-            <h1 className="card-title" style={{ margin: 0 }}>
-              <FaPrescription style={{ marginRight: '0.75rem', fontSize: '1.25rem' }} />
+                </Button>
+                
+                <HStack justify="space-between" align="flex-start" w="full">
+                  <VStack align="start" spacing={2}>
+                    <Heading size="xl" color="health.600">
+                      <HStack>
+                        <Icon as={FaPrescription} />
+                        <Text>
               {mode === 'new' ? 'New E-Prescription' : mode === 'edit' ? 'Edit E-Prescription' : 'View E-Prescription'}
-            </h1>
-                         <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '0.5rem' }}>
+                        </Text>
+                      </HStack>
+                    </Heading>
+                    
+                    <HStack spacing={4} wrap="wrap">
+                      <Text color="gray.600" fontSize="lg">
                🆔 Patient #{patientData.patientId || patientData.id} • {patientData.firstName} {patientData.lastName} • {patientData.age} years • {patientData.gender}
+                      </Text>
+                      
                {pastPrescriptions.length > 0 && (
-                 <span style={{ 
-                   background: 'var(--success-color)', 
-                   color: 'white', 
-                   padding: '0.25rem 0.75rem', 
-                   borderRadius: '1rem', 
-                   fontSize: '0.875rem',
-                   marginLeft: '1rem',
-                   fontWeight: '600'
-                 }}>
+                        <Badge colorScheme="success" variant="solid" fontSize="sm">
                    🔄 Follow-up Patient ({pastPrescriptions.length} previous)
-                 </span>
-               )}
-               <span style={{ 
-                 background: prescription.status === 'completed' ? 'var(--success-color)' : 'var(--warning-color)', 
-                 color: 'white', 
-                 padding: '0.25rem 0.75rem', 
-                 borderRadius: '1rem', 
-                 fontSize: '0.875rem',
-                 marginLeft: '1rem',
-                 fontWeight: '600'
-               }}>
-                 {prescription.status === 'completed' ? '✅ Completed' : '⏳ In Progress'}
-               </span>
-             </p>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                         {mode !== 'view' && (
-               <button 
-                 className={`btn ${isPrescriptionReady() ? 'btn-success' : 'btn-secondary'}`} 
-                 onClick={handleSave}
-                 disabled={!isPrescriptionReady()}
-                 title={isPrescriptionReady() ? 'Save Prescription' : 'Fill in diagnosis and add medications to save'}
-               >
-                 <FaSave style={{ marginRight: '0.5rem' }} />
-                 {isPrescriptionReady() ? 'Save Prescription' : 'Complete Prescription'}
-               </button>
-             )}
-            <button className="btn btn-info" onClick={handleNewPrescription}>
-              <FaPlus style={{ marginRight: '0.5rem' }} />
-              New Prescription
-            </button>
-                         <button 
-               className={`btn ${prescription.status === 'completed' ? 'btn-primary' : 'btn-secondary'}`} 
-               onClick={handlePrint}
-               disabled={prescription.status !== 'completed'}
-               title={prescription.status === 'completed' ? 'Print Prescription' : 'Save prescription first to print'}
-             >
-               <FaPrint style={{ marginRight: '0.5rem' }} />
-               Print Prescription
-             </button>
-          </div>
-        </div>
-      </div>
+                        </Badge>
+                      )}
+                      
+                      <Badge 
+                        colorScheme={prescription.status === 'completed' ? 'success' : 'warning'} 
+                        variant="solid" 
+                        fontSize="sm"
+                      >
+                        {prescription.status === 'completed' ? '✅ Completed' : '⏳ In Progress'}
+                      </Badge>
+                    </HStack>
+                  </VStack>
+                  
+                  <HStack spacing={3} wrap="wrap">
+                    <Text fontSize="sm" color="gray.500">
+                      💡 Use the action bar at the bottom to save, print, or create new prescriptions
+                    </Text>
+                  </HStack>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+          <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
         {/* Left Column - Prescription Form */}
-        <div>
+            <GridItem>
+              <VStack spacing={6} align="stretch">
           {/* Patient Information */}
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <h2 className="section-title">
-              <FaUser style={{ marginRight: '0.75rem' }} />
-              Patient Information
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div><strong>🆔 Patient ID:</strong> #{patientData.patientId || patientData.id}</div>
-              <div><strong>Name:</strong> {patientData.firstName} {patientData.middleName} {patientData.lastName}</div>
-              <div><strong>Age:</strong> {patientData.age} years</div>
-              <div><strong>Gender:</strong> {patientData.gender}</div>
-              <div><strong>Blood Group:</strong> {patientData.bloodGroup}</div>
-              <div><strong>Phone:</strong> {patientData.phone}</div>
-              <div><strong>Address:</strong> {patientData.address}</div>
+                <Card>
+                  <CardHeader>
+                    <Heading size="md" color="health.600">
+                      <HStack>
+                        <Icon as={FaUser} />
+                        <Text>Patient Information</Text>
+                      </HStack>
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">🆔 Patient ID</Text>
+                        <Text fontWeight="semibold">#{patientData.patientId || patientData.id}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Name</Text>
+                        <Text fontWeight="semibold">{patientData.firstName} {patientData.middleName} {patientData.lastName}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Age</Text>
+                        <Text fontWeight="semibold">{patientData.age} years</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Gender</Text>
+                        <Text fontWeight="semibold">{patientData.gender}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Blood Group</Text>
+                        <Text fontWeight="semibold">{patientData.bloodGroup}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Phone</Text>
+                        <Text fontWeight="semibold">{patientData.phone}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1} colSpan={{ base: 1, md: 2, lg: 3 }}>
+                        <Text fontSize="sm" color="gray.500">Address</Text>
+                        <Text fontWeight="semibold">{patientData.address}</Text>
+                      </VStack>
+                    </SimpleGrid>
+                  </CardBody>
+                </Card>
+
+          {/* Debug Section - Always show */}
+          <div className="card" style={{ marginBottom: '1rem', backgroundColor: '#f0f8ff', border: '1px solid #007acc' }}>
+            <div style={{ padding: '1rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#007acc' }}>🔍 Debug Information</h3>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem' }}>
+                <strong>Patient ID:</strong> {patientId}<br/>
+                <strong>Past Prescriptions Count:</strong> {pastPrescriptions.length}<br/>
+                <strong>Show Past Prescriptions:</strong> {showPastPrescriptions ? 'Yes' : 'No'}<br/>
+                <strong>Mode:</strong> {mode}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={loadPastPrescriptions}
+                  style={{ 
+                    padding: '8px 16px', 
+                    backgroundColor: '#007acc', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  🔄 Reload Past Prescriptions
+                </button>
+                <button 
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(`http://localhost:3001/api/prescriptions/patient/${patientId}`);
+                      const data = await response.json();
+                      console.log('🧪 Manual API Test Result:', data);
+                      alert(`API returned ${data.length} prescriptions. Check console for details.`);
+                    } catch (error) {
+                      console.error('🧪 Manual API Test Error:', error);
+                      alert('API test failed. Check console for details.');
+                    }
+                  }}
+                  style={{ 
+                    padding: '8px 16px', 
+                    backgroundColor: '#28a745', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  🧪 Test API Direct
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Past Prescriptions Section */}
+          {/* Completed Prescriptions Section */}
           {pastPrescriptions.length > 0 && (
             <div className="card" style={{ marginBottom: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h2 className="section-title" style={{ margin: 0 }}>
                   <FaPrescription style={{ marginRight: '0.75rem' }} />
-                  Last Prescription
+                  Completed Prescriptions ({pastPrescriptions.length})
                 </h2>
                 <button 
                   className="btn btn-secondary btn-sm"
                   onClick={() => setShowPastPrescriptions(!showPastPrescriptions)}
                 >
-                  {showPastPrescriptions ? 'Hide' : 'Show'} Last Prescription
+                  {showPastPrescriptions ? 'Hide' : 'Show'} All Prescriptions
                 </button>
               </div>
               
               {showPastPrescriptions && (
                 <div style={{ display: 'grid', gap: '1rem' }}>
-                  {/* Show only the last prescription */}
-                  {(() => {
-                    const lastPrescription = pastPrescriptions[pastPrescriptions.length - 1];
-                    return (
+                  {/* Show all completed prescriptions */}
+                  {pastPrescriptions.map((prescription, index) => (
                       <div 
-                        key={lastPrescription.prescriptionId}
+                        key={prescription.prescriptionId}
                         style={{
                           border: '1px solid var(--border-color)',
                           borderRadius: '0.5rem',
@@ -840,17 +1255,17 @@ const EPrescription = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                           <div>
                             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
-                              Last Prescription - {lastPrescription.prescriptionId}
+                              Prescription #{prescription.prescriptionId}
                             </h4>
                             <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                              <strong>Date:</strong> {new Date(lastPrescription.date).toLocaleDateString()} • 
-                              <strong>Diagnosis:</strong> {lastPrescription.diagnosis || 'Not specified'}
+                              <strong>Date:</strong> {new Date(prescription.date).toLocaleDateString()} • 
+                              <strong>Diagnosis:</strong> {prescription.diagnosis || 'Not specified'}
                             </div>
                           </div>
                           {mode !== 'view' && (
                             <button 
                               className="btn btn-primary btn-sm"
-                              onClick={() => copyFromPastPrescription(lastPrescription)}
+                              onClick={() => copyFromPastPrescription(prescription)}
                               title="Copy medications and details from this prescription"
                             >
                               <FaPlus style={{ marginRight: '0.25rem' }} />
@@ -859,7 +1274,7 @@ const EPrescription = () => {
                           )}
                         </div>
                         
-                        {lastPrescription.medications && lastPrescription.medications.length > 0 && (
+                        {prescription.medications && prescription.medications.length > 0 && (
                           <div style={{ marginBottom: '0.75rem' }}>
                             <strong style={{ color: 'var(--text-primary)' }}>Medications:</strong>
                             <div style={{ 
@@ -869,7 +1284,7 @@ const EPrescription = () => {
                               marginTop: '0.5rem',
                               fontSize: '0.875rem'
                             }}>
-                              {lastPrescription.medications.map((med, medIndex) => (
+                              {prescription.medications.map((med, medIndex) => (
                                 <div 
                                   key={medIndex}
                                   style={{
@@ -881,7 +1296,7 @@ const EPrescription = () => {
                                 >
                                   <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{med.name}</div>
                                   <div style={{ color: 'var(--text-secondary)' }}>
-                                    {med.dosage} • {med.frequency} • {med.duration}
+                                    {med.dosage} • {med.frequency} • {med.durationValue || 1} {med.durationUnit || 'Month'}
                                   </div>
                                 </div>
                               ))}
@@ -889,22 +1304,22 @@ const EPrescription = () => {
                           </div>
                         )}
                         
-                        {(lastPrescription.instructions || lastPrescription.followUp) && (
+                        {(prescription.instructions || prescription.followUp) && (
                           <div style={{ fontSize: '0.875rem' }}>
-                            {lastPrescription.instructions && (
+                            {prescription.instructions && (
                               <div style={{ marginBottom: '0.5rem' }}>
-                                <strong style={{ color: 'var(--text-primary)' }}>Instructions:</strong> {lastPrescription.instructions}
+                                <strong style={{ color: 'var(--text-primary)' }}>Instructions:</strong> {prescription.instructions}
                               </div>
                             )}
-                            {lastPrescription.followUp && (
+                            {prescription.followUp && (
                               <div>
-                                <strong style={{ color: 'var(--text-primary)' }}>Follow-up:</strong> {lastPrescription.followUp}
+                                <strong style={{ color: 'var(--text-primary)' }}>Follow-up:</strong> {prescription.followUp}
                               </div>
                             )}
                           </div>
                         )}
                         
-                        {lastPrescription.labTestRecommendations && (
+                        {prescription.labTestRecommendations && (
                           <div style={{ fontSize: '0.875rem', marginTop: '0.75rem' }}>
                             <strong style={{ color: 'var(--text-primary)' }}>Lab Tests:</strong>
                             <div style={{ 
@@ -915,8 +1330,8 @@ const EPrescription = () => {
                               border: '1px solid rgba(37, 99, 235, 0.1)',
                               color: 'var(--text-secondary)'
                             }}>
-                              {Array.isArray(lastPrescription.labTestRecommendations) 
-                                ? lastPrescription.labTestRecommendations.map(testId => {
+                              {Array.isArray(prescription.labTestRecommendations) 
+                                ? prescription.labTestRecommendations.map(testId => {
                                     // Try to find test in organized categories first
                                     let test = labTestCategories.flatMap(cat => cat.subcategories).flatMap(sub => sub.tests).find(t => t.id === testId);
                                     
@@ -934,13 +1349,13 @@ const EPrescription = () => {
                                     
                                     return test ? `${test.name} (${test.code})` : testId;
                                   }).join(', ')
-                                : lastPrescription.labTestRecommendations
+                                : prescription.labTestRecommendations
                               }
                             </div>
                           </div>
                         )}
                         
-                        {lastPrescription.icd10Codes && lastPrescription.icd10Codes.length > 0 && (
+                        {prescription.icd10Codes && prescription.icd10Codes.length > 0 && (
                           <div style={{ fontSize: '0.875rem', marginTop: '0.75rem' }}>
                             <strong style={{ color: 'var(--text-primary)' }}>ICD-10 Codes:</strong>
                             <div style={{ 
@@ -951,15 +1366,27 @@ const EPrescription = () => {
                               border: '1px solid rgba(37, 99, 235, 0.1)',
                               color: 'var(--text-secondary)'
                             }}>
-                              {lastPrescription.icd10Codes.map(code => 
+                              {prescription.icd10Codes.map(code => 
                                 `${code.code}: ${code.description}`
                               ).join(', ')}
                             </div>
                           </div>
                         )}
                       </div>
-                    );
-                  })()}
+                    ))}
+                  
+                  {/* Add a status badge for each prescription */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '0.5rem', 
+                    background: 'rgba(34, 197, 94, 0.1)', 
+                    borderRadius: '0.5rem',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                    color: 'rgb(22, 163, 74)',
+                    fontSize: '0.875rem'
+                  }}>
+                    ✅ <strong>All prescriptions completed successfully</strong>
+                  </div>
                   
                   <div style={{ 
                     textAlign: 'center', 
@@ -969,11 +1396,23 @@ const EPrescription = () => {
                     border: '1px dashed rgba(37, 99, 235, 0.3)'
                   }}>
                     <p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                      💡 <strong>Tip:</strong> Use the "Copy" button to quickly add medications and details from the last prescription
+                      💡 <strong>Tip:</strong> Use the "Copy" button to quickly add medications and details from any previous prescription
                     </p>
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* No Prescriptions Message */}
+          {pastPrescriptions.length === 0 && patientId && (
+            <div className="card" style={{ marginBottom: '2rem', backgroundColor: '#fff3cd', border: '1px solid #ffc107' }}>
+              <div style={{ padding: '1rem', textAlign: 'center' }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: '#856404' }}>📋 No Previous Prescriptions</h3>
+                <p style={{ margin: '0', fontSize: '0.875rem', color: '#856404' }}>
+                  This is the first prescription for this patient.
+                </p>
+              </div>
             </div>
           )}
 
@@ -1363,7 +1802,7 @@ const EPrescription = () => {
                   >
                     <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{med.name}</div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                      {med.dosage} • {med.frequency} • {med.duration}
+                      {med.dosage} • {med.frequency} • {med.durationValue || 1} {med.durationUnit || 'Month'}
                     </div>
                   </div>
                 ))}
@@ -1828,10 +2267,11 @@ const EPrescription = () => {
               </div>
             )}
           </div>
-        </div>
+                </VStack>
+              </GridItem>
 
         {/* Right Column - Prescription Summary */}
-        <div>
+              <GridItem>
           <div className="card" style={{ position: 'sticky', top: '2rem' }}>
             <h2 className="section-title">
               <FaPrescription style={{ marginRight: '0.75rem' }} />
@@ -1912,18 +2352,7 @@ const EPrescription = () => {
                </div>
              )}
 
-            {mode !== 'view' && (
-              <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <button 
-                  className="btn btn-success" 
-                  onClick={handleSave}
-                  style={{ width: '100%' }}
-                >
-                  <FaSave style={{ marginRight: '0.5rem' }} />
-                  Save Prescription
-                </button>
-              </div>
-            )}
+            {/* Save button moved to fixed action bar at bottom */}
             
             <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <button 
@@ -1936,11 +2365,11 @@ const EPrescription = () => {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+              </GridItem>
+            </Grid>
 
       {/* Printable Prescription */}
-      <div id="printable-prescription" style={{ display: 'none' }}>
+            <Box id="printable-prescription" display="none">
         <style>
           {`
             @media print {
@@ -1950,647 +2379,786 @@ const EPrescription = () => {
                 display: block !important; 
                 position: relative;
                 page-break-inside: avoid;
+                height: 100vh;
+                overflow: hidden;
               }
               .prescription-page { 
-                page-break-after: always;
+                page-break-after: avoid;
                 margin: 0;
-                padding: 20px;
+                padding: 5px;
+                height: 100vh;
+                box-sizing: border-box;
+              }
+              * {
+                box-sizing: border-box;
               }
             }
           `}
         </style>
-        <div style={{ 
-          fontFamily: 'Arial, sans-serif', 
-          maxWidth: '800px', 
-          margin: '0 auto', 
-          padding: '15px',
-          border: '2px solid #333',
-          background: 'white',
-          position: 'relative',
-          fontSize: '12px'
-        }}>
+        <Box
+          maxW="800px"
+          mx="auto"
+          p={0.5}
+          border="1px solid"
+          borderColor="gray.600"
+          bg="white"
+          position="relative"
+          fontSize="6px"
+          h="100vh"
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
+          fontFamily="Arial, sans-serif"
+        >
           {/* Professional Header */}
-          <div style={{ 
-            textAlign: 'center', 
-            borderBottom: '3px solid #2563eb', 
-            paddingBottom: '15px', 
-            marginBottom: '20px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              marginBottom: '15px' 
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                background: '#2563eb', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                marginRight: '20px',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-              }}>
-                <span style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>🏥</span>
-              </div>
-              <div>
-                <h1 style={{ 
-                  margin: 0, 
-                  color: '#1e293b', 
-                  fontSize: '24px', 
-                  fontWeight: '700',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>OPD-EMR HOSPITAL</h1>
-                <p style={{ 
-                  margin: '3px 0', 
-                  fontSize: '14px', 
-                  color: '#475569',
-                  fontWeight: '600'
-                }}>Electronic Medical Prescription</p>
-              </div>
-            </div>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '10px',
-              marginTop: '10px',
-              fontSize: '11px',
-              color: '#64748b'
-            }}>
-              <div>
-                <strong>Address:</strong> 123 Healthcare Street, Medical City, MC 12345
-              </div>
-              <div>
-                <strong>Phone:</strong> +1-555-0123 | <strong>Email:</strong> doctor@opd-emr.com
-              </div>
-              <div>
-                <strong>Website:</strong> www.opd-emr.com | <strong>License:</strong> HOSP-2024-001
-              </div>
-            </div>
-          </div>
+          <Box
+            textAlign="center"
+            borderBottom="1px solid"
+            borderBottomColor="blue.600"
+            pb={0.5}
+            mb={0.5}
+            bgGradient="linear(135deg, gray.50 0%, gray.200 100%)"
+            flexShrink={0}
+          >
+            <HStack spacing={1} justify="center" mb={0.5}>
+              <Box
+                w="16px"
+                h="16px"
+                bg="blue.600"
+                borderRadius="full"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                boxShadow="sm"
+              >
+                <Text color="white" fontSize="8px" fontWeight="bold">🏥</Text>
+              </Box>
+              <VStack spacing={0} align="start">
+                <Heading
+                  size="sm"
+                  color="gray.800"
+                  fontSize="10px"
+                  fontWeight="700"
+                  textShadow="sm"
+                  m={0}
+                >
+                  {clinicData?.clinicName || 'OPD-EMR HOSPITAL'}
+                </Heading>
+                <Text
+                  fontSize="6px"
+                  color="gray.600"
+                  fontWeight="600"
+                  m={0}
+                >
+                  Electronic Medical Prescription
+                </Text>
+              </VStack>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={0.5} mt={0.5} fontSize="5px" color="gray.500">
+              <Text>
+                <Text as="span" fontWeight="bold">Address:</Text> {clinicData?.address || '123 Healthcare Street'}, {clinicData?.city || 'Medical City'}, {clinicData?.state || 'MC'} {clinicData?.pincode || '12345'}
+              </Text>
+              <Text>
+                <Text as="span" fontWeight="bold">Phone:</Text> {clinicData?.phone || '+1-555-0123'} | <Text as="span" fontWeight="bold">Email:</Text> {clinicData?.email || 'doctor@opd-emr.com'}
+              </Text>
+              <Text>
+                <Text as="span" fontWeight="bold">Website:</Text> {clinicData?.website || 'www.opd-emr.com'} | <Text as="span" fontWeight="bold">License:</Text> {clinicData?.license || 'HOSP-2024-001'}
+              </Text>
+            </SimpleGrid>
+          </Box>
 
           {/* Prescription Details Header */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            marginBottom: '20px',
-            padding: '15px',
-            background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-            borderRadius: '8px',
-            border: '1px solid #cbd5e1'
-          }}>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ 
-                margin: '0 0 10px 0', 
-                color: '#1e293b', 
-                fontSize: '14px',
-                fontWeight: '600',
-                borderBottom: '2px solid #2563eb',
-                paddingBottom: '3px'
-              }}>📋 Patient Information</h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-                gap: '8px',
-                fontSize: '11px'
-              }}>
-                <div><strong>Name:</strong> <span style={{ color: '#1e293b', fontWeight: '600' }}>{patientData.firstName} {patientData.middleName} {patientData.lastName}</span></div>
-                <div><strong>Age:</strong> <span style={{ color: '#1e293b' }}>{patientData.age} years</span></div>
-                <div><strong>Gender:</strong> <span style={{ color: '#1e293b' }}>{patientData.gender}</span></div>
-                <div><strong>Blood Group:</strong> <span style={{ color: '#1e293b' }}>{patientData.bloodGroup}</span></div>
-                <div><strong>Phone:</strong> <span style={{ color: '#1e293b' }}>{patientData.phone}</span></div>
-                <div><strong>Address:</strong> <span style={{ color: '#1e293b' }}>{patientData.address}</span></div>
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'right', 
-              flex: 1,
-              borderLeft: '2px solid #e2e8f0',
-              paddingLeft: '20px'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 10px 0', 
-                color: '#1e293b', 
-                fontSize: '14px',
-                fontWeight: '600',
-                borderBottom: '2px solid #2563eb',
-                paddingBottom: '3px'
-              }}>📄 Prescription Details</h3>
-              <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
-                <div><strong>Prescription ID:</strong> <span style={{ color: '#2563eb', fontWeight: '600' }}>{prescription.prescriptionId}</span></div>
-                <div><strong>Date:</strong> <span style={{ color: '#1e293b' }}>{new Date(prescription.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-                <div><strong>Time:</strong> <span style={{ color: '#1e293b' }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span></div>
-                <div><strong>Doctor:</strong> <span style={{ color: '#1e293b', fontWeight: '600' }}>{prescription.doctorName}</span></div>
-                <div><strong>Specialization:</strong> <span style={{ color: '#1e293b' }}>{prescription.doctorSpecialization}</span></div>
-              </div>
-            </div>
-          </div>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            mb={0.5}
+            p={0.5}
+            bgGradient="linear(135deg, gray.100 0%, gray.200 100%)"
+            borderRadius="md"
+            border="1px solid"
+            borderColor="gray.300"
+            flexShrink={0}
+          >
+            <Box flex={1}>
+              <Heading
+                size="xs"
+                color="gray.800"
+                fontSize="8px"
+                fontWeight="600"
+                borderBottom="1px solid"
+                borderBottomColor="blue.600"
+                pb={0.5}
+                mb={0.5}
+              >
+                📋 Patient Information
+              </Heading>
+              <SimpleGrid columns={{ base: 2, md: 3 }} spacing={0.5} fontSize="5px">
+                <Text><Text as="span" fontWeight="bold">Name:</Text> <Text as="span" color="gray.800" fontWeight="600">{patientData.firstName} {patientData.middleName} {patientData.lastName}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Age:</Text> <Text as="span" color="gray.800">{patientData.age} years</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Gender:</Text> <Text as="span" color="gray.800">{patientData.gender}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Blood Group:</Text> <Text as="span" color="gray.800">{patientData.bloodGroup}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Phone:</Text> <Text as="span" color="gray.800">{patientData.phone}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Address:</Text> <Text as="span" color="gray.800">{patientData.address}</Text></Text>
+              </SimpleGrid>
+            </Box>
+            <Box
+              textAlign="right"
+              flex={1}
+              borderLeft="2px solid"
+              borderLeftColor="gray.200"
+              pl={5}
+            >
+              <Heading
+                size="xs"
+                color="gray.800"
+                fontSize="8px"
+                fontWeight="600"
+                borderBottom="1px solid"
+                borderBottomColor="blue.600"
+                pb={0.5}
+                mb={0.5}
+              >
+                📄 Prescription Details
+              </Heading>
+              <VStack spacing={0} align="stretch" fontSize="5px" lineHeight="1.1">
+                <Text><Text as="span" fontWeight="bold">Prescription ID:</Text> <Text as="span" color="blue.600" fontWeight="600">{prescription.prescriptionId}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Date:</Text> <Text as="span" color="gray.800">{new Date(prescription.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Time:</Text> <Text as="span" color="gray.800">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Doctor:</Text> <Text as="span" color="gray.800" fontWeight="600">{prescription.doctorName}</Text></Text>
+                <Text><Text as="span" fontWeight="bold">Specialization:</Text> <Text as="span" color="gray.800">{prescription.doctorSpecialization}</Text></Text>
+              </VStack>
+            </Box>
+          </Box>
 
           {/* Vital Signs Section */}
-          <div style={{ 
-            marginBottom: '20px',
-            padding: '15px',
-            background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-            borderRadius: '8px',
-            border: '1px solid #fecaca'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 10px 0', 
-              color: '#991b1b', 
-              fontSize: '14px',
-              fontWeight: '600',
-              borderBottom: '2px solid #dc2626',
-              paddingBottom: '3px'
-            }}>💓 Vital Signs</h3>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-              gap: '10px',
-              fontSize: '11px'
-            }}>
-                              <div style={{ 
-                  textAlign: 'center', 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '6px',
-                  border: '1px solid #fecaca'
-                }}>
-                  <div style={{ fontWeight: '600', color: '#991b1b', fontSize: '10px' }}>Temperature</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>{patientData.vitalSigns?.temperature || 'N/A'}</div>
-                </div>
-                              <div style={{ 
-                  textAlign: 'center', 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '6px',
-                  border: '1px solid #fecaca'
-                }}>
-                  <div style={{ fontWeight: '600', color: '#991b1b', fontSize: '10px' }}>Blood Pressure</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>{patientData.vitalSigns?.bloodPressure || 'N/A'}</div>
-                </div>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '6px',
-                  border: '1px solid #fecaca'
-                }}>
-                  <div style={{ fontWeight: '600', color: '#991b1b', fontSize: '10px' }}>Pulse</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>{patientData.vitalSigns?.pulse || 'N/A'}</div>
-                </div>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '6px',
-                  border: '1px solid #fecaca'
-                }}>
-                  <div style={{ fontWeight: '600', color: '#991b1b', fontSize: '10px' }}>Weight</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>{patientData.vitalSigns?.weight || 'N/A'}</div>
-                </div>
-            </div>
-          </div>
+          <Box
+            mb={0.5}
+            p={0.5}
+            bgGradient="linear(135deg, red.50 0%, red.100 100%)"
+            borderRadius="md"
+            border="1px solid"
+            borderColor="red.200"
+            flexShrink={0}
+          >
+            <Heading
+              size="xs"
+              color="red.800"
+              fontSize="8px"
+              fontWeight="600"
+              borderBottom="1px solid"
+              borderBottomColor="red.600"
+              pb={0.5}
+              mb={0.5}
+            >
+              💓 Vital Signs
+            </Heading>
+            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={0.5} fontSize="5px">
+              <Box
+                textAlign="center"
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="red.200"
+              >
+                <Text fontWeight="600" color="red.800" fontSize="4px">Temperature</Text>
+                <Text fontSize="6px" fontWeight="700" color="red.600">{patientData.vitalSigns?.temperature || 'N/A'}</Text>
+              </Box>
+              <Box
+                textAlign="center"
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="red.200"
+              >
+                <Text fontWeight="600" color="red.800" fontSize="4px">Blood Pressure</Text>
+                <Text fontSize="6px" fontWeight="700" color="red.600">{patientData.vitalSigns?.bloodPressure || 'N/A'}</Text>
+              </Box>
+              <Box
+                textAlign="center"
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="red.200"
+              >
+                <Text fontWeight="600" color="red.800" fontSize="4px">Pulse</Text>
+                <Text fontSize="6px" fontWeight="700" color="red.600">{patientData.vitalSigns?.pulse || 'N/A'}</Text>
+              </Box>
+              <Box
+                textAlign="center"
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="red.200"
+              >
+                <Text fontWeight="600" color="red.800" fontSize="4px">Weight</Text>
+                <Text fontSize="6px" fontWeight="700" color="red.600">{patientData.vitalSigns?.weight || 'N/A'}</Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
 
           {/* Diagnosis Section */}
-          <div style={{ 
-            marginBottom: '20px',
-            padding: '15px',
-            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-            borderRadius: '8px',
-            border: '1px solid #bae6fd'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 10px 0', 
-              color: '#0c4a6e', 
-              fontSize: '14px',
-              fontWeight: '600',
-              borderBottom: '2px solid #0284c7',
-              paddingBottom: '3px'
-            }}>🔍 Clinical Assessment</h3>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '15px',
-              fontSize: '11px'
-            }}>
-              <div>
-                <strong style={{ color: '#0c4a6e' }}>Chief Complaint:</strong>
-                                 <div style={{ 
-                   marginTop: '3px', 
-                   padding: '8px', 
-                   background: 'white', 
-                   borderRadius: '4px',
-                   border: '1px solid #bae6fd',
-                   color: '#1e293b'
-                 }}>{prescription.symptoms || 'Not specified'}</div>
-              </div>
-              <div>
-                <strong style={{ color: '#0c4a6e' }}>Diagnosis:</strong>
-                                 <div style={{ 
-                   marginTop: '3px', 
-                   padding: '8px', 
-                   background: 'white', 
-                   borderRadius: '4px',
-                   border: '1px solid #bae6fd',
-                   color: '#1e293b'
-                 }}>{prescription.diagnosis || 'Not specified'}</div>
-              </div>
-            </div>
-          </div>
+          <Box
+            mb={0.5}
+            p={0.5}
+            bgGradient="linear(135deg, blue.50 0%, blue.100 100%)"
+            borderRadius="md"
+            border="1px solid"
+            borderColor="blue.200"
+            flexShrink={0}
+          >
+            <Heading
+              size="xs"
+              color="blue.800"
+              fontSize="8px"
+              fontWeight="600"
+              borderBottom="1px solid"
+              borderBottomColor="blue.600"
+              pb={0.5}
+              mb={0.5}
+            >
+              🔍 Clinical Assessment
+            </Heading>
+            <SimpleGrid columns={2} spacing={0.5} fontSize="5px">
+              <Box>
+                <Text fontWeight="bold" color="blue.800">Chief Complaint:</Text>
+                <Box
+                  mt={0.5}
+                  p={0.5}
+                  bg="white"
+                  borderRadius="sm"
+                  border="1px solid"
+                  borderColor="blue.200"
+                  color="gray.800"
+                  fontSize="5px"
+                >
+                  {prescription.symptoms || 'Not specified'}
+                </Box>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.800">Diagnosis:</Text>
+                <Box
+                  mt={0.5}
+                  p={0.5}
+                  bg="white"
+                  borderRadius="sm"
+                  border="1px solid"
+                  borderColor="blue.200"
+                  color="gray.800"
+                  fontSize="5px"
+                >
+                  {prescription.diagnosis || 'Not specified'}
+                </Box>
+              </Box>
+            </SimpleGrid>
+          </Box>
 
           {/* Medications Section */}
-          <div style={{ 
-            marginBottom: '20px',
-            padding: '15px',
-            background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-            borderRadius: '8px',
-            border: '1px solid #bbf7d0'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 15px 0', 
-              color: '#14532d', 
-              fontSize: '18px',
-              fontWeight: '600',
-              borderBottom: '2px solid #16a34a',
-              paddingBottom: '5px'
-            }}>💊 Prescribed Medications</h3>
-            <table style={{ 
-              width: '100%', 
-              borderCollapse: 'collapse',
-              background: 'white',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}>
-              <thead>
-                <tr style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' }}>
-                  <th style={{ 
-                    border: '1px solid #bbf7d0', 
-                    padding: '15px 12px', 
-                    textAlign: 'left',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>Medication</th>
-                  <th style={{ 
-                    border: '1px solid #bbf7d0', 
-                    padding: '15px 12px', 
-                    textAlign: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>Dosage</th>
-                  <th style={{ 
-                    border: '1px solid #bbf7d0', 
-                    padding: '15px 12px', 
-                    textAlign: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>Frequency</th>
-                  <th style={{ 
-                    border: '1px solid #bbf7d0', 
-                    padding: '15px 12px', 
-                    textAlign: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prescription.medications.map((med, index) => (
-                  <tr key={med.id} style={{ 
-                    background: index % 2 === 0 ? '#f8fafc' : 'white',
-                    transition: 'background-color 0.3s ease'
-                  }}>
-                    <td style={{ 
-                      border: '1px solid #bbf7d0', 
-                      padding: '12px',
-                      fontWeight: '600',
-                      color: '#14532d'
-                    }}>{med.name}</td>
-                    <td style={{ 
-                      border: '1px solid #bbf7d0', 
-                      padding: '12px',
-                      textAlign: 'center',
-                      color: '#1e293b'
-                    }}>{med.dosage}</td>
-                    <td style={{ 
-                      border: '1px solid #bbf7d0', 
-                      padding: '12px',
-                      textAlign: 'center',
-                      color: '#1e293b'
-                    }}>{med.frequency}</td>
-                    <td style={{ 
-                      border: '1px solid #bbf7d0', 
-                      padding: '12px',
-                      textAlign: 'center',
-                      color: '#1e293b'
-                    }}>{med.duration}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Box
+            mb={0.5}
+            p={0.5}
+            bgGradient="linear(135deg, green.50 0%, green.100 100%)"
+            borderRadius="md"
+            border="1px solid"
+            borderColor="green.200"
+            flex={1}
+            overflow="hidden"
+          >
+            <Heading
+              size="xs"
+              color="green.800"
+              fontSize="8px"
+              fontWeight="600"
+              borderBottom="1px solid"
+              borderBottomColor="green.600"
+              pb={0.5}
+              mb={0.5}
+            >
+              💊 Prescribed Medications
+            </Heading>
+                      <Box
+              maxH="80px"
+              overflowY="auto"
+              border="1px solid"
+              borderColor="green.200"
+              borderRadius="md"
+            >
+              <Table size="sm" variant="simple" fontSize="5px">
+                <Thead>
+                  <Tr bgGradient="linear(135deg, green.600 0%, green.700 100%)">
+                    <Th
+                      border="1px solid"
+                      borderColor="green.200"
+                      px={0.5}
+                      py={0.5}
+                      textAlign="left"
+                      color="white"
+                      fontWeight="600"
+                      fontSize="4px"
+                    >
+                      Medication
+                    </Th>
+                    <Th
+                      border="1px solid"
+                      borderColor="green.200"
+                      px={0.5}
+                      py={0.5}
+                      textAlign="center"
+                      color="white"
+                      fontWeight="600"
+                      fontSize="4px"
+                    >
+                      Dosage
+                    </Th>
+                    <Th
+                      border="1px solid"
+                      borderColor="green.200"
+                      px={0.5}
+                      py={0.5}
+                      textAlign="center"
+                      color="white"
+                      fontWeight="600"
+                      fontSize="4px"
+                    >
+                      Frequency
+                    </Th>
+                    <Th
+                      border="1px solid"
+                      borderColor="green.200"
+                      px={0.5}
+                      py={0.5}
+                      textAlign="center"
+                      color="white"
+                      fontWeight="600"
+                      fontSize="4px"
+                    >
+                      Duration
+                    </Th>
+                  </Tr>
+                </Thead>
+                              <Tbody>
+                  {prescription.medications.map((med, index) => (
+                    <Tr
+                      key={med.id}
+                      bg={index % 2 === 0 ? 'gray.50' : 'white'}
+                    >
+                      <Td
+                        border="1px solid"
+                        borderColor="green.200"
+                        p={0.5}
+                        fontWeight="600"
+                        color="green.800"
+                        fontSize="4px"
+                      >
+                        {med.name}
+                      </Td>
+                      <Td
+                        border="1px solid"
+                        borderColor="green.200"
+                        p={0.5}
+                        textAlign="center"
+                        color="gray.800"
+                        fontSize="4px"
+                      >
+                        {med.dosage}
+                      </Td>
+                      <Td
+                        border="1px solid"
+                        borderColor="green.200"
+                        p={0.5}
+                        textAlign="center"
+                        color="gray.800"
+                        fontSize="4px"
+                      >
+                        {med.frequency}
+                      </Td>
+                      <Td
+                        border="1px solid"
+                        borderColor="green.200"
+                        p={0.5}
+                        textAlign="center"
+                        color="gray.800"
+                        fontSize="4px"
+                      >
+                        {med.durationValue || 1} {med.durationUnit || 'Month'}
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
             {prescription.medications.length === 0 && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '20px', 
-                color: '#64748b',
-                fontStyle: 'italic'
-              }}>
+              <Text
+                textAlign="center"
+                p={1}
+                color="gray.500"
+                fontStyle="italic"
+                fontSize="5px"
+              >
                 No medications prescribed
-              </div>
+              </Text>
             )}
-          </div>
+          </Box>
 
           {/* Instructions Section */}
           {(prescription.instructions || prescription.followUp) && (
-            <div style={{ 
-              marginBottom: '30px',
-              padding: '20px',
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-              borderRadius: '10px',
-              border: '1px solid #fcd34d'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 15px 0', 
-                color: '#92400e', 
-                fontSize: '18px',
-                fontWeight: '600',
-                borderBottom: '2px solid #d97706',
-                paddingBottom: '5px'
-              }}>📝 Treatment Instructions</h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
-                gap: '20px',
-                fontSize: '14px'
-              }}>
+            <Box
+              mb={0.5}
+              p={0.5}
+              bgGradient="linear(135deg, yellow.50 0%, yellow.100 100%)"
+              borderRadius="md"
+              border="1px solid"
+              borderColor="yellow.200"
+              flexShrink={0}
+            >
+              <Heading
+                size="xs"
+                color="yellow.800"
+                fontSize="8px"
+                fontWeight="600"
+                borderBottom="1px solid"
+                borderBottomColor="yellow.600"
+                pb={0.5}
+                mb={0.5}
+              >
+                📝 Treatment Instructions
+              </Heading>
+              <SimpleGrid columns={2} spacing={0.5} fontSize="5px">
                 {prescription.instructions && (
-                  <div>
-                    <strong style={{ color: '#92400e' }}>Treatment Instructions:</strong>
-                    <div style={{ 
-                      marginTop: '5px', 
-                      padding: '10px', 
-                      background: 'white', 
-                      borderRadius: '6px',
-                      border: '1px solid #fcd34d',
-                      color: '#1e293b'
-                    }}>{prescription.instructions}</div>
-                  </div>
+                  <Box>
+                    <Text fontWeight="bold" color="yellow.800">Treatment Instructions:</Text>
+                    <Box
+                      mt={0.5}
+                      p={0.5}
+                      bg="white"
+                      borderRadius="sm"
+                      border="1px solid"
+                      borderColor="yellow.200"
+                      color="gray.800"
+                      fontSize="5px"
+                    >
+                      {prescription.instructions}
+                    </Box>
+                  </Box>
                 )}
                 {prescription.followUp && (
-                  <div>
-                    <strong style={{ color: '#92400e' }}>Follow-up Instructions:</strong>
-                    <div style={{ 
-                      marginTop: '5px', 
-                      padding: '10px', 
-                      background: 'white', 
-                      borderRadius: '6px',
-                      border: '1px solid #fcd34d',
-                      color: '#1e293b'
-                    }}>{prescription.followUp}</div>
-                  </div>
+                  <Box>
+                    <Text fontWeight="bold" color="yellow.800">Follow-up Instructions:</Text>
+                    <Box
+                      mt={0.5}
+                      p={0.5}
+                      bg="white"
+                      borderRadius="sm"
+                      border="1px solid"
+                      borderColor="yellow.200"
+                      color="gray.800"
+                      fontSize="5px"
+                    >
+                      {prescription.followUp}
+                    </Box>
+                  </Box>
                 )}
-              </div>
-            </div>
+              </SimpleGrid>
+            </Box>
           )}
 
-                     {/* ICD-10 Codes Section */}
-           {selectedIcd10Codes.length > 0 && (
-             <div style={{ 
-               marginBottom: '30px',
-               padding: '20px',
-               background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-               borderRadius: '10px',
-               border: '1px solid #fcd34d'
-             }}>
-               <h3 style={{ 
-                 margin: '0 0 15px 0', 
-                 color: '#92400e', 
-                 fontSize: '18px',
-                 fontWeight: '600',
-                 borderBottom: '2px solid #d97706',
-                 paddingBottom: '5px'
-               }}>🏷️ ICD-10 Diagnosis Codes</h3>
-               <div style={{ 
-                 padding: '15px', 
-                 background: 'white', 
-                 borderRadius: '8px',
-                 border: '1px solid #fcd34d',
-                 color: '#1e293b',
-                 fontSize: '14px',
-                 lineHeight: '1.6'
-               }}>
-                 {selectedIcd10Codes.map(code => (
-                   <div key={code.code} style={{ marginBottom: '10px' }}>
-                     <strong style={{ color: '#92400e' }}>{code.code}:</strong> {code.description}
-                     <div style={{ 
-                       fontSize: '12px', 
-                       color: '#64748b', 
-                       marginTop: '3px',
-                       fontStyle: 'italic'
-                     }}>
-                       Category: {code.category}
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
+          {/* ICD-10 Codes Section */}
+          {selectedIcd10Codes.length > 0 && (
+            <Box
+              mb={0.5}
+              p={0.5}
+              bgGradient="linear(135deg, yellow.50 0%, yellow.100 100%)"
+              borderRadius="md"
+              border="1px solid"
+              borderColor="yellow.200"
+              flexShrink={0}
+            >
+              <Heading
+                size="xs"
+                color="yellow.800"
+                fontSize="8px"
+                fontWeight="600"
+                borderBottom="1px solid"
+                borderBottomColor="yellow.600"
+                pb={0.5}
+                mb={0.5}
+              >
+                🏷️ ICD-10 Diagnosis Codes
+              </Heading>
+              <Box
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="yellow.200"
+                color="gray.800"
+                fontSize="5px"
+                lineHeight="1.1"
+              >
+                {selectedIcd10Codes.map(code => (
+                  <Box key={code.code} mb={0.5}>
+                    <Text fontWeight="bold" color="yellow.800">{code.code}:</Text> {code.description}
+                    <Text
+                      fontSize="4px"
+                      color="gray.500"
+                      mt={0.25}
+                      fontStyle="italic"
+                    >
+                      Category: {code.category}
+                    </Text>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
 
-           {/* Lab Test Recommendations Section */}
-           {selectedLabTests.length > 0 && (
-            <div style={{ 
-              marginBottom: '30px',
-              padding: '20px',
-              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-              borderRadius: '10px',
-              border: '1px solid #bae6fd'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 15px 0', 
-                color: '#0c4a6e', 
-                fontSize: '18px',
-                fontWeight: '600',
-                borderBottom: '2px solid #0284c7',
-                paddingBottom: '5px'
-              }}>🧪 Laboratory Test Recommendations</h3>
-              <div style={{ 
-                padding: '15px', 
-                background: 'white', 
-                borderRadius: '8px',
-                border: '1px solid #bae6fd',
-                color: '#1e293b',
-                fontSize: '14px',
-                lineHeight: '1.6'
-              }}>
-                {selectedLabTests.map(testId => {
-                  // Try to find test in organized categories first
-                  let test = labTestCategories.flatMap(cat => cat.subcategories).flatMap(sub => sub.tests).find(t => t.id === testId);
-                  
-                  // If not found in organized categories, try raw data
-                  if (!test && labTestsFromDB.length > 0) {
-                    const rawTest = labTestsFromDB.find(t => t.testCode === testId);
-                    if (rawTest) {
-                      test = {
-                        id: rawTest.testCode,
-                        name: rawTest.testName,
-                        code: rawTest.testCode
-                      };
+          {/* Lab Test Recommendations Section */}
+          {selectedLabTests.length > 0 && (
+            <Box
+              mb={0.5}
+              p={0.5}
+              bgGradient="linear(135deg, blue.50 0%, blue.100 100%)"
+              borderRadius="md"
+              border="1px solid"
+              borderColor="blue.200"
+              flexShrink={0}
+            >
+              <Heading
+                size="xs"
+                color="blue.800"
+                fontSize="8px"
+                fontWeight="600"
+                borderBottom="1px solid"
+                borderBottomColor="blue.600"
+                pb={0.5}
+                mb={0.5}
+              >
+                🧪 Laboratory Test Recommendations
+              </Heading>
+              <Box
+                p={0.5}
+                bg="white"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="blue.200"
+                color="gray.800"
+                fontSize="5px"
+                lineHeight="1.1"
+              >
+                <Text>
+                  {selectedLabTests.map(testId => {
+                    // Try to find test in organized categories first
+                    let test = labTestCategories.flatMap(cat => cat.subcategories).flatMap(sub => sub.tests).find(t => t.id === testId);
+                    
+                    // If not found in organized categories, try raw data
+                    if (!test && labTestsFromDB.length > 0) {
+                      const rawTest = labTestsFromDB.find(t => t.testCode === testId);
+                      if (rawTest) {
+                        test = {
+                          id: rawTest.testCode,
+                          name: rawTest.testName,
+                          code: rawTest.testCode
+                        };
+                      }
                     }
-                  }
-                  
-                  return test ? `${test.name} (${test.code})` : testId;
-                }).join(', ')}
-              </div>
-              <div style={{ 
-                marginTop: '15px',
-                padding: '10px',
-                background: 'rgba(2, 132, 199, 0.1)',
-                borderRadius: '6px',
-                border: '1px solid #bae6fd',
-                fontSize: '12px',
-                color: '#0c4a6e',
-                fontStyle: 'italic'
-              }}>
-                <strong>Note:</strong> These are test recommendations only. Please visit the laboratory separately for test ordering and billing.
-              </div>
-            </div>
+                    
+                    return test ? `${test.name} (${test.code})` : testId;
+                  }).join(', ')}
+                </Text>
+              </Box>
+              <Box
+                mt={0.5}
+                p={0.5}
+                bg="blue.50"
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="blue.200"
+                fontSize="4px"
+                color="blue.800"
+                fontStyle="italic"
+              >
+                <Text fontWeight="bold">Note:</Text> These are test recommendations only. Please visit the laboratory separately for test ordering and billing.
+              </Box>
+            </Box>
           )}
 
           {/* Professional Footer */}
-          <div style={{ 
-            borderTop: '3px solid #2563eb', 
-            paddingTop: '25px', 
-            marginTop: '40px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end'
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ 
-                borderTop: '2px solid #2563eb', 
-                width: '250px', 
-                marginTop: '40px',
-                marginBottom: '15px'
-              }}></div>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                gap: '20px',
-                fontSize: '14px'
-              }}>
-                <div>
-                  <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '16px' }}>{prescription.doctorName}</div>
-                  <div style={{ color: '#475569' }}>{prescription.doctorSpecialization}</div>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>License: {prescription.doctorLicense}</div>
-                </div>
-                <div>
-                  <div style={{ color: '#475569', fontSize: '12px' }}>Digital Signature</div>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>Generated Electronically</div>
-                </div>
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'right',
-              flex: 1,
-              borderLeft: '2px solid #e2e8f0',
-              paddingLeft: '20px'
-            }}>
-              <div style={{ 
-                background: '#f8fafc', 
-                padding: '15px', 
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '5px' }}>Document Information</div>
-                <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>
-                  <div>Generated on: {new Date().toLocaleString('en-US', { 
+          <Box
+            borderTop="1px solid"
+            borderTopColor="blue.600"
+            pt={0.5}
+            mt={0.5}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="flex-end"
+            flexShrink={0}
+          >
+            <Box flex={1}>
+              <Box
+                borderTop="1px solid"
+                borderTopColor="blue.600"
+                w="120px"
+                mt={1}
+                mb={0.5}
+              />
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={0.5} fontSize="5px">
+                <Box>
+                  <Text fontWeight="700" color="gray.800" fontSize="7px">{prescription.doctorName}</Text>
+                  <Text color="gray.600" fontSize="5px">{prescription.doctorSpecialization}</Text>
+                  <Text color="gray.500" fontSize="4px">License: {prescription.doctorLicense}</Text>
+                </Box>
+                <Box>
+                  <Text color="gray.600" fontSize="5px">Digital Signature</Text>
+                  <Text color="gray.500" fontSize="4px">Generated Electronically</Text>
+                </Box>
+              </SimpleGrid>
+            </Box>
+            <Box
+              textAlign="right"
+              flex={1}
+              borderLeft="1px solid"
+              borderLeftColor="gray.200"
+              pl={1}
+            >
+              <Box
+                bg="gray.50"
+                p={0.5}
+                borderRadius="sm"
+                border="1px solid"
+                borderColor="gray.200"
+              >
+                <Text fontWeight="600" color="gray.800" mb={0.5} fontSize="5px">Document Information</Text>
+                <VStack spacing={0} align="stretch" fontSize="4px" color="gray.500" lineHeight="1.1">
+                  <Text>Generated on: {new Date().toLocaleString('en-US', { 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}</div>
-                  <div>Prescription ID: {prescription.prescriptionId}</div>
-                  <div>This is a computer generated prescription</div>
-                  <div>Valid for 30 days from issue date</div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  })}</Text>
+                  <Text>Prescription ID: {prescription.prescriptionId}</Text>
+                  <Text>This is a computer generated prescription</Text>
+                  <Text>Valid for 30 days from issue date</Text>
+                </VStack>
+              </Box>
+            </Box>
+          </Box>
 
           {/* Security Watermark */}
-          <div style={{ 
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%) rotate(-45deg)',
-            opacity: '0.03',
-            fontSize: '120px',
-            fontWeight: 'bold',
-            color: '#2563eb',
-            pointerEvents: 'none',
-            zIndex: '-1'
-          }}>
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%) rotate(-45deg)"
+            opacity="0.03"
+            fontSize="120px"
+            fontWeight="bold"
+            color="blue.600"
+            pointerEvents="none"
+            zIndex="-1"
+          >
             OPD-EMR
-          </div>
-
-          {/* QR Code Section */}
-          <div style={{ 
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            background: 'white',
-            padding: '10px',
-            borderRadius: '8px',
-            border: '2px solid #2563eb',
-            textAlign: 'center'
-          }}>
-            <div style={{ 
-              width: '80px', 
-              height: '80px', 
-              background: '#f1f5f9', 
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '5px'
-            }}>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>QR Code</span>
-            </div>
-            <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>
-              Verify at<br/>opd-emr.com
-            </div>
-          </div>
+          </Box>
 
           {/* Prescription Validity Stamp */}
-          <div style={{ 
-            position: 'absolute',
-            bottom: '40px',
-            right: '40px',
-            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-            color: 'white',
-            padding: '15px 25px',
-            borderRadius: '50px',
-            transform: 'rotate(15deg)',
-            boxShadow: '0 4px 15px rgba(22, 163, 74, 0.3)',
-            fontSize: '14px',
-            fontWeight: '700',
-            textAlign: 'center'
-          }}>
-            <div>VALID</div>
-            <div style={{ fontSize: '12px', opacity: '0.9' }}>30 DAYS</div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <Box
+            position="absolute"
+            bottom="5px"
+            right="5px"
+            bgGradient="linear(135deg, green.600 0%, green.700 100%)"
+            color="white"
+            px={1}
+            py={0.5}
+            borderRadius="full"
+            transform="rotate(15deg)"
+            boxShadow="sm"
+            fontSize="5px"
+            fontWeight="700"
+            textAlign="center"
+          >
+            <Text>VALID</Text>
+            <Text fontSize="4px" opacity="0.9">{clinicData?.prescriptionValidity || 30} DAYS</Text>
+          </Box>
+        </Box>
+            </Box>
+          </VStack>
+        </Container>
+        
+        {/* Fixed Action Bar */}
+        <Box
+        position="fixed"
+        bottom="0"
+        left="0"
+        right="0"
+        bg="white"
+        borderTop="1px solid"
+        borderColor="gray.200"
+        p={4}
+        shadow="lg"
+        zIndex={1000}
+      >
+        <Container maxW="7xl">
+          <HStack justify="space-between" align="center">
+            <VStack align="start" spacing={1}>
+              <Text fontSize="sm" color="gray.600">
+                Patient: {patientData?.firstName} {patientData?.lastName}
+              </Text>
+              <HStack spacing={2}>
+                <Text fontSize="xs" color="gray.500">
+                  ID: {prescription.prescriptionId}
+                </Text>
+                <Badge 
+                  colorScheme={isPrescriptionReady() ? 'success' : 'warning'} 
+                  variant="subtle" 
+                  fontSize="xs"
+                >
+                  {isPrescriptionReady() ? 'Ready to Save' : 'Incomplete'}
+                </Badge>
+                <Badge colorScheme="blue" variant="outline" fontSize="xs">
+                  Mode: {mode}
+                </Badge>
+              </HStack>
+            </VStack>
+            
+            <HStack spacing={3}>
+              <Button
+                leftIcon={<Icon as={FaPrint} />}
+                colorScheme="blue"
+                variant="outline"
+                onClick={handlePrint}
+              >
+                Print
+              </Button>
+              
+              {mode !== 'view' && (
+                <Button
+                  leftIcon={<Icon as={FaPlus} />}
+                  colorScheme="blue"
+                  variant="outline"
+                  onClick={handleNewPrescription}
+                >
+                  New Prescription
+                </Button>
+              )}
+              
+              <Button
+                leftIcon={<Icon as={FaSave} />}
+                colorScheme={isPrescriptionReady() ? 'success' : 'gray'}
+                onClick={handleSave}
+                isDisabled={!isPrescriptionReady()}
+                size="lg"
+                px={8}
+              >
+                {isPrescriptionReady() ? 'Save Prescription' : 'Complete Prescription'}
+              </Button>
+            </HStack>
+          </HStack>
+        </Container>
+        </Box>
+      </Box>
   );
 };
 

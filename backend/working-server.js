@@ -1,72 +1,82 @@
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 
 const app = express();
-const PORT = 8080;
+const PORT = 3001;
 
-// Middleware
+// Enable CORS for all origins
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: true,
   credentials: true
 }));
-app.use(bodyParser.json());
 
-// Test route
-app.get('/test', (req, res) => {
-  res.json({ message: 'Working server is running!' });
-});
+app.use(express.json());
 
-// Health check
+// Health check endpoint
 app.get('/health', (req, res) => {
+  console.log('Health check requested');
   res.json({ 
     status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Database connection
-const dbPath = path.join(__dirname, 'opd-emr.db');
-console.log('📊 Database path:', dbPath);
-
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Database connection error:', err.message);
-  } else {
-    console.log('✅ Connected to SQLite database');
-  }
+// Mock login endpoint
+app.post('/api/auth/login', (req, res) => {
+  console.log('Login request received:', req.body);
+  res.json({
+    success: true,
+    message: 'Login successful',
+    user: {
+      id: 1,
+      username: req.body.username || 'admin',
+      role: 'admin'
+    }
+  });
 });
 
-// Simple auth endpoint for testing
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
-  }
-  
-  // For now, just return success (you can add real authentication later)
-  res.json({ 
-    success: true, 
-    message: 'Login successful',
-    user: { username, role: 'doctor' }
+// Mock clinic endpoint
+app.get('/api/clinic', (req, res) => {
+  console.log('Clinic data requested');
+  res.json({
+    id: 1,
+    clinicName: 'OPD-EMR HOSPITAL',
+    address: '123 Medical Street',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
+    phone: '+91-22-12345678',
+    email: 'info@opdemr.com',
+    website: 'www.opdemr.com',
+    license: 'CLINIC-LICENSE-001',
+    registration: 'REG-001',
+    prescriptionValidity: 30
+  });
+});
+
+// Mock patients endpoint
+app.get('/api/patients/:id', (req, res) => {
+  console.log('Patient data requested for ID:', req.params.id);
+  res.json({
+    id: parseInt(req.params.id),
+    name: 'John Doe',
+    age: 35,
+    gender: 'Male',
+    phone: '9876543210',
+    email: 'john@example.com',
+    address: '123 Main St',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001'
   });
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Working server running on port ${PORT}`);
-  console.log(`🔗 Test endpoint: http://localhost:${PORT}/test`);
+app.listen(PORT, () => {
+  console.log('🎉 Working Backend Server Started!');
+  console.log(`🚀 Server running on: http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔐 Auth endpoint: http://localhost:${PORT}/api/auth/login`);
-  console.log(`🌐 Also accessible at: http://127.0.0.1:${PORT}/test`);
-}).on('error', (err) => {
-  console.error('❌ Server error:', err.message);
-  console.error('Error code:', err.code);
-  console.error('Error details:', err);
+  console.log('✅ Ready to accept requests!');
+  console.log('🔐 Mock login: any username/password will work');
 });
-
-module.exports = app;
