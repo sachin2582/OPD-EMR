@@ -5,6 +5,7 @@ import {
     FaCalendarAlt, FaUser, FaExclamationTriangle, FaArrowLeft,
     FaBoxes, FaReceipt, FaShieldAlt, FaClipboardList
 } from 'react-icons/fa';
+import api from '../../../config/api';
 import './ReturnsManagement.css';
 
 const ReturnsManagement = () => {
@@ -58,14 +59,14 @@ const ReturnsManagement = () => {
             }
 
             // Load invoices for reference
-            const invoicesResponse = await fetch('http://localhost:5000/api/pharmacy/invoices');
+            const invoicesResponse = await api.get('/api/pharmacy/invoices');
             if (invoicesResponse.ok) {
                 const invoicesData = await invoicesResponse.json();
                 setInvoices(invoicesData);
             }
 
             // Load suppliers
-            const suppliersResponse = await fetch('http://localhost:5000/api/pharmacy/suppliers');
+            const suppliersResponse = await api.get('/api/pharmacy/suppliers');
             if (suppliersResponse.ok) {
                 const suppliersData = await suppliersResponse.json();
                 setSuppliers(suppliersData);
@@ -79,11 +80,7 @@ const ReturnsManagement = () => {
 
     const handleCreateSalesReturn = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/returns/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(salesReturnForm)
-            });
+            const response = await api.post('/api/pharmacy/returns/sales', salesReturnForm);
 
             if (response.ok) {
                 alert('Sales return created successfully!');
@@ -101,11 +98,7 @@ const ReturnsManagement = () => {
 
     const handleCreateSupplierReturn = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/returns/supplier', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(supplierReturnForm)
-            });
+            const response = await api.post('/api/pharmacy/returns/supplier', supplierReturnForm);
 
             if (response.ok) {
                 alert('Supplier return created successfully!');

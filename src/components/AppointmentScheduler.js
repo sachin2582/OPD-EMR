@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { 
   FaCalendarAlt, 
   FaUser, 
@@ -250,7 +251,7 @@ const AppointmentScheduler = () => {
 
   const loadPatients = async () => {
     try {
-      const response = await fetch('/api/patients');
+      const response = await api.get('/api/patients');
       if (response.ok) {
         const data = await response.json();
           setPatients(data);
@@ -301,7 +302,7 @@ const AppointmentScheduler = () => {
 
   const loadDoctors = async () => {
     try {
-      const response = await fetch('/api/doctors');
+      const response = await api.get('/api/doctors');
       if (response.ok) {
         const data = await response.json();
           setDoctors(data);
@@ -384,13 +385,7 @@ const AppointmentScheduler = () => {
     setErrors({});
     
     try {
-      const response = await fetch('/api/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(existingPatientForm),
-      });
+      const response = await api.post('/api/appointments', existingPatientForm);
 
       if (response.ok) {
         setSuccessMessage('Appointment scheduled successfully!');
@@ -425,13 +420,7 @@ const AppointmentScheduler = () => {
     setErrors({});
 
     try {
-      const response = await fetch('/api/appointments/new-patient', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newPatientForm),
-      });
+      const response = await api.post('/api/appointments/new-patient', newPatientForm);
 
       if (response.ok) {
         setSuccessMessage('Patient registered and appointment scheduled successfully!');

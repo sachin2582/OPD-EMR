@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { 
   FaUserPlus, 
   FaUserMd, 
@@ -123,15 +124,9 @@ const RegisterPage = () => {
     }
     
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          userType: 'doctor'
-        }),
+      const response = await api.post('/api/auth/register', {
+        ...formData,
+        userType: 'doctor'
       });
       
       const data = await response.json();

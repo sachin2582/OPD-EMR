@@ -4,6 +4,7 @@ import {
     FaCalculator, FaUser, FaCreditCard, FaMoneyBillWave, FaHistory,
     FaFileMedical, FaUserMd, FaCalendarAlt, FaPills, FaExclamationTriangle
 } from 'react-icons/fa';
+import api from '../../../config/api';
 import './PharmacyPOS.css';
 
 const PharmacyPOS = () => {
@@ -47,7 +48,7 @@ const PharmacyPOS = () => {
     // Load stock warnings for low stock and near-expiry items
     const loadStockWarnings = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/pharmacy/dashboard/warnings');
+            const response = await api.get('/api/pharmacy/dashboard/warnings');
             if (response.ok) {
                 const data = await response.json();
                 setStockWarnings(data);
@@ -74,9 +75,9 @@ const PharmacyPOS = () => {
         
         setLoading(true);
         try {
-            let url = `http://localhost:5000/api/pharmacy/items?search=${encodeURIComponent(term)}`;
+            let url = `/api/pharmacy/items?search=${encodeURIComponent(term)}`;
             if (type === 'barcode') {
-                url = `http://localhost:5000/api/pharmacy/items?search=${encodeURIComponent(term)}`;
+                url = `/api/pharmacy/items?search=${encodeURIComponent(term)}`;
             }
             
             const response = await fetch(url);
@@ -160,7 +161,7 @@ const PharmacyPOS = () => {
         if (!term.trim()) return;
         
         try {
-            const response = await fetch(`http://localhost:5000/api/patients?search=${encodeURIComponent(term)}`);
+            const response = await api.get(`/api/patients?search=${encodeURIComponent(term)}`);
             if (response.ok) {
                 const data = await response.json();
                 setPatients(data);
@@ -183,7 +184,7 @@ const PharmacyPOS = () => {
     // Load patient history
     const loadPatientHistory = async (patientId) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/pharmacy/patients/${patientId}/history`);
+            const response = await api.get(`/api/pharmacy/patients/${patientId}/history`);
             if (response.ok) {
                 const data = await response.json();
                 setPatientHistory(data);
@@ -198,7 +199,7 @@ const PharmacyPOS = () => {
         if (!term.trim()) return;
         
         try {
-            const response = await fetch(`http://localhost:5000/api/prescriptions?search=${encodeURIComponent(term)}`);
+            const response = await api.get(`/api/prescriptions?search=${encodeURIComponent(term)}`);
             if (response.ok) {
                 const data = await response.json();
                 setPrescriptions(data);
@@ -221,7 +222,7 @@ const PharmacyPOS = () => {
     // Load prescription details
     const loadPrescriptionDetails = async (prescriptionId) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/prescriptions/${prescriptionId}`);
+            const response = await api.get(`/api/prescriptions/${prescriptionId}`);
             if (response.ok) {
                 const data = await response.json();
                 setPrescriptionDetails(data);
@@ -243,7 +244,7 @@ const PharmacyPOS = () => {
         for (const med of medications) {
             try {
                 // Search for the medication in pharmacy inventory
-                const response = await fetch(`http://localhost:5000/api/pharmacy/items?search=${encodeURIComponent(med.name)}`);
+                const response = await api.get(`/api/pharmacy/items?search=${encodeURIComponent(med.name)}`);
                 if (response.ok) {
                     const items = await response.json();
                     const availableItem = items.find(item => 
@@ -300,13 +301,7 @@ const PharmacyPOS = () => {
                 total_amount: total
             };
 
-            const response = await fetch('http://localhost:5000/api/pharmacy/sales', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(saleData)
-            });
+            const response = await api.post('/api/pharmacy/sales', saleData);
 
             if (response.ok) {
                 const result = await response.json();
@@ -335,7 +330,7 @@ const PharmacyPOS = () => {
     // Quick patient lookup by ID
     const quickPatientLookup = async (patientId) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/patients/${patientId}`);
+            const response = await api.get(`/api/patients/${patientId}`);
             if (response.ok) {
                 const patient = await response.json();
                 setSelectedPatient(patient);

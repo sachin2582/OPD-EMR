@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserMd, FaUserShield, FaEye, FaEyeSlash, FaSignInAlt } from 'react-icons/fa';
+import api from '../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,34 +29,29 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await api.post('/api/auth/login', formData);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (response.status === 200) {
         // Store token and user data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
         
         // Redirect based on user type
-        if (data.user.userType === 'doctor') {
+        if (data.user.role === 'doctor') {
           navigate('/doctor');
-        } else if (data.user.userType === 'admin') {
+        } else if (data.user.role === 'admin') {
           navigate('/dashboard');
         } else {
           navigate('/dashboard'); // Default fallback
         }
-      } else {
-        setError(data.error || 'Login failed');
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('Network error. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

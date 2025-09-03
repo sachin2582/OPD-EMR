@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../config/api';
 import { 
   getAllCities, 
   getAreasByCity, 
@@ -10,8 +10,7 @@ import {
   searchAreas 
 } from '../data/indianCitiesData';
 
-// Get API base URL from environment variables
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Using centralized API configuration
 
 // Mock data for demo purposes when backend is not available
 const mockPatients = [
@@ -131,10 +130,9 @@ const PatientForm = () => {
   const testBackendConnection = async () => {
     try {
       console.log('🔍 [FRONTEND] Testing backend connection...');
-      console.log('🔍 [FRONTEND] API_BASE_URL:', API_BASE_URL);
-      console.log('🔍 [FRONTEND] Full URL:', `${API_BASE_URL}/health`);
+      console.log('🔍 [FRONTEND] Testing backend connection...');
       
-      const response = await axios.get(`${API_BASE_URL}/health`);
+      const response = await api.get('/health');
       console.log('✅ [FRONTEND] Backend connection successful:', response.data);
       setIsOffline(false);
     } catch (err) {
@@ -156,7 +154,7 @@ const PatientForm = () => {
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/patients/${id}`);
+      const response = await api.get(`/api/patients/${id}`);
       setFormData(response.data);
     } catch (err) {
       console.log('❌ [FRONTEND] Error fetching patient data:', err.message);
@@ -313,7 +311,7 @@ const PatientForm = () => {
     e.preventDefault();
     console.log('🔵 [FRONTEND] Patient form submission started');
     console.log('📝 [FRONTEND] Form data:', JSON.stringify(formData, null, 2));
-    console.log('🔗 [FRONTEND] API Base URL:', API_BASE_URL);
+    console.log('🔗 [FRONTEND] Using centralized API configuration');
     console.log('🔄 [FRONTEND] Is Edit Mode:', isEditMode);
     console.log('📱 [FRONTEND] Is Offline:', isOffline);
     
@@ -333,8 +331,8 @@ const PatientForm = () => {
 
     try {
       const url = isEditMode 
-        ? `${API_BASE_URL}/api/patients/${id}` 
-        : `${API_BASE_URL}/api/patients`;
+        ? `/api/patients/${id}` 
+        : `/api/patients`;
       
       // Prepare data for backend - ensure required fields are present
       const submitData = {
@@ -363,16 +361,15 @@ const PatientForm = () => {
       console.log('📡 [FRONTEND] Making API request to:', url);
       console.log('📡 [FRONTEND] Request method:', isEditMode ? 'PUT' : 'POST');
       console.log('📡 [FRONTEND] Request payload:', JSON.stringify(submitData, null, 2));
-      console.log('📡 [FRONTEND] API_BASE_URL:', API_BASE_URL);
       console.log('📡 [FRONTEND] Full request URL:', url);
       
       let response;
       if (isEditMode) {
         console.log('🔄 [FRONTEND] Updating existing patient...');
-        response = await axios.put(url, submitData);
+        response = await api.put(url, submitData);
       } else {
         console.log('➕ [FRONTEND] Creating new patient...');
-        response = await axios.post(url, submitData);
+        response = await api.post(url, submitData);
       }
       
       console.log('✅ [FRONTEND] API request successful!');

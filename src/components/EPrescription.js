@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { FaPrescription, FaPrint, FaSave, FaArrowLeft, FaPlus, FaTrash, FaStethoscope, FaPills, FaNotesMedical, FaUser, FaHeartbeat, FaFlask } from 'react-icons/fa';
 import {
   Box,
@@ -480,12 +481,11 @@ const EPrescription = () => {
       if (patientId) {
         try {
           console.log('🚀 EPrescription: Fetching patient data for ID:', patientId);
-          console.log('🌐 API URL: http://localhost:3001/api/patients/' + patientId);
-          const response = await fetch(`http://localhost:3001/api/patients/${patientId}`);
+          const response = await api.get(`/api/patients/${patientId}`);
           console.log('📡 Response status:', response.status);
           
-          if (response.ok) {
-            const data = await response.json();
+          if (response.status === 200) {
+            const data = response.data;
             console.log('✅ Patient data fetched:', data);
             console.log('📊 Patient data type:', typeof data);
             console.log('📊 Patient data keys:', Object.keys(data));
@@ -608,10 +608,10 @@ const EPrescription = () => {
       console.log('🔄 Current mode:', mode);
       console.log('🔄 Current prescription ID:', prescription.prescriptionId);
       
-      const response = await fetch(`http://localhost:3001/api/prescriptions/patient/${patientId}`);
+      const response = await api.get(`/api/prescriptions/patient/${patientId}`);
       
-      if (response.ok) {
-        const prescriptions = await response.json();
+      if (response.status === 200) {
+        const prescriptions = response.data;
         console.log('✅ Past prescriptions loaded:', prescriptions);
         console.log('✅ Number of prescriptions found:', prescriptions.length);
         
@@ -645,11 +645,11 @@ const EPrescription = () => {
     const fetchClinicData = async () => {
       try {
         console.log('🏥 Fetching clinic data...');
-        const response = await fetch('http://localhost:3001/api/clinic');
+        const response = await api.get('/api/clinic');
         console.log('📡 Response status:', response.status);
         
-        if (response.ok) {
-          const data = await response.json();
+        if (response.status === 200) {
+          const data = response.data;
           console.log('✅ Clinic data fetched:', data);
           console.log('📊 Data type:', typeof data);
           console.log('📊 Data keys:', Object.keys(data));
@@ -1197,8 +1197,8 @@ const EPrescription = () => {
                 <button 
                   onClick={async () => {
                     try {
-                      const response = await fetch(`http://localhost:3001/api/prescriptions/patient/${patientId}`);
-                      const data = await response.json();
+                      const response = await api.get(`/api/prescriptions/patient/${patientId}`);
+                      const data = response.data;
                       console.log('🧪 Manual API Test Result:', data);
                       alert(`API returned ${data.length} prescriptions. Check console for details.`);
                     } catch (error) {

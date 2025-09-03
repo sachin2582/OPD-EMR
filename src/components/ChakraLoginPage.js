@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -33,6 +34,7 @@ const ChakraLoginPage = () => {
   const [error, setError] = useState('');
   
   const toast = useToast();
+  const navigate = useNavigate();
 
   const handleClick = () => setShow(!show);
 
@@ -55,14 +57,28 @@ const ChakraLoginPage = () => {
       
       // Mock validation
       if (formData.email === 'admin@hospital.com' && formData.password === 'admin123') {
+        // Store user data in localStorage for session management
+        const userData = {
+          email: formData.email,
+          name: 'Admin User',
+          role: 'admin',
+          loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('authToken', 'mock-token-' + Date.now());
+        
         toast({
           title: 'Login Successful',
           description: 'Welcome to OPD-EMR System',
           status: 'success',
-          duration: 3000,
+          duration: 2000,
           isClosable: true,
         });
-        // Redirect logic here
+        
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
       } else {
         setError('Invalid credentials. Please try again.');
       }

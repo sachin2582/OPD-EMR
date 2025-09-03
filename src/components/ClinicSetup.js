@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../config/api';
 import {
   Box,
   Container,
@@ -59,9 +60,9 @@ const ClinicSetup = () => {
   const fetchClinicData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/clinic');
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get('/api/clinic');
+      if (response.status === 200) {
+        const data = response.data;
         if (data.success && data.data) {
           setClinicData(data.data);
         }
@@ -131,16 +132,10 @@ const ClinicSetup = () => {
 
     try {
       setSaving(true);
-      const response = await fetch('http://localhost:3001/api/clinic', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(clinicData),
-      });
+      const response = await api.post('/api/clinic', clinicData);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         if (data.success) {
           toast({
             title: 'Success',

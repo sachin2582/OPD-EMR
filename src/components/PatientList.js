@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import {
   Box,
   Container,
@@ -175,32 +176,20 @@ const PatientList = () => {
 
     try {
       console.log('🔍 Fetching patients from API...');
-      console.log('🌐 API URL: http://localhost:3001/api/patients');
-      const response = await fetch('http://localhost:3001/api/patients');
-      console.log('📡 API Response status:', response.status);
-      console.log('📡 API Response headers:', response.headers);
+      const response = await api.get('/api/patients');
+      const data = response.data;
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Patients data received:', data);
-        console.log('📊 Data type:', typeof data);
-        console.log('📊 Is array:', Array.isArray(data));
-        console.log('📊 Data length:', data.length);
-        
-        // Handle both array format and object with patients property
-        if (Array.isArray(data)) {
-          console.log('✅ Setting patients array directly');
-          setPatients(data);
-        } else if (data.patients && Array.isArray(data.patients)) {
-          console.log('✅ Setting patients from data.patients property');
-          setPatients(data.patients);
-        } else {
-          console.log('⚠️ No valid patients data found, setting empty array');
-          setPatients([]);
-        }
+      console.log('✅ Patients data received:', data);
+      
+      // Handle both array format and object with patients property
+      if (Array.isArray(data)) {
+        console.log('✅ Setting patients array directly');
+        setPatients(data);
+      } else if (data.patients && Array.isArray(data.patients)) {
+        console.log('✅ Setting patients from data.patients property');
+        setPatients(data.patients);
       } else {
-        console.error('❌ API Error:', response.status, response.statusText);
-        // Don't fall back to mock data, show empty state instead
+        console.log('⚠️ No valid patients data found, setting empty array');
         setPatients([]);
       }
     } catch (error) {
@@ -228,22 +217,15 @@ const PatientList = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/patients/${patientId}`, {
-        method: 'DELETE',
+      await api.delete(`/api/patients/${patientId}`);
+      setPatients(patients.filter(p => p.id !== patientId));
+      toast({
+        title: 'Patient Deleted',
+        description: 'Patient removed successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
-      
-      if (response.ok) {
-        setPatients(patients.filter(p => p.id !== patientId));
-        toast({
-          title: 'Patient Deleted',
-          description: 'Patient removed successfully',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        throw new Error('Failed to delete patient');
-      }
     } catch (error) {
       toast({
         title: 'Error',

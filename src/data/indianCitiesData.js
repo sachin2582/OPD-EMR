@@ -850,7 +850,7 @@ export const indianCitiesData = {
       "Attur": "636102",
       "Rasipuram": "637408",
       "Namakkal": "637001",
-      "Paramathi": "637207",
+      "Paramathi": "637207", 
       "Tiruchengode": "637211",
       "Sankari": "637301",
       "Edapadi": "637105",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { FaArrowLeft, FaPrint, FaDownload, FaEdit, FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt, FaHeartbeat, FaIdCard, FaUsers, FaGlobe, FaShieldAlt, FaFileAlt, FaCalendarAlt, FaVenusMars } from 'react-icons/fa';
 
 const PatientView = () => {
@@ -11,7 +12,7 @@ const PatientView = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const response = await fetch(`/api/patients/${id}`);
+        const response = await api.get(`/api/patients/${id}`);
         if (response.ok) {
           const patientData = await response.json();
           setPatient(patientData);

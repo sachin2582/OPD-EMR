@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { FaUserMd, FaUsers, FaStethoscope, FaCalendarAlt, FaSearch, FaEye, FaPrescription, FaClock, FaUser, FaHeartbeat, FaPhone, FaIdCard, FaThermometerHalf, FaTachometerAlt, FaWeight, FaNotesMedical } from 'react-icons/fa';
 import {
   Box,
@@ -92,12 +93,11 @@ const DoctorDashboard = () => {
     const fetchPatients = async () => {
       try {
         console.log('🚀 DoctorDashboard: Fetching patients from backend...');
-        console.log('🌐 API URL: http://localhost:3001/api/patients');
-        const response = await fetch('http://localhost:3001/api/patients');
+        const response = await api.get('/api/patients');
         console.log('📡 Response status:', response.status);
         
-        if (response.ok) {
-          const data = await response.json();
+        if (response.status === 200) {
+          const data = response.data;
           console.log('✅ Raw data from backend:', data);
           console.log('📊 Data type:', typeof data);
           console.log('📊 Is array:', Array.isArray(data));
@@ -113,9 +113,9 @@ const DoctorDashboard = () => {
             allPatients.map(async (patient) => {
               try {
                 // Check if prescription exists for this patient
-                const prescriptionResponse = await fetch(`http://localhost:3001/api/prescriptions/patient/${patient.id}`);
-                if (prescriptionResponse.ok) {
-                  const prescriptions = await prescriptionResponse.json();
+                const prescriptionResponse = await api.get(`/api/prescriptions/patient/${patient.id}`);
+                if (prescriptionResponse.status === 200) {
+                  const prescriptions = prescriptionResponse.data;
                   if (prescriptions && prescriptions.length > 0) {
                     // Patient has prescriptions, mark as completed
                     return { ...patient, status: 'completed', hasPrescription: true };
@@ -209,9 +209,9 @@ const DoctorDashboard = () => {
     try {
       if (patient.hasPrescription) {
         // Patient has existing prescription, fetch the latest one for editing
-        const prescriptionResponse = await fetch(`http://localhost:3001/api/prescriptions/patient/${patient.id}`);
-        if (prescriptionResponse.ok) {
-          const prescriptions = await prescriptionResponse.json();
+        const prescriptionResponse = await api.get(`/api/prescriptions/patient/${patient.id}`);
+        if (prescriptionResponse.status === 200) {
+          const prescriptions = prescriptionResponse.data;
           if (prescriptions && prescriptions.length > 0) {
             // Get the latest prescription
             const latestPrescription = prescriptions[0];
