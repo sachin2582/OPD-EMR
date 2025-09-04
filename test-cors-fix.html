@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - Doctors API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 CORS Test - Doctors API</h1>
+    
+    <div class="container info">
+        <h3>📋 Troubleshooting Steps:</h3>
+        <ol>
+            <li><strong>Check Backend Server:</strong> Make sure the backend server is running on port 3001</li>
+            <li><strong>Check CORS:</strong> The server should allow requests from this origin</li>
+            <li><strong>Check Network:</strong> Look for any network errors in browser console</li>
+            <li><strong>Check URL:</strong> Make sure you're using the correct API endpoint</li>
+        </ol>
+    </div>
+
+    <div class="container">
+        <h3>🌐 Test 1: Health Check</h3>
+        <p>Test if the backend server is responding:</p>
+        <button onclick="testHealthCheck()">Test Health Check</button>
+        <div id="healthResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>👥 Test 2: Get All Doctors</h3>
+        <p>Test the main doctors API endpoint:</p>
+        <button onclick="testGetDoctors()">Get All Doctors</button>
+        <div id="doctorsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>➕ Test 3: Create Doctor (POST)</h3>
+        <p>Test creating a new doctor:</p>
+        <button onclick="testCreateDoctor()">Create Test Doctor</button>
+        <div id="createResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>🔍 Test 4: Search Doctors</h3>
+        <p>Test searching doctors:</p>
+        <button onclick="testSearchDoctors()">Search Doctors</button>
+        <div id="searchResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>📊 Test 5: Get Statistics</h3>
+        <p>Test getting doctor statistics:</p>
+        <button onclick="testGetStats()">Get Statistics</button>
+        <div id="statsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function testHealthCheck() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing health check...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/health');
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Health Check Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Health Check Failed!\n\nError: ' + error.message + '\n\nPossible causes:\n1. Backend server is not running\n2. Server is running on different port\n3. Network connectivity issues';
+            }
+        }
+
+        async function testGetDoctors() {
+            const resultDiv = document.getElementById('doctorsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing GET /api/doctors...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/doctors`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Get Doctors Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Get Doctors Failed!\n\nError: ' + error.message + '\n\nPossible causes:\n1. CORS issue - server not allowing this origin\n2. API endpoint not found\n3. Network connectivity issues';
+            }
+        }
+
+        async function testCreateDoctor() {
+            const resultDiv = document.getElementById('createResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing POST /api/doctors...';
+            
+            try {
+                const timestamp = Date.now();
+                const newDoctor = {
+                    name: "Dr. Test User",
+                    specialization: "Test Specialty",
+                    contactNumber: `9876543${timestamp.toString().slice(-3)}`,
+                    email: `test.user.${timestamp}@hospital.com`,
+                    qualification: "Test Qualification",
+                    experienceYears: 5,
+                    availability: "Mon-Fri 9AM-5PM"
+                };
+                
+                const response = await fetch(`${API_BASE}/doctors`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newDoctor)
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Create Doctor Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Create Doctor Failed!\n\nError: ' + error.message + '\n\nPossible causes:\n1. CORS issue - server not allowing POST requests\n2. Validation error - check required fields\n3. Network connectivity issues';
+            }
+        }
+
+        async function testSearchDoctors() {
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing search functionality...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/doctors?search=Test`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Search Doctors Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Search Doctors Failed!\n\nError: ' + error.message + '\n\nPossible causes:\n1. CORS issue\n2. API endpoint not found\n3. Network connectivity issues';
+            }
+        }
+
+        async function testGetStats() {
+            const resultDiv = document.getElementById('statsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing statistics endpoint...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/doctors/stats/overview`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Get Statistics Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Get Statistics Failed!\n\nError: ' + error.message + '\n\nPossible causes:\n1. CORS issue\n2. API endpoint not found\n3. Network connectivity issues';
+            }
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            testHealthCheck();
+        };
+    </script>
+</body>
+</html>

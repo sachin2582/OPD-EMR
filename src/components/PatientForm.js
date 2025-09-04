@@ -17,6 +17,7 @@ const mockPatients = [
   {
     id: 1,
     firstName: 'John',
+    middleName: 'Michael',
     lastName: 'Doe',
     dateOfBirth: '1990-05-15',
     age: '33',
@@ -46,6 +47,7 @@ const PatientForm = () => {
 
   const [formData, setFormData] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
     dateOfBirth: '',
     age: '',
@@ -337,6 +339,7 @@ const PatientForm = () => {
       // Prepare data for backend - ensure required fields are present
       const submitData = {
         firstName: formData.firstName,
+        middleName: formData.middleName || null,
         lastName: formData.lastName,
         dateOfBirth: formData.dateOfBirth,
         age: parseInt(formData.age) || 0,
@@ -532,6 +535,26 @@ const PatientForm = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' }}>
+                  Middle Name
+                </label>
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
+                  onChange={handleChange}
+                  placeholder="Optional"
                   style={{
                     width: '100%',
                     padding: '10px',

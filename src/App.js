@@ -19,6 +19,7 @@ import AppLayout from './components/AppLayout';
 import AdvancedDashboard from './components/AdvancedDashboard';
 import SmartAppointmentScheduler from './components/SmartAppointmentScheduler';
 import ClinicSetup from './components/ClinicSetup';
+import DoctorsManagement from './components/DoctorsManagement';
 // Pharmacy Module Imports
 import PharmacyDashboard from './components/pharmacy/PharmacyDashboard';
 import PharmacyPOS from './components/pharmacy/POS/PharmacyPOS';
@@ -173,6 +174,13 @@ function App() {
               <Route path="/clinic-setup" element={
                 <AppLayout>
                   <ClinicSetup />
+                </AppLayout>
+              } />
+              
+              {/* Doctors Management Route */}
+              <Route path="/doctors" element={
+                <AppLayout>
+                  <DoctorsManagement />
                 </AppLayout>
               } />
             </Routes>

@@ -43,7 +43,7 @@ app.use(limiter);
 // CORS configuration - configurable via environment variables
 const corsOrigins = process.env.CORS_ORIGIN 
   ? [process.env.CORS_ORIGIN]
-  : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://localhost:8000', 'http://127.0.0.1:8000'];
 
 app.use(cors({
   origin: corsOrigins,

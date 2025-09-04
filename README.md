@@ -34,7 +34,7 @@ A modern, enterprise-grade Electronic Medical Record (EMR) system designed for o
 ## 🚀 **Quick Start**
 
 ### Prerequisites
-- Node.js 18.0+ 
+- Node.js 16.0+ 
 - npm 8.0+
 - Modern web browser
 
@@ -42,8 +42,8 @@ A modern, enterprise-grade Electronic Medical Record (EMR) system designed for o
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/opd-emr.git
-   cd opd-emr
+   git clone https://github.com/sachin2582/OPD-EMR.git
+   cd OPD-EMR
    ```
 
 2. **Install Frontend Dependencies**
@@ -57,29 +57,41 @@ A modern, enterprise-grade Electronic Medical Record (EMR) system designed for o
    npm install
    ```
 
-4. **Initialize Database**
+4. **Start the Application**
+
+   **Option 1: Using the startup script (Recommended)**
    ```bash
-   npm run init-db
+   # PowerShell (Windows)
+   .\start-project.ps1
+   
+   # Or Batch file
+   start-project.bat
    ```
 
-5. **Start Backend Server**
+   **Option 2: Manual startup**
    ```bash
-   npm run dev
-   ```
-
-6. **Start Frontend Application**
-   ```bash
-   # In a new terminal, from the root directory
+   # Terminal 1: Start Backend
+   cd backend
+   npm start
+   
+   # Terminal 2: Start Frontend
    npm start
    ```
 
-7. **Access the Application**
+5. **Access the Application**
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
+   - Backend API: http://localhost:3001
+   - Health Check: http://localhost:3001/health
 
 ### Default Login Credentials
-- **Username**: admin@opd-emr.com
+- **Email**: admin@hospital.com
 - **Password**: admin123
+
+### Quick Verification
+Run the verification script to check if everything is set up correctly:
+```bash
+.\verify-setup.ps1
+```
 
 ## 🏗️ **System Architecture**
 

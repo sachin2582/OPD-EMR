@@ -251,99 +251,44 @@ const AppointmentScheduler = () => {
 
   const loadPatients = async () => {
     try {
+      console.log('🔍 [APPOINTMENTS] Loading patients from API...');
       const response = await api.get('/api/patients');
-      if (response.ok) {
-        const data = await response.json();
-          setPatients(data);
-        } else {
-        // Mock data for development
-        setPatients([
-          {
-            id: 1,
-            firstName: 'John',
-            lastName: 'Doe',
-            phone: '1234567890',
-            email: 'john.doe@email.com',
-            address: '123 Main St, City, State'
-          },
-          {
-            id: 2,
-            firstName: 'Jane',
-            lastName: 'Smith',
-            phone: '0987654321',
-            email: 'jane.smith@email.com',
-            address: '456 Oak Ave, City, State'
-          }
-        ]);
+      console.log('✅ [APPOINTMENTS] API response received:', response.data);
+      
+      if (response.data && response.data.patients) {
+        setPatients(response.data.patients);
+        console.log('✅ [APPOINTMENTS] Patients loaded successfully:', response.data.patients.length);
+      } else if (Array.isArray(response.data)) {
+        setPatients(response.data);
+        console.log('✅ [APPOINTMENTS] Patients loaded successfully (array format):', response.data.length);
+      } else {
+        console.log('⚠️ [APPOINTMENTS] Unexpected response format, using empty array');
+        setPatients([]);
       }
     } catch (error) {
-      console.error('Error loading patients:', error);
-      // Mock data for development
-      setPatients([
-        {
-          id: 1,
-          firstName: 'John',
-          lastName: 'Doe',
-          phone: '1234567890',
-          email: 'john.doe@email.com',
-          address: '123 Main St, City, State'
-        },
-        {
-          id: 2,
-          firstName: 'Jane',
-          lastName: 'Smith',
-          phone: '0987654321',
-          email: 'jane.smith@email.com',
-          address: '456 Oak Ave, City, State'
-        }
-      ]);
+      console.error('❌ [APPOINTMENTS] Error loading patients:', error);
+      console.log('🔄 [APPOINTMENTS] Backend not available, using empty array');
+      setPatients([]);
     }
   };
 
   const loadDoctors = async () => {
     try {
+      console.log('🔍 [APPOINTMENTS] Loading doctors from API...');
       const response = await api.get('/api/doctors');
-      if (response.ok) {
-        const data = await response.json();
-          setDoctors(data);
-        } else {
-        // Mock data for development
-        setDoctors([
-          {
-            id: 1,
-            firstName: 'Dr. Sarah',
-            lastName: 'Johnson',
-            specialization: 'General Medicine',
-            experience: 10
-          },
-          {
-            id: 2,
-            firstName: 'Dr. Michael',
-            lastName: 'Brown',
-            specialization: 'Cardiology',
-            experience: 15
-          }
-        ]);
+      console.log('✅ [APPOINTMENTS] Doctors API response received:', response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        setDoctors(response.data);
+        console.log('✅ [APPOINTMENTS] Doctors loaded successfully:', response.data.length);
+      } else {
+        console.log('⚠️ [APPOINTMENTS] Unexpected doctors response format, using empty array');
+        setDoctors([]);
       }
     } catch (error) {
-      console.error('Error loading doctors:', error);
-      // Mock data for development
-      setDoctors([
-        {
-          id: 1,
-          firstName: 'Dr. Sarah',
-          lastName: 'Johnson',
-          specialization: 'General Medicine',
-          experience: 10
-        },
-        {
-          id: 2,
-          firstName: 'Dr. Michael',
-          lastName: 'Brown',
-          specialization: 'Cardiology',
-          experience: 15
-        }
-      ]);
+      console.error('❌ [APPOINTMENTS] Error loading doctors:', error);
+      console.log('🔄 [APPOINTMENTS] Backend not available, using empty array');
+      setDoctors([]);
     }
   };
 

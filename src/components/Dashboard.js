@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   Box,
   Grid,
-  GridItem,
   Heading,
   Text,
   VStack,
@@ -22,15 +21,9 @@ import {
   StatNumber,
   StatHelpText,
   StatArrow,
-  Divider,
   Container,
   Flex,
-  Spacer,
   Progress,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
 } from '@chakra-ui/react';
 import {
   FaUserInjured,
@@ -39,17 +32,11 @@ import {
   FaPills,
   FaPlus,
   FaPrescriptionBottle,
-  FaHeartbeat,
   FaStethoscope,
   FaHospital,
   FaUserMd,
   FaChartLine,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaClock,
   FaUsers,
-  FaFileMedical,
-  FaShieldAlt,
   FaDatabase,
   FaServer,
   FaHdd,
@@ -196,6 +183,14 @@ const Dashboard = () => {
       color: 'teal',
       link: '/lab-tests',
       buttonText: 'Order Tests',
+    },
+    {
+      title: 'Manage Doctors',
+      description: 'Add and manage doctors',
+      icon: FaUserMd,
+      color: 'orange',
+      link: '/doctors',
+      buttonText: 'Manage',
     },
   ];
 
@@ -445,6 +440,101 @@ const Dashboard = () => {
                   <Progress value={72} colorScheme="purple" size="lg" borderRadius="lg" w="full" />
                   <Text color="purple.600" fontWeight="bold">72%</Text>
                 </VStack>
+              </SimpleGrid>
+            </CardBody>
+          </Card>
+
+          {/* Settings & Administration */}
+          <Card shadow="lg" borderRadius="xl" bg={cardBg}>
+            <CardHeader pb={4}>
+              <Flex alignItems="center" justifyContent="space-between">
+                <Heading size="md" color={textColor}>
+                  Settings & Administration
+                </Heading>
+                <Badge colorScheme="orange" variant="subtle" px={3} py={1}>
+                  Admin Panel
+                </Badge>
+              </Flex>
+            </CardHeader>
+            <CardBody pt={0}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                <Card shadow="sm" borderRadius="lg" _hover={{ shadow: 'md' }} transition="all 0.2s">
+                  <CardBody p={6} textAlign="center">
+                    <VStack spacing={4}>
+                      <Icon as={FaUserMd} w={10} h={10} color="orange.500" />
+                      <VStack spacing={2}>
+                        <Heading size="sm" color={textColor}>
+                          Manage Doctors
+                        </Heading>
+                        <Text color={textSecondary} fontSize="sm">
+                          Add, edit, and manage doctor profiles
+                        </Text>
+                      </VStack>
+                      <Button
+                        as={Link}
+                        to="/doctors"
+                        colorScheme="orange"
+                        size="sm"
+                        w="full"
+                        borderRadius="lg"
+                      >
+                        Manage Doctors
+                      </Button>
+                    </VStack>
+                  </CardBody>
+                </Card>
+
+                <Card shadow="sm" borderRadius="lg" _hover={{ shadow: 'md' }} transition="all 0.2s">
+                  <CardBody p={6} textAlign="center">
+                    <VStack spacing={4}>
+                      <Icon as={FaHospital} w={10} h={10} color="blue.500" />
+                      <VStack spacing={2}>
+                        <Heading size="sm" color={textColor}>
+                          Clinic Setup
+                        </Heading>
+                        <Text color={textSecondary} fontSize="sm">
+                          Configure clinic information and settings
+                        </Text>
+                      </VStack>
+                      <Button
+                        as={Link}
+                        to="/clinic-setup"
+                        colorScheme="blue"
+                        size="sm"
+                        w="full"
+                        borderRadius="lg"
+                      >
+                        Setup Clinic
+                      </Button>
+                    </VStack>
+                  </CardBody>
+                </Card>
+
+                <Card shadow="sm" borderRadius="lg" _hover={{ shadow: 'md' }} transition="all 0.2s">
+                  <CardBody p={6} textAlign="center">
+                    <VStack spacing={4}>
+                      <Icon as={FaUsers} w={10} h={10} color="green.500" />
+                      <VStack spacing={2}>
+                        <Heading size="sm" color={textColor}>
+                          User Management
+                        </Heading>
+                        <Text color={textSecondary} fontSize="sm">
+                          Manage staff and user accounts
+                        </Text>
+                      </VStack>
+                      <Button
+                        as={Link}
+                        to="/admin"
+                        colorScheme="green"
+                        size="sm"
+                        w="full"
+                        borderRadius="lg"
+                      >
+                        Manage Users
+                      </Button>
+                    </VStack>
+                  </CardBody>
+                </Card>
               </SimpleGrid>
             </CardBody>
           </Card>

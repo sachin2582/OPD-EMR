@@ -3,31 +3,182 @@ const { runQuery, getRow, getAll } = require('../database/database');
 
 const router = express.Router();
 
+// Validation functions
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePhoneNumber(phone) {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+  // Check if it's exactly 10 digits
+  return digits.length === 10;
+}
+
+function validateRequiredFields(data, requiredFields) {
+  const missingFields = [];
+  requiredFields.forEach(field => {
+    if (!data[field] || (typeof data[field] === 'string' && data[field].trim() === '')) {
+      missingFields.push(field);
+    }
+  });
+  return missingFields;
+}
+
 // Generate unique doctor ID
 function generateDoctorId() {
   return `DOC-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
 }
 
-// GET all doctors
-router.get('/', async (req, res) => {
+// POST /api/doctors - Add new doctor
+router.post('/', async (req, res) => {
+  console.log('🔵 [DOCTORS API] POST /api/doctors - Creating new doctor');
+  console.log('📥 [DOCTORS API] Request body:', JSON.stringify(req.body, null, 2));
+  
   try {
-    const { page = 1, limit = 20, search = '', department = '', isActive = '' } = req.query;
+    const {
+      name,
+      specialization,
+      contactNumber,
+      email,
+      qualification,
+      experienceYears,
+      availability
+    } = req.body;
+    
+    // Validate required fields
+    const requiredFields = ['name', 'specialization', 'contactNumber'];
+    const missingFields = validateRequiredFields(req.body, requiredFields);
+    
+    if (missingFields.length > 0) {
+      console.log('❌ [DOCTORS API] Missing required fields:', missingFields);
+      return res.status(400).json({
+        error: 'Missing required fields',
+        missingFields: missingFields,
+        message: `Required fields missing: ${missingFields.join(', ')}`
+      });
+    }
+    
+    // Validate contact number (10 digits)
+    if (!validatePhoneNumber(contactNumber)) {
+      console.log('❌ [DOCTORS API] Invalid contact number:', contactNumber);
+      return res.status(400).json({
+        error: 'Invalid contact number',
+        message: 'Contact number must be exactly 10 digits'
+      });
+    }
+    
+    // Validate email format if provided
+    if (email && !validateEmail(email)) {
+      console.log('❌ [DOCTORS API] Invalid email format:', email);
+      return res.status(400).json({
+        error: 'Invalid email format',
+        message: 'Please provide a valid email address'
+      });
+    }
+    
+    // Check if email already exists
+    if (email) {
+      const existingEmail = await getRow('SELECT id FROM doctors WHERE email = ?', [email]);
+      if (existingEmail) {
+        console.log('❌ [DOCTORS API] Email already exists:', email);
+        return res.status(400).json({
+          error: 'Email already registered',
+          message: 'This email address is already registered with another doctor'
+        });
+      }
+    }
+    
+    // Check if contact number already exists
+    const existingPhone = await getRow('SELECT id FROM doctors WHERE phone = ?', [contactNumber]);
+    if (existingPhone) {
+      console.log('❌ [DOCTORS API] Contact number already exists:', contactNumber);
+      return res.status(400).json({
+        error: 'Contact number already registered',
+        message: 'This contact number is already registered with another doctor'
+      });
+    }
+    
+    // Generate doctor ID
+    const doctorId = generateDoctorId();
+    console.log('✅ [DOCTORS API] Generated doctor ID:', doctorId);
+    
+    // Insert new doctor
+    const insertQuery = `
+      INSERT INTO doctors (
+        doctorId, name, specialization, phone, email, 
+        qualification, experienceYears, availability, isActive
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const insertParams = [
+      doctorId,
+      name.trim(),
+      specialization.trim(),
+      contactNumber,
+      email ? email.trim() : null,
+      qualification ? qualification.trim() : null,
+      experienceYears ? parseInt(experienceYears) : null,
+      availability ? availability.trim() : 'Mon-Fri 9AM-5PM',
+      1 // isActive
+    ];
+    
+    console.log('💾 [DOCTORS API] Inserting doctor with params:', insertParams);
+    const result = await runQuery(insertQuery, insertParams);
+    console.log('✅ [DOCTORS API] Doctor inserted successfully, ID:', result.id);
+    
+    // Get the created doctor
+    const newDoctor = await getRow('SELECT * FROM doctors WHERE id = ?', [result.id]);
+    console.log('✅ [DOCTORS API] Created doctor:', newDoctor);
+    
+    res.status(201).json({
+      message: 'Doctor created successfully',
+      doctor: newDoctor
+    });
+    
+  } catch (error) {
+    console.error('❌ [DOCTORS API] Error creating doctor:', error);
+    res.status(500).json({
+      error: 'Failed to create doctor',
+      message: 'An internal server error occurred'
+    });
+  }
+});
+
+// GET /api/doctors - List all doctors with search and pagination
+router.get('/', async (req, res) => {
+  console.log('🔵 [DOCTORS API] GET /api/doctors - Listing doctors');
+  console.log('📥 [DOCTORS API] Query params:', req.query);
+  
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      search = '', 
+      specialization = '',
+      isActive = 'true'
+    } = req.query;
+    
     const offset = (page - 1) * limit;
     
     let sql = 'SELECT * FROM doctors WHERE 1=1';
     let params = [];
     
+    // Search by name or specialization
     if (search) {
-      sql += ` AND (name LIKE ? OR specialization LIKE ? OR license LIKE ?)`;
+      sql += ` AND (name LIKE ? OR specialization LIKE ? OR qualification LIKE ?)`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
     
-    if (department) {
-      sql += ` AND department = ?`;
-      params.push(department);
+    // Filter by specialization
+    if (specialization) {
+      sql += ` AND specialization = ?`;
+      params.push(specialization);
     }
     
+    // Filter by active status
     if (isActive !== '') {
       sql += ` AND isActive = ?`;
       params.push(isActive === 'true' ? 1 : 0);
@@ -36,21 +187,25 @@ router.get('/', async (req, res) => {
     sql += ` ORDER BY name ASC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
     
+    console.log('🔍 [DOCTORS API] Executing query:', sql);
+    console.log('📝 [DOCTORS API] Query params:', params);
+    
     const doctors = await getAll(sql, params);
+    console.log('✅ [DOCTORS API] Found doctors:', doctors.length);
     
     // Get total count for pagination
     let countSql = 'SELECT COUNT(*) as total FROM doctors WHERE 1=1';
     let countParams = [];
     
     if (search) {
-      countSql += ` AND (name LIKE ? OR specialization LIKE ? OR license LIKE ?)`;
+      countSql += ` AND (name LIKE ? OR specialization LIKE ? OR qualification LIKE ?)`;
       const searchTerm = `%${search}%`;
       countParams.push(searchTerm, searchTerm, searchTerm);
     }
     
-    if (department) {
-      countSql += ` AND department = ?`;
-      countParams.push(department);
+    if (specialization) {
+      countSql += ` AND specialization = ?`;
+      countParams.push(specialization);
     }
     
     if (isActive !== '') {
@@ -70,14 +225,21 @@ router.get('/', async (req, res) => {
         pages: Math.ceil(total / limit)
       }
     });
+    
   } catch (error) {
-    console.error('Error fetching doctors:', error);
-    res.status(500).json({ error: 'Failed to fetch doctors' });
+    console.error('❌ [DOCTORS API] Error fetching doctors:', error);
+    res.status(500).json({
+      error: 'Failed to fetch doctors',
+      message: 'An internal server error occurred'
+    });
   }
 });
 
-// GET doctor by ID
+// GET /api/doctors/:id - Get details of a specific doctor
 router.get('/:id', async (req, res) => {
+  console.log('🔵 [DOCTORS API] GET /api/doctors/:id - Getting doctor details');
+  console.log('📥 [DOCTORS API] Doctor ID:', req.params.id);
+  
   try {
     const { id } = req.params;
     
@@ -87,78 +249,94 @@ router.get('/:id', async (req, res) => {
     );
     
     if (!doctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
-    }
-    
-    res.json(doctor);
-  } catch (error) {
-    console.error('Error fetching doctor:', error);
-    res.status(500).json({ error: 'Failed to fetch doctor' });
-  }
-});
-
-// POST create new doctor
-router.post('/', async (req, res) => {
-  try {
-    const {
-      name,
-      specialization,
-      license,
-      phone,
-      email,
-      department
-    } = req.body;
-    
-    // Validation
-    if (!name || !specialization || !license) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: name, specialization, license' 
+      console.log('❌ [DOCTORS API] Doctor not found:', id);
+      return res.status(404).json({
+        error: 'Doctor not found',
+        message: 'The requested doctor does not exist'
       });
     }
     
-    // Check if license already exists
-    const existingDoctor = await getRow('SELECT id FROM doctors WHERE license = ?', [license]);
-    if (existingDoctor) {
-      return res.status(400).json({ error: 'License number already registered' });
-    }
+    console.log('✅ [DOCTORS API] Doctor found:', doctor.name);
+    res.json(doctor);
     
-    const doctorId = generateDoctorId();
-    
-    const result = await runQuery(`
-      INSERT INTO doctors (doctorId, name, specialization, license, phone, email, department)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [doctorId, name, specialization, license, phone, email, department]);
-    
-    // Get the created doctor
-    const newDoctor = await getRow('SELECT * FROM doctors WHERE id = ?', [result.id]);
-    
-    res.status(201).json({
-      message: 'Doctor created successfully',
-      doctor: newDoctor
-    });
   } catch (error) {
-    console.error('Error creating doctor:', error);
-    res.status(500).json({ error: 'Failed to create doctor' });
+    console.error('❌ [DOCTORS API] Error fetching doctor:', error);
+    res.status(500).json({
+      error: 'Failed to fetch doctor',
+      message: 'An internal server error occurred'
+    });
   }
 });
 
-// PUT update doctor
+// PUT /api/doctors/:id - Update doctor details
 router.put('/:id', async (req, res) => {
+  console.log('🔵 [DOCTORS API] PUT /api/doctors/:id - Updating doctor');
+  console.log('📥 [DOCTORS API] Doctor ID:', req.params.id);
+  console.log('📥 [DOCTORS API] Update data:', JSON.stringify(req.body, null, 2));
+  
   try {
     const { id } = req.params;
     const updateData = req.body;
     
     // Check if doctor exists
-    const existingDoctor = await getRow('SELECT id FROM doctors WHERE id = ? OR doctorId = ?', [id, id]);
+    const existingDoctor = await getRow(
+      'SELECT * FROM doctors WHERE id = ? OR doctorId = ?',
+      [id, id]
+    );
+    
     if (!existingDoctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
+      console.log('❌ [DOCTORS API] Doctor not found:', id);
+      return res.status(404).json({
+        error: 'Doctor not found',
+        message: 'The requested doctor does not exist'
+      });
     }
     
-    // Check if license is being changed and if it conflicts with another doctor
-    if (updateData.license && updateData.license !== existingDoctor.license) {
-      const licenseConflict = await getRow('SELECT id FROM doctors WHERE license = ? AND id != ?', [updateData.license, existingDoctor.id]);
-      if (licenseConflict) {
-        return res.status(400).json({ error: 'License number already registered with another doctor' });
+    // Validate contact number if being updated
+    if (updateData.contactNumber) {
+      if (!validatePhoneNumber(updateData.contactNumber)) {
+        console.log('❌ [DOCTORS API] Invalid contact number:', updateData.contactNumber);
+        return res.status(400).json({
+          error: 'Invalid contact number',
+          message: 'Contact number must be exactly 10 digits'
+        });
+      }
+      
+      // Check if contact number is already used by another doctor
+      const phoneConflict = await getRow(
+        'SELECT id FROM doctors WHERE phone = ? AND id != ?',
+        [updateData.contactNumber, existingDoctor.id]
+      );
+      if (phoneConflict) {
+        console.log('❌ [DOCTORS API] Contact number already exists:', updateData.contactNumber);
+        return res.status(400).json({
+          error: 'Contact number already registered',
+          message: 'This contact number is already registered with another doctor'
+        });
+      }
+    }
+    
+    // Validate email if being updated
+    if (updateData.email) {
+      if (!validateEmail(updateData.email)) {
+        console.log('❌ [DOCTORS API] Invalid email format:', updateData.email);
+        return res.status(400).json({
+          error: 'Invalid email format',
+          message: 'Please provide a valid email address'
+        });
+      }
+      
+      // Check if email is already used by another doctor
+      const emailConflict = await getRow(
+        'SELECT id FROM doctors WHERE email = ? AND id != ?',
+        [updateData.email, existingDoctor.id]
+      );
+      if (emailConflict) {
+        console.log('❌ [DOCTORS API] Email already exists:', updateData.email);
+        return res.status(400).json({
+          error: 'Email already registered',
+          message: 'This email address is already registered with another doctor'
+        });
       }
     }
     
@@ -166,45 +344,89 @@ router.put('/:id', async (req, res) => {
     const fields = [];
     const values = [];
     
+    // Map frontend field names to database field names
+    const fieldMapping = {
+      name: 'name',
+      specialization: 'specialization',
+      contactNumber: 'phone',
+      email: 'email',
+      qualification: 'qualification',
+      experienceYears: 'experienceYears',
+      availability: 'availability'
+    };
+    
     Object.keys(updateData).forEach(key => {
-      if (key !== 'id' && key !== 'doctorId' && key !== 'createdAt') {
-        fields.push(`${key} = ?`);
-        values.push(updateData[key]);
+      if (fieldMapping[key] && updateData[key] !== undefined && updateData[key] !== null) {
+        const dbField = fieldMapping[key];
+        fields.push(`${dbField} = ?`);
+        
+        // Handle special cases
+        if (key === 'experienceYears') {
+          values.push(parseInt(updateData[key]) || null);
+        } else if (typeof updateData[key] === 'string') {
+          values.push(updateData[key].trim());
+        } else {
+          values.push(updateData[key]);
+        }
       }
     });
     
     if (fields.length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
+      console.log('❌ [DOCTORS API] No valid fields to update');
+      return res.status(400).json({
+        error: 'No valid fields to update',
+        message: 'Please provide valid fields to update'
+      });
     }
     
     fields.push('updatedAt = CURRENT_TIMESTAMP');
     values.push(existingDoctor.id);
     
     const sql = `UPDATE doctors SET ${fields.join(', ')} WHERE id = ?`;
+    console.log('💾 [DOCTORS API] Update query:', sql);
+    console.log('📝 [DOCTORS API] Update params:', values);
+    
     await runQuery(sql, values);
+    console.log('✅ [DOCTORS API] Doctor updated successfully');
     
     // Get updated doctor
     const updatedDoctor = await getRow('SELECT * FROM doctors WHERE id = ?', [existingDoctor.id]);
+    console.log('✅ [DOCTORS API] Updated doctor:', updatedDoctor.name);
     
     res.json({
       message: 'Doctor updated successfully',
       doctor: updatedDoctor
     });
+    
   } catch (error) {
-    console.error('Error updating doctor:', error);
-    res.status(500).json({ error: 'Failed to update doctor' });
+    console.error('❌ [DOCTORS API] Error updating doctor:', error);
+    res.status(500).json({
+      error: 'Failed to update doctor',
+      message: 'An internal server error occurred'
+    });
   }
 });
 
-// DELETE doctor (soft delete)
+// DELETE /api/doctors/:id - Delete doctor (soft delete)
 router.delete('/:id', async (req, res) => {
+  console.log('🔵 [DOCTORS API] DELETE /api/doctors/:id - Deleting doctor');
+  console.log('📥 [DOCTORS API] Doctor ID:', req.params.id);
+  
   try {
     const { id } = req.params;
     
     // Check if doctor exists
-    const existingDoctor = await getRow('SELECT id FROM doctors WHERE id = ? OR doctorId = ?', [id, id]);
+    const existingDoctor = await getRow(
+      'SELECT * FROM doctors WHERE id = ? OR doctorId = ?',
+      [id, id]
+    );
+    
     if (!existingDoctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
+      console.log('❌ [DOCTORS API] Doctor not found:', id);
+      return res.status(404).json({
+        error: 'Doctor not found',
+        message: 'The requested doctor does not exist'
+      });
     }
     
     // Check if doctor has active prescriptions
@@ -214,8 +436,24 @@ router.delete('/:id', async (req, res) => {
     );
     
     if (activePrescriptions.count > 0) {
-      return res.status(400).json({ 
-        error: 'Cannot delete doctor with active prescriptions' 
+      console.log('❌ [DOCTORS API] Doctor has active prescriptions:', activePrescriptions.count);
+      return res.status(400).json({
+        error: 'Cannot delete doctor with active prescriptions',
+        message: `Doctor has ${activePrescriptions.count} active prescriptions. Please complete or cancel them first.`
+      });
+    }
+    
+    // Check if doctor has scheduled appointments
+    const scheduledAppointments = await getRow(
+      'SELECT COUNT(*) as count FROM appointments WHERE doctorId = ? AND status IN ("scheduled", "confirmed")',
+      [existingDoctor.id]
+    );
+    
+    if (scheduledAppointments.count > 0) {
+      console.log('❌ [DOCTORS API] Doctor has scheduled appointments:', scheduledAppointments.count);
+      return res.status(400).json({
+        error: 'Cannot delete doctor with scheduled appointments',
+        message: `Doctor has ${scheduledAppointments.count} scheduled appointments. Please reschedule or cancel them first.`
       });
     }
     
@@ -225,219 +463,63 @@ router.delete('/:id', async (req, res) => {
       [existingDoctor.id]
     );
     
-    res.json({ message: 'Doctor deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting doctor:', error);
-    res.status(500).json({ error: 'Failed to delete doctor' });
-  }
-});
-
-// GET doctor's daily patients
-router.get('/:id/daily-patients', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { date = new Date().toISOString().split('T')[0] } = req.query;
-    
-    // Check if doctor exists
-    const doctor = await getRow('SELECT id FROM doctors WHERE id = ? OR doctorId = ?', [id, id]);
-    if (!doctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
-    }
-    
-    // Get patients with appointments or prescriptions for the specified date
-    const dailyPatients = await getAll(`
-      SELECT DISTINCT
-        pat.id,
-        pat.patientId as patientUniqueId,
-        pat.firstName,
-        pat.middleName,
-        pat.lastName,
-        pat.age,
-        pat.gender,
-        pat.phone,
-        pat.bloodGroup,
-        pat.vitalSigns,
-        pat.chiefComplaint,
-        COALESCE(apt.status, 'no-appointment') as appointmentStatus,
-        COALESCE(apt.appointmentTime, '') as appointmentTime,
-        COALESCE(apt.type, '') as appointmentType,
-        COALESCE(pres.status, 'no-prescription') as prescriptionStatus,
-        COALESCE(pres.prescriptionId, '') as prescriptionId,
-        COALESCE(pres.diagnosis, '') as diagnosis
-      FROM patients pat
-      LEFT JOIN appointments apt ON pat.id = apt.patientId AND DATE(apt.appointmentDate) = DATE(?) AND apt.doctorId = ?
-      LEFT JOIN prescriptions pres ON pat.id = pres.patientId AND DATE(pres.date) = DATE(?) AND pres.doctorId = ?
-      WHERE (apt.id IS NOT NULL OR pres.id IS NOT NULL)
-      ORDER BY COALESCE(apt.appointmentTime, '00:00') ASC, pat.firstName ASC
-    `, [date, doctor.id, date, doctor.id]);
-    
-    // Parse JSON fields
-    dailyPatients.forEach(patient => {
-      try {
-        if (patient.vitalSigns) {
-          patient.vitalSigns = JSON.parse(patient.vitalSigns);
-        }
-      } catch (e) {
-        console.warn('Error parsing vital signs JSON:', e);
+    console.log('✅ [DOCTORS API] Doctor deleted successfully:', existingDoctor.name);
+    res.json({
+      message: 'Doctor deleted successfully',
+      doctor: {
+        id: existingDoctor.id,
+        name: existingDoctor.name,
+        isActive: false
       }
     });
     
-    res.json({
-      date,
-      doctorId: doctor.id,
-      patients: dailyPatients,
-      totalPatients: dailyPatients.length
-    });
   } catch (error) {
-    console.error('Error fetching daily patients:', error);
-    res.status(500).json({ error: 'Failed to fetch daily patients' });
+    console.error('❌ [DOCTORS API] Error deleting doctor:', error);
+    res.status(500).json({
+      error: 'Failed to delete doctor',
+      message: 'An internal server error occurred'
+    });
   }
 });
 
-// GET doctor's patient statistics
-router.get('/:id/patient-stats', async (req, res) => {
+// GET /api/doctors/specializations - Get all specializations
+router.get('/specializations/list', async (req, res) => {
+  console.log('🔵 [DOCTORS API] GET /api/doctors/specializations - Getting specializations list');
+  
   try {
-    const { id } = req.params;
-    const { period = 'month' } = req.query;
+    const specializations = await getAll(`
+      SELECT DISTINCT specialization, COUNT(*) as doctorCount
+      FROM doctors 
+      WHERE isActive = 1 AND specialization IS NOT NULL
+      GROUP BY specialization
+      ORDER BY specialization ASC
+    `);
     
-    // Check if doctor exists
-    const doctor = await getRow('SELECT id FROM doctors WHERE id = ? OR doctorId = ?', [id, id]);
-    if (!doctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
-    }
-    
-    let dateFilter = '';
-    if (period === 'week') {
-      dateFilter = 'AND DATE(createdAt) >= DATE("now", "-7 days")';
-    } else if (period === 'month') {
-      dateFilter = 'AND DATE(createdAt) >= DATE("now", "-30 days")';
-    } else if (period === 'year') {
-      dateFilter = 'AND DATE(createdAt) >= DATE("now", "-365 days")';
-    }
-    
-    // Get prescription statistics
-    const prescriptionStats = await getRow(`
-      SELECT 
-        COUNT(*) as totalPrescriptions,
-        COUNT(CASE WHEN status = 'active' THEN 1 END) as activePrescriptions,
-        COUNT(CASE WHEN DATE(date) = DATE('now') THEN 1 END) as todayPrescriptions
-      FROM prescriptions 
-      WHERE doctorId = ? ${dateFilter}
-    `, [doctor.id]);
-    
-    // Get patient statistics
-    const patientStats = await getRow(`
-      SELECT 
-        COUNT(DISTINCT patientId) as uniquePatients,
-        COUNT(CASE WHEN DATE(createdAt) = DATE('now') THEN 1 END) as newPatientsToday
-      FROM prescriptions 
-      WHERE doctorId = ? ${dateFilter}
-    `, [doctor.id]);
-    
-    // Get appointment statistics
-    const appointmentStats = await getRow(`
-      SELECT 
-        COUNT(*) as totalAppointments,
-        COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as scheduledAppointments,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completedAppointments,
-        COUNT(CASE WHEN DATE(appointmentDate) = DATE('now') THEN 1 END) as todayAppointments
-      FROM appointments 
-      WHERE doctorId = ? ${dateFilter}
-    `, [doctor.id]);
-    
+    console.log('✅ [DOCTORS API] Found specializations:', specializations.length);
     res.json({
-      doctorId: doctor.id,
-      period,
-      prescriptionStats,
-      patientStats,
-      appointmentStats
+      specializations: specializations.map(s => ({
+        name: s.specialization,
+        count: s.doctorCount
+      }))
     });
+    
   } catch (error) {
-    console.error('Error fetching doctor patient statistics:', error);
-    res.status(500).json({ error: 'Failed to fetch doctor patient statistics' });
+    console.error('❌ [DOCTORS API] Error fetching specializations:', error);
+    res.status(500).json({
+      error: 'Failed to fetch specializations',
+      message: 'An internal server error occurred'
+    });
   }
 });
 
-// GET doctor's recent activity
-router.get('/:id/recent-activity', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { limit = 10 } = req.query;
-    
-    // Check if doctor exists
-    const doctor = await getRow('SELECT id FROM doctors WHERE id = ? OR doctorId = ?', [id, id]);
-    if (!doctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
-    }
-    
-    // Get recent prescriptions
-    const recentPrescriptions = await getAll(`
-      SELECT 
-        'prescription' as type,
-        p.prescriptionId as id,
-        p.date,
-        p.diagnosis,
-        p.status,
-        pat.firstName as patientFirstName,
-        pat.lastName as patientLastName,
-        pat.patientId as patientUniqueId
-      FROM prescriptions p
-      JOIN patients pat ON p.patientId = pat.id
-      WHERE p.doctorId = ?
-      ORDER BY p.createdAt DESC
-      LIMIT ?
-    `, [doctor.id, parseInt(limit)]);
-    
-    // Get recent appointments
-    const recentAppointments = await getAll(`
-      SELECT 
-        'appointment' as type,
-        apt.appointmentId as id,
-        apt.appointmentDate as date,
-        apt.status,
-        apt.type as appointmentType,
-        pat.firstName as patientFirstName,
-        pat.lastName as patientLastName,
-        pat.patientId as patientUniqueId
-      FROM appointments apt
-      JOIN patients pat ON apt.patientId = pat.id
-      WHERE apt.doctorId = ?
-      ORDER BY apt.createdAt DESC
-      LIMIT ?
-    `, [doctor.id, parseInt(limit)]);
-    
-    // Combine and sort by date
-    const allActivities = [...recentPrescriptions, ...recentAppointments]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, parseInt(limit));
-    
-    res.json({
-      doctorId: doctor.id,
-      activities: allActivities
-    });
-  } catch (error) {
-    console.error('Error fetching doctor recent activity:', error);
-    res.status(500).json({ error: 'Failed to fetch doctor recent activity' });
-  }
-});
-
-// GET doctor statistics overview
+// GET /api/doctors/stats/overview - Get doctor statistics
 router.get('/stats/overview', async (req, res) => {
+  console.log('🔵 [DOCTORS API] GET /api/doctors/stats/overview - Getting statistics');
+  
   try {
     const totalDoctors = await getRow('SELECT COUNT(*) as count FROM doctors');
     const activeDoctors = await getRow('SELECT COUNT(*) as count FROM doctors WHERE isActive = 1');
-    const totalDepartments = await getRow('SELECT COUNT(DISTINCT department) as count FROM doctors WHERE department IS NOT NULL');
-    
-    // Get department breakdown
-    const departmentBreakdown = await getAll(`
-      SELECT 
-        department,
-        COUNT(*) as doctorCount
-      FROM doctors 
-      WHERE department IS NOT NULL AND isActive = 1
-      GROUP BY department
-      ORDER BY doctorCount DESC
-    `);
+    const totalSpecializations = await getRow('SELECT COUNT(DISTINCT specialization) as count FROM doctors WHERE isActive = 1');
     
     // Get specialization breakdown
     const specializationBreakdown = await getAll(`
@@ -445,22 +527,26 @@ router.get('/stats/overview', async (req, res) => {
         specialization,
         COUNT(*) as doctorCount
       FROM doctors 
-      WHERE isActive = 1
+      WHERE isActive = 1 AND specialization IS NOT NULL
       GROUP BY specialization
       ORDER BY doctorCount DESC
       LIMIT 10
     `);
     
+    console.log('✅ [DOCTORS API] Statistics retrieved successfully');
     res.json({
       total: totalDoctors.count,
       active: activeDoctors.count,
-      totalDepartments: totalDepartments.count,
-      departmentBreakdown,
+      totalSpecializations: totalSpecializations.count,
       specializationBreakdown
     });
+    
   } catch (error) {
-    console.error('Error fetching doctor statistics:', error);
-    res.status(500).json({ error: 'Failed to fetch doctor statistics' });
+    console.error('❌ [DOCTORS API] Error fetching statistics:', error);
+    res.status(500).json({
+      error: 'Failed to fetch statistics',
+      message: 'An internal server error occurred'
+    });
   }
 });
 

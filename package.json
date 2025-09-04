@@ -4,6 +4,7 @@
   "description": "OPD-EMR System",
   "private": true,
   "dependencies": {
+    "@chakra-ui/icons": "^2.2.4",
     "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
@@ -27,7 +28,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "vercel-build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
@@ -35,7 +37,6 @@
       "react-app/jest"
     ]
   },
-
   "browserslist": {
     "production": [
       ">0.2%",

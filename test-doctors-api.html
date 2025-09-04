@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctors API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .doctor-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .doctor-card h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏥 Doctors REST API Test Interface</h1>
+    
+    <!-- Statistics Overview -->
+    <div class="container">
+        <h2>📊 Statistics Overview</h2>
+        <button onclick="loadStats()">Load Statistics</button>
+        <div id="statsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Create Doctor -->
+    <div class="container">
+        <h2>➕ Create New Doctor</h2>
+        <form id="createDoctorForm">
+            <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="specialization">Specialization *</label>
+                <input type="text" id="specialization" name="specialization" required>
+            </div>
+            <div class="form-group">
+                <label for="contactNumber">Contact Number *</label>
+                <input type="text" id="contactNumber" name="contactNumber" required placeholder="10 digits">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email">
+            </div>
+            <div class="form-group">
+                <label for="qualification">Qualification</label>
+                <input type="text" id="qualification" name="qualification">
+            </div>
+            <div class="form-group">
+                <label for="experienceYears">Experience Years</label>
+                <input type="number" id="experienceYears" name="experienceYears" min="0">
+            </div>
+            <div class="form-group">
+                <label for="availability">Availability</label>
+                <textarea id="availability" name="availability" rows="2" placeholder="e.g., Mon-Fri 9AM-5PM"></textarea>
+            </div>
+            <button type="submit">Create Doctor</button>
+        </form>
+        <div id="createResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Get All Doctors -->
+    <div class="container">
+        <h2>📋 Get All Doctors</h2>
+        <div class="form-group">
+            <label for="search">Search</label>
+            <input type="text" id="search" placeholder="Search by name, specialization, or qualification">
+        </div>
+        <div class="form-group">
+            <label for="specializationFilter">Filter by Specialization</label>
+            <select id="specializationFilter">
+                <option value="">All Specializations</option>
+            </select>
+        </div>
+        <button onclick="loadDoctors()">Load Doctors</button>
+        <button onclick="loadSpecializations()">Load Specializations</button>
+        <div id="doctorsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Get Doctor by ID -->
+    <div class="container">
+        <h2>👤 Get Doctor by ID</h2>
+        <div class="form-group">
+            <label for="doctorId">Doctor ID</label>
+            <input type="text" id="doctorId" placeholder="Enter doctor ID">
+        </div>
+        <button onclick="getDoctorById()">Get Doctor</button>
+        <div id="doctorResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Update Doctor -->
+    <div class="container">
+        <h2>✏️ Update Doctor</h2>
+        <div class="form-group">
+            <label for="updateId">Doctor ID</label>
+            <input type="text" id="updateId" placeholder="Enter doctor ID to update">
+        </div>
+        <div class="form-group">
+            <label for="updateName">Name</label>
+            <input type="text" id="updateName" name="updateName">
+        </div>
+        <div class="form-group">
+            <label for="updateSpecialization">Specialization</label>
+            <input type="text" id="updateSpecialization" name="updateSpecialization">
+        </div>
+        <div class="form-group">
+            <label for="updateContactNumber">Contact Number</label>
+            <input type="text" id="updateContactNumber" name="updateContactNumber">
+        </div>
+        <div class="form-group">
+            <label for="updateEmail">Email</label>
+            <input type="email" id="updateEmail" name="updateEmail">
+        </div>
+        <div class="form-group">
+            <label for="updateQualification">Qualification</label>
+            <input type="text" id="updateQualification" name="updateQualification">
+        </div>
+        <div class="form-group">
+            <label for="updateExperienceYears">Experience Years</label>
+            <input type="number" id="updateExperienceYears" name="updateExperienceYears" min="0">
+        </div>
+        <div class="form-group">
+            <label for="updateAvailability">Availability</label>
+            <textarea id="updateAvailability" name="updateAvailability" rows="2"></textarea>
+        </div>
+        <button onclick="updateDoctor()">Update Doctor</button>
+        <div id="updateResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Delete Doctor -->
+    <div class="container">
+        <h2>🗑️ Delete Doctor</h2>
+        <div class="form-group">
+            <label for="deleteId">Doctor ID</label>
+            <input type="text" id="deleteId" placeholder="Enter doctor ID to delete">
+        </div>
+        <button class="danger" onclick="deleteDoctor()">Delete Doctor</button>
+        <div id="deleteResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/doctors';
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats/overview`);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('statsResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                showError('statsResult', error);
+            }
+        }
+
+        // Load specializations
+        async function loadSpecializations() {
+            try {
+                const response = await fetch(`${API_BASE}/specializations/list`);
+                const data = await response.json();
+                
+                const select = document.getElementById('specializationFilter');
+                select.innerHTML = '<option value="">All Specializations</option>';
+                
+                data.specializations.forEach(spec => {
+                    const option = document.createElement('option');
+                    option.value = spec.name;
+                    option.textContent = `${spec.name} (${spec.count})`;
+                    select.appendChild(option);
+                });
+                
+                showSuccess('doctorsResult', 'Specializations loaded successfully!');
+            } catch (error) {
+                showError('doctorsResult', error);
+            }
+        }
+
+        // Load doctors
+        async function loadDoctors() {
+            try {
+                const search = document.getElementById('search').value;
+                const specialization = document.getElementById('specializationFilter').value;
+                
+                let url = API_BASE;
+                const params = new URLSearchParams();
+                
+                if (search) params.append('search', search);
+                if (specialization) params.append('specialization', specialization);
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('doctorsResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                
+                if (data.doctors && data.doctors.length > 0) {
+                    let html = `Found ${data.doctors.length} doctors:\n\n`;
+                    data.doctors.forEach(doctor => {
+                        html += `ID: ${doctor.id}\n`;
+                        html += `Name: ${doctor.name}\n`;
+                        html += `Specialization: ${doctor.specialization}\n`;
+                        html += `Phone: ${doctor.phone}\n`;
+                        html += `Email: ${doctor.email}\n`;
+                        html += `Experience: ${doctor.experienceYears} years\n`;
+                        html += `Availability: ${doctor.availability}\n`;
+                        html += `Active: ${doctor.isActive ? 'Yes' : 'No'}\n`;
+                        html += '---\n';
+                    });
+                    resultDiv.textContent = html;
+                } else {
+                    resultDiv.textContent = 'No doctors found.';
+                }
+            } catch (error) {
+                showError('doctorsResult', error);
+            }
+        }
+
+        // Get doctor by ID
+        async function getDoctorById() {
+            try {
+                const id = document.getElementById('doctorId').value;
+                if (!id) {
+                    showError('doctorResult', new Error('Please enter a doctor ID'));
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/${id}`);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('doctorResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                showError('doctorResult', error);
+            }
+        }
+
+        // Create doctor
+        document.getElementById('createDoctorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const formData = new FormData(this);
+                const doctorData = Object.fromEntries(formData.entries());
+                
+                // Convert experienceYears to number if provided
+                if (doctorData.experienceYears) {
+                    doctorData.experienceYears = parseInt(doctorData.experienceYears);
+                }
+                
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(doctorData)
+                });
+                
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('createResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Clear form
+                this.reset();
+                
+                // Reload doctors list
+                loadDoctors();
+            } catch (error) {
+                showError('createResult', error);
+            }
+        });
+
+        // Update doctor
+        async function updateDoctor() {
+            try {
+                const id = document.getElementById('updateId').value;
+                if (!id) {
+                    showError('updateResult', new Error('Please enter a doctor ID'));
+                    return;
+                }
+                
+                const updateData = {};
+                const fields = ['updateName', 'updateSpecialization', 'updateContactNumber', 'updateEmail', 'updateQualification', 'updateExperienceYears', 'updateAvailability'];
+                
+                fields.forEach(field => {
+                    const value = document.getElementById(field).value;
+                    if (value) {
+                        const key = field.replace('update', '').toLowerCase();
+                        if (key === 'contactnumber') key = 'contactNumber';
+                        if (key === 'experienceyears') key = 'experienceYears';
+                        updateData[key] = key === 'experienceYears' ? parseInt(value) : value;
+                    }
+                });
+                
+                if (Object.keys(updateData).length === 0) {
+                    showError('updateResult', new Error('Please enter at least one field to update'));
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('updateResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Clear form
+                document.getElementById('updateId').value = '';
+                fields.forEach(field => {
+                    document.getElementById(field).value = '';
+                });
+                
+                // Reload doctors list
+                loadDoctors();
+            } catch (error) {
+                showError('updateResult', error);
+            }
+        }
+
+        // Delete doctor
+        async function deleteDoctor() {
+            try {
+                const id = document.getElementById('deleteId').value;
+                if (!id) {
+                    showError('deleteResult', new Error('Please enter a doctor ID'));
+                    return;
+                }
+                
+                if (!confirm('Are you sure you want to delete this doctor?')) {
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('deleteResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Clear form
+                document.getElementById('deleteId').value = '';
+                
+                // Reload doctors list
+                loadDoctors();
+            } catch (error) {
+                showError('deleteResult', error);
+            }
+        }
+
+        // Helper functions
+        function showSuccess(elementId, message) {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result success';
+            resultDiv.textContent = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
+        }
+
+        function showError(elementId, error) {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result error';
+            resultDiv.textContent = `Error: ${error.message}`;
+        }
+
+        // Load initial data
+        window.onload = function() {
+            loadStats();
+            loadSpecializations();
+            loadDoctors();
+        };
+    </script>
+</body>
+</html>

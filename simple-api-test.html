@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Simple API Test</h1>
+    
+    <div class="container info">
+        <h3>📋 Current Status:</h3>
+        <p><strong>Backend Server:</strong> http://localhost:3001</p>
+        <p><strong>Test Server:</strong> http://localhost:8000</p>
+        <p><strong>Current Page:</strong> http://localhost:8000/simple-api-test.html</p>
+    </div>
+
+    <div class="container">
+        <h3>🌐 Test 1: Health Check</h3>
+        <p>Test if the backend server is responding:</p>
+        <button onclick="testHealth()">Test Health Check</button>
+        <div id="healthResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>👥 Test 2: Get All Doctors</h3>
+        <p>Test the main doctors API endpoint:</p>
+        <button onclick="testGetDoctors()">Get All Doctors</button>
+        <div id="doctorsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>➕ Test 3: Create Doctor</h3>
+        <p>Test creating a new doctor:</p>
+        <button onclick="testCreateDoctor()">Create Test Doctor</button>
+        <div id="createResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>🔍 Test 4: Search Doctors</h3>
+        <p>Test searching doctors:</p>
+        <button onclick="testSearchDoctors()">Search Doctors</button>
+        <div id="searchResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h3>📊 Test 5: Get Statistics</h3>
+        <p>Test getting doctor statistics:</p>
+        <button onclick="testGetStats()">Get Statistics</button>
+        <div id="statsResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing health check...';
+            
+            try {
+                console.log('Testing health check...');
+                const response = await fetch('http://localhost:3001/health');
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Health check data:', data);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Health Check Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Health check error:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Health Check Failed!\n\nError: ' + error.message + '\n\nCheck browser console for more details.';
+            }
+        }
+
+        async function testGetDoctors() {
+            const resultDiv = document.getElementById('doctorsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing GET /api/doctors...';
+            
+            try {
+                console.log('Testing get doctors...');
+                const response = await fetch(`${API_BASE}/doctors`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Doctors data:', data);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Get Doctors Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Get doctors error:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Get Doctors Failed!\n\nError: ' + error.message + '\n\nCheck browser console for more details.';
+            }
+        }
+
+        async function testCreateDoctor() {
+            const resultDiv = document.getElementById('createResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing POST /api/doctors...';
+            
+            try {
+                const timestamp = Date.now();
+                const newDoctor = {
+                    name: "Dr. Test User",
+                    specialization: "Test Specialty",
+                    contactNumber: `9876543${timestamp.toString().slice(-3)}`,
+                    email: `test.user.${timestamp}@hospital.com`,
+                    qualification: "Test Qualification",
+                    experienceYears: 5,
+                    availability: "Mon-Fri 9AM-5PM"
+                };
+                
+                console.log('Creating doctor:', newDoctor);
+                const response = await fetch(`${API_BASE}/doctors`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newDoctor)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || errorData.message}`);
+                }
+                
+                const data = await response.json();
+                console.log('Create doctor data:', data);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Create Doctor Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Create doctor error:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Create Doctor Failed!\n\nError: ' + error.message + '\n\nCheck browser console for more details.';
+            }
+        }
+
+        async function testSearchDoctors() {
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing search functionality...';
+            
+            try {
+                console.log('Testing search...');
+                const response = await fetch(`${API_BASE}/doctors?search=Test`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Search data:', data);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Search Doctors Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Search error:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Search Doctors Failed!\n\nError: ' + error.message + '\n\nCheck browser console for more details.';
+            }
+        }
+
+        async function testGetStats() {
+            const resultDiv = document.getElementById('statsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing statistics endpoint...';
+            
+            try {
+                console.log('Testing stats...');
+                const response = await fetch(`${API_BASE}/doctors/stats/overview`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Stats data:', data);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Get Statistics Successful!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Stats error:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Get Statistics Failed!\n\nError: ' + error.message + '\n\nCheck browser console for more details.';
+            }
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            console.log('Page loaded, running health check...');
+            testHealth();
+        };
+    </script>
+</body>
+</html>

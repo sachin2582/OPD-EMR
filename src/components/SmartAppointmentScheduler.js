@@ -35,24 +35,50 @@ const SmartAppointmentScheduler = () => {
   ];
 
   useEffect(() => {
-    // Mock data
-    setDoctors([
-      { id: 1, name: 'Dr. Smith', specialization: 'Cardiology' },
-      { id: 2, name: 'Dr. Johnson', specialization: 'Neurology' },
-      { id: 3, name: 'Dr. Williams', specialization: 'Pediatrics' }
-    ]);
-
-    setPatients([
-      { id: 1, firstName: 'John', lastName: 'Doe', phone: '123-456-7890' },
-      { id: 2, firstName: 'Jane', lastName: 'Smith', phone: '098-765-4321' },
-      { id: 3, firstName: 'Mike', lastName: 'Johnson', phone: '555-123-4567' }
-    ]);
-
-    setAppointments([
-      { id: 1, date: '2024-01-15', startTime: '09:00', endTime: '09:30', patientName: 'John Doe', doctorName: 'Dr. Smith', type: 'General Consultation', status: 'scheduled', priority: 'normal' },
-      { id: 2, date: '2024-01-15', startTime: '10:00', endTime: '10:30', patientName: 'Jane Smith', doctorName: 'Dr. Johnson', type: 'Follow-up', status: 'confirmed', priority: 'high' }
-    ]);
+    // Load real data from API
+    loadDoctors();
+    loadPatients();
+    loadAppointments();
   }, []);
+
+  const loadDoctors = async () => {
+    try {
+      const response = await fetch('/api/doctors');
+      if (response.ok) {
+        const data = await response.json();
+        setDoctors(data);
+      }
+    } catch (error) {
+      console.error('Error loading doctors:', error);
+      setDoctors([]);
+    }
+  };
+
+  const loadPatients = async () => {
+    try {
+      const response = await fetch('/api/patients');
+      if (response.ok) {
+        const data = await response.json();
+        setPatients(data.patients || data);
+      }
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      setPatients([]);
+    }
+  };
+
+  const loadAppointments = async () => {
+    try {
+      const response = await fetch('/api/appointments');
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data.appointments || data);
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      setAppointments([]);
+    }
+  };
 
   const handleScheduleAppointment = () => {
     if (!selectedDoctor || !selectedPatient || !appointmentType) {
