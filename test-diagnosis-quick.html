@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Diagnosis Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .diagnosis-tag {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 12px;
+            border: 1px solid #ffeaa7;
+        }
+        .diagnosis-tag .remove {
+            cursor: pointer;
+            margin-left: 4px;
+            font-weight: bold;
+        }
+        .diagnosis-tag .remove:hover {
+            color: #dc3545;
+        }
+        input { padding: 8px; margin: 4px; }
+        button { padding: 8px 12px; margin: 4px; }
+    </style>
+</head>
+<body>
+    <h2>Quick Diagnosis Test</h2>
+    
+    <div id="tags"></div>
+    
+    <input type="text" id="input" placeholder="Enter diagnosis">
+    <button onclick="add()">Add</button>
+    <button onclick="clear()">Clear All</button>
+    
+    <div id="output" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script>
+        let diagnoses = [];
+        
+        function add() {
+            const input = document.getElementById('input');
+            const value = input.value.trim();
+            if (value && !diagnoses.includes(value)) {
+                diagnoses.push(value);
+                input.value = '';
+                update();
+            }
+        }
+        
+        function remove(diagnosis) {
+            diagnoses = diagnoses.filter(d => d !== diagnosis);
+            update();
+        }
+        
+        function clear() {
+            diagnoses = [];
+            update();
+        }
+        
+        function update() {
+            const tagsDiv = document.getElementById('tags');
+            const outputDiv = document.getElementById('output');
+            
+            tagsDiv.innerHTML = diagnoses.map(d => 
+                `<span class="diagnosis-tag">${d} <span class="remove" onclick="remove('${d}')">×</span></span>`
+            ).join('');
+            
+            outputDiv.innerHTML = `
+                <strong>Diagnoses (${diagnoses.length}):</strong> ${diagnoses.join(', ') || 'None'}
+            `;
+        }
+        
+        document.getElementById('input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') add();
+        });
+        
+        update();
+    </script>
+</body>
+</html>

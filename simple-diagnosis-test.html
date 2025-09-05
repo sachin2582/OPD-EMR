@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Diagnosis Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tag { 
+            display: inline-block; 
+            background: #fff3cd; 
+            color: #856404; 
+            padding: 6px 12px; 
+            margin: 4px; 
+            border-radius: 16px; 
+            font-size: 14px; 
+            border: 1px solid #ffeaa7; 
+        }
+        .tag .close { 
+            cursor: pointer; 
+            margin-left: 8px; 
+            font-weight: bold; 
+            color: #dc3545; 
+        }
+        .tag .close:hover { background: #dc3545; color: white; padding: 2px 4px; border-radius: 50%; }
+        input { padding: 10px; margin: 8px 0; width: 300px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 8px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .clear-btn { background: #dc3545; }
+        .clear-btn:hover { background: #c82333; }
+        .output { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Diagnosis Tag Test</h1>
+        <p>Test the multiple diagnosis functionality:</p>
+        
+        <div id="tags-container"></div>
+        
+        <div>
+            <input type="text" id="diagnosis-input" placeholder="Type a diagnosis (e.g., DIABETES MELLITUS TYPE 2)">
+            <br>
+            <button onclick="addDiagnosis()">➕ Add Diagnosis</button>
+            <button onclick="clearAll()" class="clear-btn">🗑️ Clear All</button>
+        </div>
+        
+        <div class="output">
+            <h3>Current Diagnoses:</h3>
+            <div id="diagnosis-list">None</div>
+            <p><strong>Count:</strong> <span id="count">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        let diagnoses = [];
+        
+        function addDiagnosis() {
+            const input = document.getElementById('diagnosis-input');
+            const value = input.value.trim().toUpperCase();
+            
+            if (!value) {
+                alert('Please enter a diagnosis');
+                return;
+            }
+            
+            if (diagnoses.includes(value)) {
+                alert('This diagnosis is already added');
+                return;
+            }
+            
+            diagnoses.push(value);
+            input.value = '';
+            updateDisplay();
+        }
+        
+        function removeDiagnosis(diagnosis) {
+            diagnoses = diagnoses.filter(d => d !== diagnosis);
+            updateDisplay();
+        }
+        
+        function clearAll() {
+            diagnoses = [];
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            const container = document.getElementById('tags-container');
+            const list = document.getElementById('diagnosis-list');
+            const count = document.getElementById('count');
+            
+            // Update tags
+            container.innerHTML = diagnoses.map(d => 
+                `<span class="tag">${d} <span class="close" onclick="removeDiagnosis('${d}')">×</span></span>`
+            ).join('');
+            
+            // Update list
+            list.textContent = diagnoses.length > 0 ? diagnoses.join(', ') : 'None';
+            count.textContent = diagnoses.length;
+        }
+        
+        // Enter key support
+        document.getElementById('diagnosis-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addDiagnosis();
+            }
+        });
+        
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>

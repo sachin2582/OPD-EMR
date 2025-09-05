@@ -380,26 +380,6 @@
   opacity: 1;
 }
 
-/* ICD-10 styling */
-.icd10-option {
-  transition: all 0.2s ease;
-}
-
-.icd10-option:hover {
-  background: rgba(37, 99, 235, 0.05) !important;
-  border-color: var(--primary-color) !important;
-}
-
-.icd10-option.selected {
-  background: var(--primary-color) !important;
-  color: white !important;
-  border-color: var(--primary-color) !important;
-}
-
-.icd10-option.selected:hover {
-  background: var(--primary-color) !important;
-  opacity: 0.9;
-}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Search Clear Functionality</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-item { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin: 5px 0; 
+            cursor: pointer; 
+            background: #f9f9f9;
+        }
+        .test-item:hover { background: #e9e9e9; }
+        .test-item.selected { background: #d4edda; }
+        .search-box { 
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 20px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+        }
+        .clear-btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-left: 10px;
+        }
+        .status { margin: 10px 0; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Test Search Clear Functionality</h1>
+    
+    <div>
+        <input type="text" id="searchBox" class="search-box" placeholder="Search tests...">
+        <button id="clearBtn" class="clear-btn" onclick="clearSearch()">Clear Search</button>
+    </div>
+    
+    <div id="status" class="status">Showing all tests (3)</div>
+    
+    <div id="testList">
+        <div class="test-item" onclick="selectTest(this, 'TEST001')">
+            [TEST001] Blood Glucose Test
+        </div>
+        <div class="test-item" onclick="selectTest(this, 'TEST002')">
+            [TEST002] Complete Blood Count
+        </div>
+        <div class="test-item" onclick="selectTest(this, 'TEST003')">
+            [TEST003] Lipid Profile
+        </div>
+    </div>
+    
+    <div id="selectedTests" style="margin-top: 20px;">
+        <h3>Selected Tests:</h3>
+        <div id="selectedList"></div>
+    </div>
+
+    <script>
+        let selectedTests = [];
+        let allTests = [
+            { code: 'TEST001', name: 'Blood Glucose Test' },
+            { code: 'TEST002', name: 'Complete Blood Count' },
+            { code: 'TEST003', name: 'Lipid Profile' }
+        ];
+        let filteredTests = [...allTests];
+
+        function selectTest(element, testCode) {
+            const isSelected = selectedTests.includes(testCode);
+            
+            if (isSelected) {
+                // Remove test
+                selectedTests = selectedTests.filter(id => id !== testCode);
+                element.classList.remove('selected');
+                alert(`Test ${testCode} removed`);
+            } else {
+                // Add test
+                selectedTests.push(testCode);
+                element.classList.add('selected');
+                alert(`Test ${testCode} added`);
+                
+                // Clear search box when test is selected
+                document.getElementById('searchBox').value = '';
+                filterTests('');
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchBox').value = '';
+            filterTests('');
+        }
+
+        function filterTests(searchTerm) {
+            if (searchTerm.trim() === '') {
+                filteredTests = [...allTests];
+                document.getElementById('status').textContent = `Showing all tests (${filteredTests.length})`;
+            } else {
+                filteredTests = allTests.filter(test => 
+                    test.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    test.code.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                document.getElementById('status').textContent = `Search results (${filteredTests.length})`;
+            }
+            
+            // Update display
+            updateTestDisplay();
+        }
+
+        function updateTestDisplay() {
+            const testList = document.getElementById('testList');
+            testList.innerHTML = '';
+            
+            filteredTests.forEach(test => {
+                const div = document.createElement('div');
+                div.className = 'test-item';
+                if (selectedTests.includes(test.code)) {
+                    div.classList.add('selected');
+                }
+                div.onclick = () => selectTest(div, test.code);
+                div.textContent = `[${test.code}] ${test.name}`;
+                testList.appendChild(div);
+            });
+        }
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            filterTests(e.target.value);
+        });
+
+        // Initialize
+        updateTestDisplay();
+    </script>
+</body>
+</html>
