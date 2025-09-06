@@ -192,6 +192,14 @@ const Dashboard = () => {
       link: '/doctors',
       buttonText: 'Manage',
     },
+    {
+      title: 'Bills View',
+      description: 'View and manage patient bills',
+      icon: FaChartLine,
+      color: 'purple',
+      link: '/bills-view',
+      buttonText: 'View Bills',
+    },
   ];
 
   const systemStatus = [

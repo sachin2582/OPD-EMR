@@ -14,7 +14,8 @@ import {
   FaCreditCard,
   FaBars,
   FaTimes,
-  FaPrescriptionBottle
+  FaPrescriptionBottle,
+  FaUserCog
 } from 'react-icons/fa';
 import '../styles/MasterTheme.css';
 
@@ -54,6 +55,8 @@ const MasterLayout = ({ children, title, subtitle, actions, showPatientSidebar =
     { path: '/lab-tests', label: 'Lab Tests', icon: <FaPills />, section: 'lab' },
     { path: '/lab-billing', label: 'Lab Billing', icon: <FaCreditCard />, section: 'lab' },
     { path: '/billing', label: 'Billing', icon: <FaCreditCard />, section: 'lab' },
+    { path: '/bills-view', label: 'Bills View', icon: <FaCreditCard />, section: 'lab' },
+    { path: '/user-management', label: 'User Management', icon: <FaUserCog />, section: 'admin' },
     // Pharmacy Module Navigation
     { path: '/pharmacy', label: 'Pharmacy Dashboard', icon: <FaPrescriptionBottle />, section: 'pharmacy' },
     { path: '/pharmacy/pos', label: 'Pharmacy POS', icon: <FaCreditCard />, section: 'pharmacy' },
@@ -68,7 +71,8 @@ const MasterLayout = ({ children, title, subtitle, actions, showPatientSidebar =
       patient: '',
       clinical: 'Clinical Operations',
       lab: 'Laboratory & Billing',
-      pharmacy: 'Pharmacy Management'
+      pharmacy: 'Pharmacy Management',
+      admin: 'Administration'
     };
     return titles[section] || section;
   };

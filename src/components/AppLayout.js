@@ -27,6 +27,8 @@ const AppLayout = ({ children, title, subtitle, actions }) => {
         return 'Lab Test Billing';*/
       case '/billing':
         return 'Billing';
+      case '/bills-view':
+        return 'Bills View';
       case '/patient-dashboard':
         return 'Patient Dashboard';
       // Pharmacy Module Titles

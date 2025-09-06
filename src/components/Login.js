@@ -1,25 +1,53 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserMd, FaUserShield, FaEye, FaEyeSlash, FaSignInAlt } from 'react-icons/fa';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  FormControl,
+  FormLabel,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  useToast,
+  Icon,
+  Divider,
+  Link,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaUser, FaLock, FaSignInAlt, FaUserMd, FaShieldAlt } from 'react-icons/fa';
 import api from '../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     username: '',
-    password: '',
-    userType: 'doctor'
+    password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleInputChange = (e) => {
+  const bg = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
     if (error) setError('');
   };
 
@@ -29,143 +57,131 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/auth/login', formData);
-      const data = response.data;
-
-      if (response.status === 200) {
-        // Store token and user data
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('userData', JSON.stringify(data.user));
+      // Simple validation - you can customize this
+      if (formData.username === 'admin' && formData.password === 'admin') {
+        // Store basic auth info
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('username', formData.username);
         
-        // Redirect based on user type
-        if (data.user.role === 'doctor') {
-          navigate('/doctor');
-        } else if (data.user.role === 'admin') {
-          navigate('/dashboard');
-        } else {
-          navigate('/dashboard'); // Default fallback
-        }
+        toast({
+          title: "Login Successful",
+          description: "Welcome to OPD-EMR System!",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+
+        // Navigate to dashboard
+        navigate('/dashboard');
+      } else {
+        setError('Invalid username or password');
       }
     } catch (error) {
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else {
-        setError('Network error. Please try again.');
-      }
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
+      
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials. Please try again.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo">
-            <FaUserMd />
-            <h1>OPD-EMR</h1>
-          </div>
-          <p>Electronic Medical Records System</p>
-        </div>
+    <Box minH="100vh" bg={bg} display="flex" alignItems="center" justifyContent="center" p={4}>
+      <Card maxW="md" w="full" bg={cardBg} shadow="xl">
+        <CardHeader textAlign="center" pb={4}>
+          <VStack spacing={4}>
+            <Icon as={FaUserMd} boxSize={12} color="health.500" />
+            <Heading size="lg" color="health.600">
+              Doctor Login
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              Sign in to access your EMR dashboard
+            </Text>
+          </VStack>
+        </CardHeader>
+        
+        <CardBody pt={0}>
+          <form onSubmit={handleSubmit}>
+            <VStack spacing={6}>
+              {error && (
+                <Alert status="error" borderRadius="md">
+                  <AlertIcon />
+                  <AlertTitle>Login Error:</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label className="form-label">User Type</label>
-            <div className="user-type-selector">
-              <button
-                type="button"
-                className={`type-btn ${formData.userType === 'doctor' ? 'active' : ''}`}
-                onClick={() => setFormData(prev => ({ ...prev, userType: 'doctor' }))}
+              <FormControl isRequired>
+                <FormLabel>Username</FormLabel>
+                <InputGroup>
+                  <InputLeftElement>
+                    <Icon as={FaUser} color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="Enter your username"
+                    autoComplete="username"
+                  />
+                </InputGroup>
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Password</FormLabel>
+                <InputGroup>
+                  <InputLeftElement>
+                    <Icon as={FaLock} color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                  />
+                </InputGroup>
+              </FormControl>
+
+              <Button
+                type="submit"
+                colorScheme="health"
+                size="lg"
+                w="full"
+                leftIcon={<Icon as={FaSignInAlt} />}
+                isLoading={loading}
+                loadingText="Signing in..."
               >
-                <FaUserMd />
-                Doctor
-              </button>
-              <button
-                type="button"
-                className={`type-btn ${formData.userType === 'admin' ? 'active' : ''}`}
-                onClick={() => setFormData(prev => ({ ...prev, userType: 'admin' }))}
-              >
-                <FaUserShield />
-                Admin
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="username">
-              {formData.userType === 'doctor' ? 'Email or License Number' : 'Username'}
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              className="form-input"
-              value={formData.username}
-              onChange={handleInputChange}
-              placeholder={formData.userType === 'doctor' ? 'Enter email or license' : 'Enter username'}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">
-              Password
-            </label>
-            <div className="password-input">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                className="form-input"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Enter password"
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </div>
-
-          {error && <div className="error-message">{error}</div>}
-
-          <button
-            type="submit"
-            className="btn btn-primary login-btn"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <div className="loading-spinner-small"></div>
-                Signing In...
-              </>
-            ) : (
-              <>
-                <FaSignInAlt />
                 Sign In
-              </>
-            )}
-          </button>
-        </form>
+              </Button>
 
-        <div className="login-footer">
-          <p>Demo Credentials:</p>
-          <div className="demo-credentials">
-            <div>
-              <strong>Admin:</strong> admin / admin123
-            </div>
-            <div>
-              <strong>Doctor:</strong> Use registered email/license
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              <Divider />
+
+              <VStack spacing={2} textAlign="center">
+                <Text fontSize="sm" color="gray.600">
+                  Demo Credentials:
+                </Text>
+                <VStack spacing={1} fontSize="xs" color="gray.500">
+                  <HStack>
+                    <Icon as={FaShieldAlt} />
+                    <Text>Admin: admin / admin</Text>
+                  </HStack>
+                </VStack>
+              </VStack>
+            </VStack>
+          </form>
+        </CardBody>
+      </Card>
+    </Box>
   );
 };
 

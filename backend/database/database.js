@@ -4,8 +4,57 @@ const path = require('path');
 // Database file path
 const dbPath = path.join(__dirname, '..', 'opd-emr.db');
 
-// Create database connection
-const db = new sqlite3.Database(dbPath, (err) => {
+// Connection pool to manage database connections
+class DatabasePool {
+  constructor(maxConnections = 5) {
+    this.maxConnections = maxConnections;
+    this.connections = [];
+    this.activeConnections = 0;
+  }
+
+  async getConnection() {
+    return new Promise((resolve, reject) => {
+      if (this.connections.length > 0) {
+        const connection = this.connections.pop();
+        this.activeConnections++;
+        resolve(connection);
+      } else if (this.activeConnections < this.maxConnections) {
+        const connection = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            // Configure connection
+            connection.serialize(() => {
+              connection.run('PRAGMA journal_mode = WAL;');
+              connection.run('PRAGMA busy_timeout = 30000;');
+              connection.run('PRAGMA foreign_keys = ON;');
+              connection.run('PRAGMA synchronous = NORMAL;');
+              connection.run('PRAGMA cache_size = 10000;');
+            });
+            this.activeConnections++;
+            resolve(connection);
+          }
+        });
+      } else {
+        // Wait for a connection to become available
+        setTimeout(() => this.getConnection().then(resolve).catch(reject), 100);
+      }
+    });
+  }
+
+  releaseConnection(connection) {
+    if (connection && !connection.destroyed) {
+      this.connections.push(connection);
+      this.activeConnections--;
+    }
+  }
+}
+
+// Create connection pool
+const pool = new DatabasePool();
+
+// Enhanced database configuration to prevent SQLITE_BUSY
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('❌ [DATABASE] Error opening database:', err.message);
     console.error('❌ [DATABASE] Database path:', dbPath);
@@ -15,53 +64,155 @@ const db = new sqlite3.Database(dbPath, (err) => {
     console.log('✅ [DATABASE] Connected to SQLite database successfully');
     console.log('📁 [DATABASE] Database path:', dbPath);
     console.log('🔗 [DATABASE] Connection established at:', new Date().toISOString());
+    
+    // Configure database for better concurrency
+    db.serialize(() => {
+      // Enable WAL mode for better concurrency
+      db.run('PRAGMA journal_mode = WAL;', (err) => {
+        if (err) {
+          console.warn('⚠️ [DATABASE] Could not enable WAL mode:', err.message);
+        } else {
+          console.log('✅ [DATABASE] WAL mode enabled for better concurrency');
+        }
+      });
+      
+      // Set busy timeout to 30 seconds (30000ms)
+      db.run('PRAGMA busy_timeout = 30000;', (err) => {
+        if (err) {
+          console.warn('⚠️ [DATABASE] Could not set busy timeout:', err.message);
+        } else {
+          console.log('✅ [DATABASE] Busy timeout set to 30 seconds');
+        }
+      });
+      
+      // Enable foreign keys
+      db.run('PRAGMA foreign_keys = ON;', (err) => {
+        if (err) {
+          console.warn('⚠️ [DATABASE] Could not enable foreign keys:', err.message);
+        } else {
+          console.log('✅ [DATABASE] Foreign keys enabled');
+        }
+      });
+      
+      // Set synchronous mode to NORMAL for better performance
+      db.run('PRAGMA synchronous = NORMAL;', (err) => {
+        if (err) {
+          console.warn('⚠️ [DATABASE] Could not set synchronous mode:', err.message);
+        } else {
+          console.log('✅ [DATABASE] Synchronous mode set to NORMAL');
+        }
+      });
+      
+      // Set cache size for better performance
+      db.run('PRAGMA cache_size = 10000;', (err) => {
+        if (err) {
+          console.warn('⚠️ [DATABASE] Could not set cache size:', err.message);
+        } else {
+          console.log('✅ [DATABASE] Cache size set to 10000 pages');
+        }
+      });
+    });
   }
 });
 
-// Helper functions for database operations
-function runQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    console.log('🔍 [DATABASE] Executing query:', sql);
-    console.log('📝 [DATABASE] Parameters:', params);
-    
-    db.run(sql, params, function(err) {
-      if (err) {
-        console.error('❌ [DATABASE] Query failed:', err.message);
-        console.error('❌ [DATABASE] SQL:', sql);
-        console.error('❌ [DATABASE] Parameters:', params);
-        console.error('❌ [DATABASE] Error code:', err.code);
-        reject(err);
-      } else {
-        console.log('✅ [DATABASE] Query executed successfully');
-        console.log('📊 [DATABASE] Last ID:', this.lastID);
-        console.log('📊 [DATABASE] Changes:', this.changes);
-        resolve({ id: this.lastID, changes: this.changes });
+// Retry logic for SQLITE_BUSY errors
+async function retryOperation(operation, maxRetries = 3, baseDelay = 100) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.code === 'SQLITE_BUSY' && attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        console.warn(`⚠️ [DATABASE] SQLITE_BUSY on attempt ${attempt}, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
       }
-    });
+      throw error;
+    }
+  }
+}
+
+// Helper functions for database operations with retry logic and connection pooling
+async function runQuery(sql, params = []) {
+  return retryOperation(async () => {
+    const connection = await pool.getConnection();
+    try {
+      return new Promise((resolve, reject) => {
+        console.log('🔍 [DATABASE] Executing query:', sql);
+        console.log('📝 [DATABASE] Parameters:', params);
+        
+        connection.run(sql, params, function(err) {
+          if (err) {
+            console.error('❌ [DATABASE] Query failed:', err.message);
+            console.error('❌ [DATABASE] SQL:', sql);
+            console.error('❌ [DATABASE] Parameters:', params);
+            console.error('❌ [DATABASE] Error code:', err.code);
+            reject(err);
+          } else {
+            console.log('✅ [DATABASE] Query executed successfully');
+            console.log('📊 [DATABASE] Last ID:', this.lastID);
+            console.log('📊 [DATABASE] Changes:', this.changes);
+            resolve({ id: this.lastID, changes: this.changes });
+          }
+        });
+      });
+    } finally {
+      pool.releaseConnection(connection);
+    }
   });
 }
 
-function getRow(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(row);
-      }
-    });
+async function getRow(sql, params = []) {
+  return retryOperation(async () => {
+    const connection = await pool.getConnection();
+    try {
+      return new Promise((resolve, reject) => {
+        console.log('🔍 [DATABASE] Executing getRow query:', sql);
+        console.log('📝 [DATABASE] Parameters:', params);
+        
+        connection.get(sql, params, (err, row) => {
+          if (err) {
+            console.error('❌ [DATABASE] getRow failed:', err.message);
+            console.error('❌ [DATABASE] SQL:', sql);
+            console.error('❌ [DATABASE] Error code:', err.code);
+            reject(err);
+          } else {
+            console.log('✅ [DATABASE] getRow executed successfully');
+            console.log('📊 [DATABASE] Row found:', !!row);
+            resolve(row);
+          }
+        });
+      });
+    } finally {
+      pool.releaseConnection(connection);
+    }
   });
 }
 
-function getAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
+async function getAll(sql, params = []) {
+  return retryOperation(async () => {
+    const connection = await pool.getConnection();
+    try {
+      return new Promise((resolve, reject) => {
+        console.log('🔍 [DATABASE] Executing getAll query:', sql);
+        console.log('📝 [DATABASE] Parameters:', params);
+        
+        connection.all(sql, params, (err, rows) => {
+          if (err) {
+            console.error('❌ [DATABASE] getAll failed:', err.message);
+            console.error('❌ [DATABASE] SQL:', sql);
+            console.error('❌ [DATABASE] Error code:', err.code);
+            reject(err);
+          } else {
+            console.log('✅ [DATABASE] getAll executed successfully');
+            console.log('📊 [DATABASE] Rows returned:', rows.length);
+            resolve(rows);
+          }
+        });
+      });
+    } finally {
+      pool.releaseConnection(connection);
+    }
   });
 }
 

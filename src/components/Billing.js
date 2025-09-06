@@ -1,34 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import api from '../config/api';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Button,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  Card,
+  CardHeader,
+  CardBody,
+  Flex,
+  Icon,
+  Divider,
+  SimpleGrid,
+  Container,
+  Grid,
+  Tag,
+  useToast,
+  Alert,
+  AlertIcon,
+  AlertDescription,
+  IconButton,
+  Spinner,
+  Textarea,
+  FormControl,
+  FormLabel,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper
+} from '@chakra-ui/react';
 import { 
   FaUser, 
   FaCalculator, 
   FaPrint, 
-  FaDownload, 
   FaArrowLeft, 
   FaPlus, 
   FaTrash, 
   FaSave, 
   FaReceipt, 
-  FaCreditCard, 
-  FaFileAlt, 
   FaNotesMedical,
-  FaHospital,
   FaSearch,
-  FaBell,
-  FaCog,
-  FaSignOutAlt,
-  FaChartLine,
-  FaUserInjured,
-  FaCalendarAlt,
-  FaPills,
   FaTimes
 } from 'react-icons/fa';
-import './Billing.css';
 
 const Billing = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
+  
+  // Color mode values (removed unused variables)
+  
   const [patientData, setPatientData] = useState(null);
   const [patientId, setPatientId] = useState('');
   const [lookupError, setLookupError] = useState('');
@@ -37,14 +66,22 @@ const Billing = () => {
   const [billDate, setBillDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(18); // 18% GST
+  // Removed tax rate - no GST calculation
   const [notes, setNotes] = useState('');
-  const [userData, setUserData] = useState({});
 
   // Lab tests from database
   const [labTestsFromDB, setLabTestsFromDB] = useState([]);
   const [labTestsLoading, setLabTestsLoading] = useState(false);
   const [labTestsError, setLabTestsError] = useState(null);
+  
+  // Search functionality
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredTests, setFilteredTests] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState([]);
+  
+  // Clinic data
+  const [clinicData, setClinicData] = useState(null);
 
   // Available services with pricing (non-lab services)
   const availableServices = [
@@ -58,33 +95,158 @@ const Billing = () => {
     { id: 10, name: 'Medicine Supply', category: 'Pharmacy', price: 400, description: 'Prescribed medicines' }
   ];
 
+
   // Function to fetch lab tests from database
   const fetchLabTests = async () => {
     try {
+      console.log('🔄 Fetching lab tests from API...');
+      console.log('🌐 API Base URL:', process.env.REACT_APP_API_BASE_URL);
+      
       setLabTestsLoading(true);
       setLabTestsError(null);
       
-      const response = await fetch('/api/lab-tests/all');
+      const response = await api.get('/api/lab-tests/tests?all=true');
       
-      if (response.ok) {
-        const data = await response.json();
-        setLabTestsFromDB(data.tests || []);
+      console.log('✅ Lab tests API response received:', response);
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response data:', response.data);
+      
+      if (response.status === 200) {
+        const tests = response.data.tests || [];
+        console.log('📋 Lab tests loaded:', tests.length, 'tests');
+        setLabTestsFromDB(tests);
+        setFilteredTests(tests);
+        
+        // Extract unique categories
+        const uniqueCategories = [...new Set(tests.map(test => test.category))].filter(Boolean);
+        setCategories(uniqueCategories);
+        console.log('📂 Categories found:', uniqueCategories);
       } else {
+        console.warn('⚠️ Lab tests API returned unsuccessful response:', response.data);
         setLabTestsError('Failed to load lab tests');
       }
     } catch (error) {
-      setLabTestsError('Failed to load lab tests');
+      console.error('❌ Error fetching lab tests:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      let errorMessage = "Failed to load lab tests";
+      if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+        errorMessage = "Backend server is not running. Please start the backend server.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Lab tests not found in database.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Server error occurred while fetching lab tests.";
+      }
+      
+      setLabTestsError(errorMessage);
     } finally {
       setLabTestsLoading(false);
     }
   };
 
+  // Filter tests based on search term and category
   useEffect(() => {
-    // Get user data from localStorage
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
-      setUserData(user);
+    let filtered = labTestsFromDB;
+    
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(test => 
+        test.testName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        test.testCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        test.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+    
+    if (selectedCategory) {
+      filtered = filtered.filter(test => test.category === selectedCategory);
+    }
+    
+    setFilteredTests(filtered);
+  }, [searchTerm, selectedCategory, labTestsFromDB]);
+
+  // Clear search and filters
+  const clearSearchAndFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
+    setFilteredTests(labTestsFromDB);
+  };
+
+  // Function to fetch clinic data
+  const fetchClinicData = useCallback(async () => {
+    console.log('🔄 Fetching clinic data from API...');
+    console.log('🌐 API Base URL:', process.env.REACT_APP_API_BASE_URL);
+    
+    try {
+      const response = await api.get('/api/clinic');
+      console.log('✅ Clinic API response received:', response);
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response data:', response.data);
+      
+      if (response.status === 200 && response.data.success) {
+        console.log('✅ Clinic data successfully loaded:', response.data.data);
+        setClinicData(response.data.data);
+        toast({
+          title: "✅ Clinic Data Loaded",
+          description: "Clinic information loaded successfully from database",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        console.warn('⚠️ Clinic API returned unsuccessful response:', response.data);
+        throw new Error('API returned unsuccessful response');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching clinic data:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      // Determine error type for better user feedback
+      let errorMessage = "Using default clinic information.";
+      if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+        errorMessage = "Backend server is not running. Please start the backend server.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Clinic data not found in database.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Server error occurred while fetching clinic data.";
+      }
+      
+      // Set fallback clinic data (same as database data)
+      const fallbackData = {
+        clinicName: 'HIMSHIKHA NURSING HOME',
+        address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
+        city: 'Panchkula',
+        state: 'Haryana',
+        pincode: '134112',
+        phone: '9815368811',
+        email: 'info@demr.com',
+        website: 'www.demr.com',
+        license: 'CLINIC-LICENSE-001',
+        registration: 'REG-2024-001'
+      };
+      setClinicData(fallbackData);
+      console.log('🔄 Using fallback clinic data:', fallbackData);
+      
+      toast({
+        title: "⚠️ Clinic Data Error",
+        description: errorMessage,
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    console.log('🚀 Billing component mounted, initializing...');
 
     // Always initialize bill metadata
     setBillNumber(`BILL-${Date.now().toString().slice(-6)}`);
@@ -97,14 +259,14 @@ const Billing = () => {
     }
 
     // Fetch lab tests from database
+    console.log('🔄 Fetching lab tests...');
     fetchLabTests();
-  }, [location.state]);
+    
+    // Fetch clinic data
+    console.log('🔄 Fetching clinic data...');
+    fetchClinicData();
+  }, [location.state, fetchClinicData]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
 
   const fetchPatientByRegistrationNo = async () => {
     setLookupError('');
@@ -117,18 +279,18 @@ const Billing = () => {
     }
 
     try {
-      const res = await fetch(`/api/patients/${encodeURIComponent(trimmed)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPatientData(data);
-      } else if (res.status === 404) {
+      const response = await api.get(`/api/patients/${encodeURIComponent(trimmed)}`);
+      if (response.status === 200) {
+        setPatientData(response.data);
+      } else {
+        setLookupError('Failed to fetch patient.');
+      }
+    } catch (error) {
+      if (error.response?.status === 404) {
         setLookupError('No patient found with this registration number.');
       } else {
-        const err = await res.json().catch(() => ({}));
-        setLookupError(err?.error || 'Failed to fetch patient.');
-      }
-    } catch (e) {
       setLookupError('Failed to connect to server. Please ensure backend is running.');
+      }
     }
   };
 
@@ -140,8 +302,22 @@ const Billing = () => {
           ? { ...s, quantity: s.quantity + 1, total: (s.quantity + 1) * s.price }
           : s
       ));
+      toast({
+        title: "Service Updated",
+        description: `${service.name} quantity increased`,
+        status: "info",
+        duration: 2000,
+        isClosable: true,
+      });
     } else {
       setSelectedServices([...selectedServices, { ...service, quantity: 1, total: service.price }]);
+      toast({
+        title: "Service Added",
+        description: `${service.name} has been added to the bill`,
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
     }
   };
 
@@ -169,32 +345,454 @@ const Billing = () => {
     return (calculateSubtotal() * discount) / 100;
   };
 
-  const calculateTaxAmount = () => {
-    const taxableAmount = calculateSubtotal() - calculateDiscountAmount();
-    return (taxableAmount * taxRate) / 100;
-  };
-
   const calculateTotal = () => {
-    return calculateSubtotal() - calculateDiscountAmount() + calculateTaxAmount();
+    return calculateSubtotal() - calculateDiscountAmount();
   };
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('printable-bill').innerHTML;
-    const originalContent = document.body.innerHTML;
+  // Alternative print method using iframe
+  const handlePrintAlternative = () => {
+    if (!patientData || selectedServices.length === 0) {
+      toast({
+        title: "Cannot Print",
+        description: "Please select a patient and add services before printing.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const clinic = clinicData || {
+      clinicName: 'HIMSHIKHA NURSING HOME',
+      address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
+      city: 'Panchkula',
+      state: 'Haryana',
+      pincode: '134112',
+      phone: '9815368811',
+      email: 'info@demr.com',
+      website: 'www.demr.com',
+      license: 'CLINIC-LICENSE-001',
+      registration: 'REG-2024-001'
+    };
     
-    document.body.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        ${printContent}
+    console.log('🏥 Using clinic data for invoice:', clinic);
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Invoice - ${billNumber}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          @media print {
+            body { margin: 0; padding: 0; }
+            @page { margin: 0.3in; size: A4; }
+            .no-print { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            line-height: 1.4; 
+            color: #1a202c; 
+            background: #fff;
+            font-size: 12px;
+          }
+          .container { 
+            max-width: 100%;
+            margin: 0 auto; 
+            padding: 0;
+            background: #fff;
+          }
+          .header {
+            background: #ffffff;
+            color: #000000;
+            padding: 15px 20px;
+            text-align: center;
+            border-radius: 6px 6px 0 0;
+            border: 3px solid #000000;
+          }
+          .clinic-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+          }
+          .invoice-title {
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 8px;
+          }
+          .clinic-info {
+            background: #ffffff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #000000;
+            font-size: 11px;
+          }
+          .clinic-info p {
+            margin: 2px 0;
+            color: #000000;
+          }
+          .main-content {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+          }
+          .left-section {
+            flex: 2;
+          }
+          .right-section {
+            flex: 1;
+            min-width: 200px;
+          }
+          .section-card {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 4px;
+            border: 2px solid #000000;
+            margin-bottom: 10px;
+          }
+          .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #000000;
+          }
+          .patient-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 6px;
+          }
+          .detail-row {
+            margin: 3px 0;
+            font-size: 11px;
+            color: #4a5568;
+            display: flex;
+            justify-content: space-between;
+          }
+          .detail-label {
+            font-weight: 600;
+            color: #000000;
+          }
+          .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            font-size: 11px;
+          }
+          .services-table th {
+            background: #ffffff;
+            color: #000000;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 10px;
+            border: 2px solid #000000;
+          }
+          .services-table th:last-child,
+          .services-table td:last-child {
+            text-align: right;
+          }
+          .services-table th:nth-child(2),
+          .services-table td:nth-child(2) {
+            text-align: center;
+            width: 40px;
+          }
+          .services-table th:nth-child(3),
+          .services-table td:nth-child(3),
+          .services-table th:nth-child(4),
+          .services-table td:nth-child(4) {
+            text-align: right;
+            width: 70px;
+          }
+          .services-table td {
+            padding: 6px;
+            border-bottom: 1px solid #000000;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #000000;
+            font-size: 10px;
+          }
+          .services-table tbody tr:nth-child(even) {
+            background: #f5f5f5;
+          }
+          .totals-box {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 4px;
+            border: 2px solid #000000;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 11px;
+          }
+          .total-label {
+            color: #4a5568;
+          }
+          .total-value {
+            font-weight: 600;
+            color: #1a202c;
+          }
+          .final-total {
+            background: #ffffff;
+            color: #000000;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border: 3px solid #000000;
+            font-weight: 700;
+          }
+          .final-total .total-row {
+            font-size: 12px;
+            font-weight: 700;
+          }
+          .notes-section {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #000000;
+            margin: 10px 0;
+            font-size: 10px;
+          }
+          .notes-title {
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 4px;
+          }
+          .notes-content {
+            color: #333333;
+            line-height: 1.3;
+          }
+          .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+            background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+          }
+          .main-content {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            flex: 1;
+          }
+          .footer {
+            background: #ffffff;
+            padding: 12px 20px;
+            text-align: center;
+            border-top: 2px solid #000000;
+            border-left: 2px solid #000000;
+            border-right: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+            border-radius: 0 0 6px 6px;
+            font-size: 10px;
+            color: #000000;
+            margin-top: auto;
+          }
+          .footer-thanks {
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 4px;
+          }
+          .footer-meta {
+            border-top: 1px solid #000000;
+            padding-top: 6px;
+            margin-top: 6px;
+          }
+          .footer-meta p {
+            margin: 1px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <!-- Header -->
+          <div class="header">
+            <div class="clinic-name">${clinic.clinicName}</div>
+            <div class="invoice-title">INVOICE</div>
+            <div class="clinic-info">
+              <p><strong>${clinic.address}</strong></p>
+              <p>${clinic.city}, ${clinic.state} ${clinic.pincode} | Phone: ${clinic.phone}</p>
+              <p>Email: ${clinic.email}${clinic.website ? ` | Website: ${clinic.website}` : ''}</p>
       </div>
+          </div>
+
+          <!-- Main Content -->
+          <div class="main-content">
+            <!-- Left Section -->
+            <div class="left-section">
+              <!-- Bill To -->
+              <div class="section-card">
+                <div class="section-title">Bill To</div>
+                <div class="patient-name">
+                  ${patientData.firstName} ${patientData.middleName} ${patientData.lastName}
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Patient ID:</span>
+                  <span>#${patientData.patientId || patientId}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Phone:</span>
+                  <span>${patientData.phone}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Address:</span>
+                  <span>${patientData.address || 'N/A'}</span>
+                </div>
+              </div>
+
+              <!-- Services Table -->
+              <div class="section-card">
+                <div class="section-title">Services & Charges</div>
+                <table class="services-table">
+                  <thead>
+                    <tr>
+                      <th>Service Description</th>
+                      <th>Qty</th>
+                      <th>Rate (₹)</th>
+                      <th>Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${selectedServices.map((service, index) => `
+                      <tr>
+                        <td>${service.name}</td>
+                        <td>${service.quantity}</td>
+                        <td>₹${service.price.toLocaleString()}</td>
+                        <td>₹${service.total.toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Notes -->
+              ${notes ? `
+                <div class="notes-section">
+                  <div class="notes-title">Additional Notes</div>
+                  <div class="notes-content">${notes}</div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Right Section -->
+            <div class="right-section">
+              <!-- Invoice Details -->
+              <div class="section-card">
+                <div class="section-title">Invoice Details</div>
+                <div class="detail-row">
+                  <span class="detail-label">Invoice #:</span>
+                  <span>${billNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Date:</span>
+                  <span>${new Date(billDate).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Payment:</span>
+                  <span>${paymentMethod.toUpperCase()}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Generated:</span>
+                  <span>${new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              <!-- Totals -->
+              <div class="totals-box">
+                <div class="section-title">Payment Summary</div>
+                <div class="total-row">
+                  <span class="total-label">Subtotal:</span>
+                  <span class="total-value">₹${calculateSubtotal().toFixed(2)}</span>
+                </div>
+                ${discount > 0 ? `
+                  <div class="total-row">
+                    <span class="total-label">Discount (${discount}%):</span>
+                    <span class="total-value" style="color: #000000; font-weight: bold;">-₹${calculateDiscountAmount().toFixed(2)}</span>
+                  </div>
+                ` : ''}
+                <div class="final-total">
+                  <div class="total-row">
+                    <span>Total Amount:</span>
+                    <span>₹${calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <div class="footer-thanks">Thank you for choosing ${clinic.clinicName}</div>
+            <div class="footer-meta">
+              <p>This is a computer generated invoice</p>
+              <p>Generated on: ${new Date().toLocaleString()}</p>
+              ${clinic.registration ? `<p>Registration: ${clinic.registration}</p>` : ''}
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
     `;
+
+    // Create a new window for printing
+    console.log('Creating print window...');
+    const printWindow = window.open('', '_blank');
     
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
+    if (!printWindow) {
+      toast({
+        title: "Print Blocked",
+        description: "Please allow popups for this site to print the invoice.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    printWindow.onload = () => {
+      console.log('Print window loaded, attempting to print...');
+      printWindow.focus();
+      printWindow.print();
+      
+      // Close window after a delay
+      setTimeout(() => {
+        printWindow.close();
+      }, 1000);
+    };
+
+    toast({
+      title: "Print Ready",
+      description: "Bill has been sent to printer",
+      status: "success",
+      duration: 2000,
+      isClosable: true,
+    });
   };
 
-  const handleSaveBill = () => {
-    const billData = {
+  const handleSaveBill = async () => {
+    try {
+      console.log('💾 Saving bill data:', {
       billNumber,
       billDate,
       patientData,
@@ -203,145 +801,203 @@ const Billing = () => {
       subtotal: calculateSubtotal(),
       discount,
       discountAmount: calculateDiscountAmount(),
-      taxRate,
-      taxAmount: calculateTaxAmount(),
+        total: calculateTotal(),
+        paymentMethod,
+        notes
+      });
+
+      const billData = {
+        billNumber,
+        billDate,
+        patientId,
+        patientData,
+        selectedServices,
+        subtotal: calculateSubtotal(),
+        discount,
+        discountAmount: calculateDiscountAmount(),
       total: calculateTotal(),
       paymentMethod,
       notes
     };
     
-    // TODO: Replace with backend API call
-    // const savedBills = JSON.parse(localStorage.getItem('bills') || '[]');
-    // savedBills.push(billData);
-    // localStorage.setItem('bills', JSON.stringify(savedBills));
-    
-    alert('Bill saved successfully!');
+      const response = await api.post('/api/bills', billData);
+      
+      if (response.data.success) {
+        console.log('✅ Bill saved successfully:', response.data);
+        
+        toast({
+          title: "✅ Bill Saved Successfully",
+          description: `Bill #${billNumber} has been saved to the database`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+
+        // Optionally reset the form or navigate away
+        // You can add form reset logic here if needed
+        
+      } else {
+        throw new Error(response.data.message || 'Failed to save bill');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error saving bill:', error);
+      
+      let errorMessage = "Failed to save bill. Please try again.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "❌ Error Saving Bill",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
-          <div className="demr-billing">
-      {/* Main Content */}
-      <div className="billing-main">
-        {/* Main Content Area */}
-        <main className="main-content">
-          {/* Header Section */}
-          <div className="billing-header">
-            <div className="header-left">
-              <Link to="/dashboard" className="back-button">
-                <FaArrowLeft />
-                <span>Back to Dashboard</span>
-              </Link>
+    <Box minH="100vh" bg="gray.50">
+      <Container maxW="7xl" p={4}>
+        <VStack spacing={6} align="stretch">
+          {/* Header */}
+          <Card>
+            <CardBody>
+              <Flex justify="space-between" align="center">
+                <HStack spacing={4}>
+                  <Button
+                    leftIcon={<Icon as={FaArrowLeft} />}
+                    variant="outline"
+                    colorScheme="gray"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Back to Dashboard
+                  </Button>
               {patientData && (
-                <p className="patient-info">
-                  Generating bill for <strong>{patientData.firstName} {patientData.lastName}</strong>
-                </p>
-              )}
-            </div>
-            
-            {/* Close Button */}
-            <button 
+                    <Text fontSize="lg" color="gray.600">
+                      Generating bill for <Text as="span" fontWeight="bold">{patientData.firstName} {patientData.lastName}</Text>
+                    </Text>
+                  )}
+                </HStack>
+                <IconButton
+                  icon={<Icon as={FaTimes} />}
+                  variant="ghost"
               onClick={() => navigate('/dashboard')} 
-              className="close-button"
-              title="Close"
-            >
-              <FaTimes />
-            </button>
-          </div>
+                  aria-label="Close"
+                />
+              </Flex>
+            </CardBody>
+          </Card>
 
           {/* Patient Lookup Section */}
-          <div className="billing-section">
-            <div className="section-header">
-              <FaUser className="section-icon" />
-              <div>
-                <h2>Patient Lookup</h2>
-                <p>Enter registration number to load patient details</p>
-              </div>
-            </div>
-            
-            <div className="lookup-form">
-              <div className="input-group">
-                <input
-                  type="text"
-                  className="form-input"
+          <Card>
+            <CardHeader>
+              <HStack>
+                <Icon as={FaUser} color="blue.500" />
+                <VStack align="start" spacing={1}>
+                  <Heading size="md">Patient Lookup</Heading>
+                  <Text color="gray.600">Enter registration number to load patient details</Text>
+                </VStack>
+              </HStack>
+            </CardHeader>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <HStack spacing={3}>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={FaSearch} color="gray.300" />
+                    </InputLeftElement>
+                    <Input
                   placeholder="Registration No (e.g., 1, 2, 3)"
                   value={patientId}
                   onChange={(e) => setPatientId(e.target.value)}
-                />
-                <button className="btn-primary" onClick={fetchPatientByRegistrationNo}>
-                  <FaSearch />
-                  <span>Load Patient</span>
-                </button>
-              </div>
+                      onKeyPress={(e) => e.key === 'Enter' && fetchPatientByRegistrationNo()}
+                    />
+                  </InputGroup>
+                  <Button
+                    colorScheme="blue"
+                    onClick={fetchPatientByRegistrationNo}
+                    leftIcon={<Icon as={FaSearch} />}
+                    isLoading={false}
+                  >
+                    Load Patient
+                  </Button>
+                </HStack>
               
               {lookupError && (
-                <div className="error-message">
-                  <span>{lookupError}</span>
-                </div>
+                  <Alert status="error">
+                    <AlertIcon />
+                    <AlertDescription>{lookupError}</AlertDescription>
+                  </Alert>
               )}
               
               {patientData && (
-                <div className="patient-details">
+                  <Box>
                   {location.state?.patientData && (
-                    <div className="success-message">
-                      ✅ Patient registered successfully! Ready to create bill.
-                    </div>
-                  )}
-                  <div className="patient-info-grid">
-                    <div className="info-item">
-                      <span className="label">Patient:</span>
-                      <span className="value">{patientData.firstName} {patientData.middleName} {patientData.lastName}</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="label">Reg No:</span>
-                      <span className="value">#{patientData.patientId || patientId}</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="label">Phone:</span>
-                      <span className="value">{patientData.phone}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+                      <Alert status="success" mb={4}>
+                        <AlertIcon />
+                        <AlertDescription>Patient registered successfully! Ready to create bill.</AlertDescription>
+                      </Alert>
+                    )}
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} p={4} bg="blue.50" borderRadius="md">
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Patient</Text>
+                        <Text fontWeight="semibold">{patientData.firstName} {patientData.middleName} {patientData.lastName}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Reg No</Text>
+                        <Text fontWeight="semibold">#{patientData.patientId || patientId}</Text>
+                      </VStack>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" color="gray.500">Phone</Text>
+                        <Text fontWeight="semibold">{patientData.phone}</Text>
+                      </VStack>
+                    </SimpleGrid>
+                  </Box>
+                )}
+              </VStack>
+            </CardBody>
+          </Card>
 
           {patientData && (
-            <div className="billing-content">
+            <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={6}>
               {/* Left Column - Service Selection */}
-              <div className="billing-left">
+              <VStack spacing={6} align="stretch">
                 {/* Bill Information */}
-                <div className="billing-section">
-                  <div className="section-header">
-                    <FaReceipt className="section-icon" />
-                    <div>
-                      <h2>Bill Information</h2>
-                      <p>Configure bill details and payment method</p>
-                    </div>
-                  </div>
-                  
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Bill Number</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaReceipt} color="green.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Bill Information</Heading>
+                        <Text color="gray.600">Configure bill details and payment method</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                      <FormControl>
+                        <FormLabel>Bill Number</FormLabel>
+                        <Input
                         value={billNumber} 
                         onChange={(e) => setBillNumber(e.target.value)}
                       />
-                    </div>
-                    <div className="form-group">
-                      <label>Bill Date</label>
-                      <input 
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Bill Date</FormLabel>
+                        <Input
                         type="date" 
-                        className="form-input" 
                         value={billDate} 
                         onChange={(e) => setBillDate(e.target.value)}
                       />
-                    </div>
-                    <div className="form-group">
-                      <label>Payment Method</label>
-                      <select 
-                        className="form-input" 
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Payment Method</FormLabel>
+                        <Select
                         value={paymentMethod} 
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       >
@@ -349,325 +1005,381 @@ const Billing = () => {
                         <option value="card">Card</option>
                         <option value="upi">UPI</option>
                         <option value="insurance">Insurance</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                        </Select>
+                      </FormControl>
+                    </SimpleGrid>
+                  </CardBody>
+                </Card>
 
                 {/* Available Services */}
-                <div className="billing-section">
-                  <div className="section-header">
-                    <FaPlus className="section-icon" />
-                    <div>
-                      <h2>Available Services</h2>
-                      <p>Click on services to add to bill</p>
-                    </div>
-                  </div>
-                  
-                  <div className="services-grid">
-                    {/* Regular services */}
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaPlus} color="purple.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Available Services</Heading>
+                        <Text color="gray.600">Click on services to add to bill</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack spacing={6} align="stretch">
+                      {/* Search and Filter Controls */}
+                      <Box>
+                        <HStack spacing={3} mb={4}>
+                          <InputGroup flex="1">
+                            <InputLeftElement pointerEvents="none">
+                              <Icon as={FaSearch} color="gray.300" />
+                            </InputLeftElement>
+                            <Input
+                              placeholder="Search lab tests..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                          </InputGroup>
+                          <Select
+                            placeholder="All Categories"
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            w="200px"
+                          >
+                            {categories.map(category => (
+                              <option key={category} value={category}>{category}</option>
+                            ))}
+                          </Select>
+                          {(searchTerm || selectedCategory) && (
+                            <Button
+                              variant="outline"
+                              onClick={clearSearchAndFilters}
+                              leftIcon={<Icon as={FaTimes} />}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </HStack>
+                        <Text fontSize="sm" color="gray.600">
+                          Found {filteredTests.length} lab tests
+                        </Text>
+                      </Box>
+
+                      {/* Regular Services */}
+                      <Box>
+                        <Text fontWeight="semibold" mb={3} color="gray.700">
+                          General Services
+                        </Text>
+                        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
                     {availableServices.map(service => (
-                      <div 
+                            <Card
                         key={service.id} 
-                        className="service-card"
+                              cursor="pointer"
+                              _hover={{ transform: "translateY(-2px)", shadow: "md" }}
+                              transition="all 0.2s"
                         onClick={() => addService(service)}
                       >
-                        <div className="service-header">
-                          <h4>{service.name}</h4>
-                          <span className="service-price">₹{service.price}</span>
-                        </div>
-                        <p className="service-description">{service.description}</p>
-                        <div className="service-category">{service.category}</div>
-                      </div>
-                    ))}
-                    
-                    {/* Lab tests from database */}
+                              <CardBody p={4}>
+                                <Flex justify="space-between" align="start" mb={2}>
+                                  <Text fontWeight="semibold" fontSize="sm">{service.name}</Text>
+                                  <Text fontWeight="bold" color="green.600">₹{service.price}</Text>
+                                </Flex>
+                                <Text fontSize="xs" color="gray.600" mb={2}>{service.description}</Text>
+                                <Tag size="sm" colorScheme="blue">{service.category}</Tag>
+                              </CardBody>
+                            </Card>
+                          ))}
+                        </SimpleGrid>
+                      </Box>
+
+                      {/* Lab Tests */}
+                      <Box>
+                        <Text fontWeight="semibold" mb={3} color="gray.700">
+                          Laboratory Tests
+                        </Text>
                     {labTestsLoading ? (
-                      <div className="service-card loading">
-                        <div className="service-header">
-                          <h4>Loading Lab Tests...</h4>
-                        </div>
-                        <p className="service-description">Please wait while we load lab tests from database</p>
-                      </div>
+                          <VStack spacing={4} py={8}>
+                            <Spinner size="lg" color="blue.500" />
+                            <Text color="gray.600">Loading lab tests from database...</Text>
+                          </VStack>
                     ) : labTestsError ? (
-                      <div className="service-card error">
-                        <div className="service-header">
-                          <h4>Error Loading Lab Tests</h4>
-                        </div>
-                        <p className="service-description">{labTestsError}</p>
-                      </div>
-                    ) : (
-                      labTestsFromDB.map(test => (
-                        <div 
+                          <Alert status="error">
+                            <AlertIcon />
+                            <AlertDescription>{labTestsError}</AlertDescription>
+                          </Alert>
+                        ) : (
+                          <Box
+                            maxH="400px"
+                            overflowY="auto"
+                            border="1px solid"
+                            borderColor="gray.200"
+                            borderRadius="md"
+                          >
+                            {filteredTests.length > 0 ? (
+                              <VStack spacing={0} align="stretch">
+                                {filteredTests.map(test => (
+                                  <Box
                           key={`lab-${test.id}`} 
-                          className="service-card lab-test"
+                                    p={3}
+                                    borderBottom="1px solid"
+                                    borderColor="gray.100"
+                                    _hover={{ bg: "gray.50" }}
+                                    cursor="pointer"
                           onClick={() => addService({
                             id: `lab-${test.id}`,
-                            name: test.test_name,
+                                      name: test.testName,
                             category: 'Laboratory',
-                            price: test.price || 500, // Default price if not set
-                            description: test.description || `${test.test_name} laboratory test`,
+                                      price: test.price || 500,
+                                      description: test.description || `${test.testName} laboratory test`,
                             isLabTest: true,
                             labTestId: test.id
                           })}
                         >
-                          <div className="service-header">
-                            <h4>{test.test_name}</h4>
-                            <span className="service-price">₹{test.price || 500}</span>
-                          </div>
-                          <p className="service-description">{test.description || `${test.test_name} laboratory test`}</p>
-                          <div className="service-category">Laboratory</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                                    <Flex justify="space-between" align="start">
+                                      <VStack align="start" spacing={1} flex={1}>
+                                        <Text fontSize="sm" fontWeight="semibold" color="gray.800">
+                                          {test.testName}
+                                        </Text>
+                                        <Text fontSize="xs" color="gray.600">
+                                          {test.testCode} • {test.category}
+                                        </Text>
+                                        {test.description && (
+                                          <Text fontSize="xs" color="gray.500">
+                                            {test.description}
+                                          </Text>
+                                        )}
+                                      </VStack>
+                                      <VStack align="end" spacing={1}>
+                                        <Text fontSize="sm" fontWeight="bold" color="green.600">
+                                          ₹{test.price || 500}
+                                        </Text>
+                                        <Button
+                                          size="xs"
+                                          colorScheme="blue"
+                                          variant="outline"
+                                          leftIcon={<Icon as={FaPlus} />}
+                                        >
+                                          Add
+                                        </Button>
+                                      </VStack>
+                                    </Flex>
+                                  </Box>
+                                ))}
+                              </VStack>
+                            ) : (
+                              <Box p={4} textAlign="center">
+                                <Text color="gray.500" fontSize="sm">
+                                  No lab tests found matching your search.
+                                </Text>
+                              </Box>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    </VStack>
+                  </CardBody>
+                </Card>
 
                 {/* Bill Notes */}
-                <div className="billing-section">
-                  <div className="section-header">
-                    <FaNotesMedical className="section-icon" />
-                    <div>
-                      <h2>Additional Notes</h2>
-                      <p>Enter any additional notes or instructions</p>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <textarea 
-                      className="form-input" 
-                      rows="4" 
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaNotesMedical} color="orange.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Additional Notes</Heading>
+                        <Text color="gray.600">Enter any additional notes or instructions</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <Textarea
                       placeholder="Enter any additional notes or instructions..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
+                      rows={4}
                     />
-                  </div>
-                </div>
-              </div>
+                  </CardBody>
+                </Card>
+              </VStack>
 
               {/* Right Column - Bill Summary */}
-              <div className="billing-right">
-                <div className="bill-summary">
-                  <div className="summary-header">
-                    <FaCalculator className="summary-icon" />
-                    <div>
-                      <h2>Bill Summary</h2>
-                      <p>Review selected services and totals</p>
-                    </div>
-                  </div>
-                  
-                  {/* Selected Services */}
-                  <div className="selected-services">
-                    <h4>Selected Services</h4>
-                    {selectedServices.length === 0 ? (
-                      <div className="empty-state">
-                        <p>No services selected</p>
-                      </div>
+              <VStack spacing={6} align="stretch">
+                {/* Clinic Data Display */}
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaUser} color="blue.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Clinic Information</Heading>
+                        <Text color="gray.600">Current clinic data for invoice</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    {clinicData ? (
+                      <VStack align="start" spacing={2}>
+                        <Text><strong>Name:</strong> {clinicData.clinicName}</Text>
+                        <Text><strong>Address:</strong> {clinicData.address}</Text>
+                        <Text><strong>City:</strong> {clinicData.city}, {clinicData.state} {clinicData.pincode}</Text>
+                        <Text><strong>Phone:</strong> {clinicData.phone}</Text>
+                        <Text><strong>Email:</strong> {clinicData.email}</Text>
+                      </VStack>
                     ) : (
-                      <div className="services-list">
-                        {selectedServices.map(service => (
-                          <div key={service.id} className="service-item">
-                            <div className="service-details">
-                              <div className="service-name">{service.name}</div>
-                              <div className="service-price-info">₹{service.price} × {service.quantity}</div>
-                            </div>
-                            <div className="service-controls">
-                              <button 
-                                className="quantity-btn" 
-                                onClick={() => updateQuantity(service.id, service.quantity - 1)}
-                              >
-                                -
-                              </button>
-                              <span className="quantity">{service.quantity}</span>
-                              <button 
-                                className="quantity-btn" 
-                                onClick={() => updateQuantity(service.id, service.quantity + 1)}
-                              >
-                                +
-                              </button>
-                              <button 
-                                className="remove-btn" 
-                                onClick={() => removeService(service.id)}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <Text color="orange.500">Loading clinic data...</Text>
                     )}
-                  </div>
+                  </CardBody>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaCalculator} color="teal.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Bill Summary</Heading>
+                        <Text color="gray.600">Review selected services and totals</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                  {/* Selected Services */}
+                      <Box>
+                        <Text fontWeight="semibold" mb={3} color="gray.700">
+                          Selected Services ({selectedServices.length})
+                        </Text>
+                    {selectedServices.length === 0 ? (
+                          <Box
+                            textAlign="center"
+                            p={8}
+                            border="2px dashed"
+                            borderColor="gray.300"
+                            borderRadius="md"
+                            bg="gray.50"
+                          >
+                            <Text color="gray.500" fontSize="sm">
+                              No services selected. Add services from the left panel.
+                            </Text>
+                          </Box>
+                        ) : (
+                          <VStack spacing={2} align="stretch">
+                        {selectedServices.map(service => (
+                              <Card key={service.id} size="sm">
+                                <CardBody p={3}>
+                                  <Flex justify="space-between" align="center">
+                                    <VStack align="start" spacing={1} flex={1}>
+                                      <Text fontSize="sm" fontWeight="semibold">{service.name}</Text>
+                                      <Text fontSize="xs" color="gray.600">
+                                        ₹{service.price} × {service.quantity}
+                                      </Text>
+                                    </VStack>
+                                    <HStack spacing={2}>
+                                      <IconButton
+                                        size="xs"
+                                        icon={<Text>-</Text>}
+                                onClick={() => updateQuantity(service.id, service.quantity - 1)}
+                                        aria-label="Decrease quantity"
+                                      />
+                                      <Text fontSize="sm" fontWeight="semibold" minW="20px" textAlign="center">
+                                        {service.quantity}
+                                      </Text>
+                                      <IconButton
+                                        size="xs"
+                                        icon={<Text>+</Text>}
+                                onClick={() => updateQuantity(service.id, service.quantity + 1)}
+                                        aria-label="Increase quantity"
+                                      />
+                                      <IconButton
+                                        size="xs"
+                                        colorScheme="red"
+                                        variant="ghost"
+                                        icon={<Icon as={FaTrash} />}
+                                onClick={() => removeService(service.id)}
+                                        aria-label="Remove service"
+                                      />
+                                    </HStack>
+                                  </Flex>
+                                </CardBody>
+                              </Card>
+                            ))}
+                          </VStack>
+                        )}
+                      </Box>
 
                   {/* Bill Calculations */}
-                  <div className="bill-calculations">
-                    <div className="calculation-row">
-                      <span>Subtotal:</span>
-                      <span>₹{calculateSubtotal().toFixed(2)}</span>
-                    </div>
-                    
-                    <div className="calculation-row">
-                      <span>Discount ({discount}%):</span>
-                      <span>-₹{calculateDiscountAmount().toFixed(2)}</span>
-                    </div>
-                    
-                    <div className="calculation-row">
-                      <span>Tax (GST {taxRate}%):</span>
-                      <span>₹{calculateTaxAmount().toFixed(2)}</span>
-                    </div>
-                    
-                    <div className="calculation-row total">
-                      <span>Total:</span>
-                      <span>₹{calculateTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
+                      <Box>
+                        <VStack spacing={2} align="stretch">
+                          <Flex justify="space-between">
+                            <Text fontSize="sm">Subtotal:</Text>
+                            <Text fontSize="sm" fontWeight="semibold">₹{calculateSubtotal().toFixed(2)}</Text>
+                          </Flex>
+                          <Flex justify="space-between">
+                            <Text fontSize="sm">Discount ({discount}%):</Text>
+                            <Text fontSize="sm" color="red.500">-₹{calculateDiscountAmount().toFixed(2)}</Text>
+                          </Flex>
+                          <Divider />
+                          <Flex justify="space-between">
+                            <Text fontSize="lg" fontWeight="bold">Total:</Text>
+                            <Text fontSize="lg" fontWeight="bold" color="green.600">
+                              ₹{calculateTotal().toFixed(2)}
+                            </Text>
+                          </Flex>
+                        </VStack>
+                      </Box>
 
                   {/* Discount Control */}
-                  <div className="discount-control">
-                    <label>Discount Percentage</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      min="0" 
-                      max="100" 
+                      <FormControl>
+                        <FormLabel fontSize="sm">Discount Percentage</FormLabel>
+                        <NumberInput
                       value={discount} 
-                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
+                          onChange={(value) => setDiscount(parseFloat(value) || 0)}
+                          min={0}
+                          max={100}
+                        >
+                          <NumberInputField />
+                          <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                          </NumberInputStepper>
+                        </NumberInput>
+                      </FormControl>
 
                   {/* Action Buttons */}
-                  <div className="action-buttons">
-                    <button 
-                      className="btn-primary full-width" 
-                      onClick={handlePrint}
-                      disabled={selectedServices.length === 0}
-                    >
-                      <FaPrint />
-                      <span>Generate & Print Bill</span>
-                    </button>
-                    <button 
-                      className="btn-secondary full-width" 
+                      <VStack spacing={3} align="stretch">
+                        <Button
+                          colorScheme="purple"
+                          size="lg"
+                          leftIcon={<Icon as={FaSearch} />}
+                          onClick={fetchClinicData}
+                          mr={2}
+                        >
+                          Refresh Clinic Data
+                        </Button>
+                        <Button
+                          colorScheme="blue"
+                          size="lg"
+                          leftIcon={<Icon as={FaPrint} />}
+                          onClick={handlePrintAlternative}
+                          isDisabled={selectedServices.length === 0}
+                        >
+                          Generate & Print Bill
+                        </Button>
+                        <Button
+                          colorScheme="green"
+                          size="lg"
+                          leftIcon={<Icon as={FaSave} />}
                       onClick={handleSaveBill}
-                      disabled={selectedServices.length === 0}
-                    >
-                      <FaSave />
-                      <span>Save Bill</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                          isDisabled={selectedServices.length === 0}
+                        >
+                          Save Bill
+                        </Button>
+                      </VStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
+            </Grid>
           )}
 
-          {/* Printable Bill (Hidden) */}
-          {patientData && (
-            <div id="printable-bill" style={{ display: 'none' }}>
-              <div style={{ 
-                fontFamily: 'Arial, sans-serif', 
-                maxWidth: '800px', 
-                margin: '0 auto', 
-                padding: '20px',
-                border: '2px solid #333'
-              }}>
-                {/* Header */}
-                <div style={{ textAlign: 'center', borderBottom: '3px solid #333', paddingBottom: '20px', marginBottom: '30px' }}>
-                  <h1 style={{ margin: 0, color: '#333', fontSize: '28px' }}>D"EMR Hospital</h1>
-                  <p style={{ margin: '5px 0', fontSize: '16px' }}>Patient Billing Statement</p>
-                  <p style={{ margin: '5px 0', fontSize: '14px' }}>123 Healthcare Street, Medical City, MC 12345</p>
-                  <p style={{ margin: '5px 0', fontSize: '14px' }}>Phone: +1-555-0123 | Email: billing@demr.com</p>
-                </div>
-
-                {/* Bill Information */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#333' }}>Bill To:</h3>
-                    <p style={{ margin: '5px 0', fontSize: '16px', fontWeight: 'bold' }}>
-                      {patientData.firstName} {patientData.middleName} {patientData.lastName}
-                    </p>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Patient ID: #{patientData.patientId || patientId}</p>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Phone: {patientData.phone}</p>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Address: {patientData.address}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#333' }}>Bill Details:</h3>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Bill #: {billNumber}</p>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Date: {new Date(billDate).toLocaleDateString()}</p>
-                    <p style={{ margin: '5px 0', fontSize: '14px' }}>Payment: {paymentMethod.toUpperCase()}</p>
-                  </div>
-                </div>
-
-                {/* Services Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                  <thead>
-                    <tr style={{ background: '#f5f5f5' }}>
-                      <th style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'left' }}>Service</th>
-                      <th style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'center' }}>Qty</th>
-                      <th style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right' }}>Rate</th>
-                      <th style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right' }}>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedServices.map(service => (
-                      <tr key={service.id}>
-                        <td style={{ border: '1px solid #ddd', padding: '12px' }}>{service.name}</td>
-                        <td style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'center' }}>{service.quantity}</td>
-                        <td style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right' }}>₹{service.price}</td>
-                        <td style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'right' }}>₹{service.total}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Totals */}
-                <div style={{ textAlign: 'right', marginBottom: '30px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 'bold', marginRight: '20px' }}>Subtotal:</span>
-                    <span>₹{calculateSubtotal().toFixed(2)}</span>
-                  </div>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 'bold', marginRight: '20px' }}>Discount ({discount}%):</span>
-                    <span>-₹{calculateDiscountAmount().toFixed(2)}</span>
-                  </div>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 'bold', marginRight: '20px' }}>Tax (GST {taxRate}%):</span>
-                    <span>₹{calculateTaxAmount().toFixed(2)}</span>
-                  </div>
-                  <div style={{ 
-                    fontSize: '20px', 
-                    fontWeight: 'bold', 
-                    borderTop: '2px solid #333', 
-                    paddingTop: '10px',
-                    color: '#333'
-                  }}>
-                    <span style={{ marginRight: '20px' }}>Total Amount:</span>
-                    <span>₹{calculateTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {notes && (
-                  <div style={{ marginBottom: '30px' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Notes:</h4>
-                    <p style={{ margin: 0, fontSize: '14px', fontStyle: 'italic' }}>{notes}</p>
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div style={{ 
-                  borderTop: '2px solid #333', 
-                  paddingTop: '20px', 
-                  textAlign: 'center',
-                  marginTop: '40px'
-                }}>
-                  <p style={{ margin: '5px 0', fontSize: '14px' }}>Thank you for choosing D"EMR Hospital</p>
-                  <p style={{ margin: '5px 0', fontSize: '12px' }}>This is a computer generated bill</p>
-                  <p style={{ margin: '5px 0', fontSize: '12px' }}>Generated on: {new Date().toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
+        </VStack>
+      </Container>
+    </Box>
   );
 };
 

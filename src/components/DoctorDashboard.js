@@ -88,12 +88,27 @@ const DoctorDashboard = () => {
   const cardBg = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-  // Fetch patients from backend API
+  // Fetch patients with completed billing from backend API
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        console.log('🚀 DoctorDashboard: Fetching patients from backend...');
-        const response = await api.get('/api/patients');
+        // Check if user is authenticated
+        const isAuthenticated = localStorage.getItem('isAuthenticated');
+        
+        if (!isAuthenticated) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access the dashboard",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/login');
+          return;
+        }
+        
+        console.log('🚀 DoctorDashboard: Fetching patients with completed billing...');
+        const response = await api.get('/api/doctors/patients');
         console.log('📡 Response status:', response.status);
         
         if (response.status === 200) {
@@ -103,41 +118,44 @@ const DoctorDashboard = () => {
           console.log('📊 Is array:', Array.isArray(data));
           console.log('📊 Data length:', data.length);
           
-          // Handle both array format and object with patients property
-          const allPatients = Array.isArray(data) ? data : (data.patients || []);
-          console.log('✅ All patients processed:', allPatients);
+          // Handle both array format and object with data property
+          const allPatients = Array.isArray(data) ? data : (data.data || []);
+          console.log('✅ All patients with completed billing processed:', allPatients);
           console.log('📊 Patients count:', allPatients.length);
           
-          // Check for existing prescriptions and update patient status
-          const patientsWithStatus = await Promise.all(
-            allPatients.map(async (patient) => {
-              try {
-                // Check if prescription exists for this patient
-                const prescriptionResponse = await api.get(`/api/prescriptions/patient/${patient.id}`);
-                if (prescriptionResponse.status === 200) {
-                  const prescriptions = prescriptionResponse.data;
-                  if (prescriptions && prescriptions.length > 0) {
-                    // Patient has prescriptions, mark as completed
-                    return { ...patient, status: 'completed', hasPrescription: true };
-                  }
-                }
-                // No prescriptions found, keep original status or set to waiting
-                return { ...patient, status: patient.status || 'waiting', hasPrescription: false };
-              } catch (error) {
-                console.warn(`Failed to check prescriptions for patient ${patient.id}:`, error);
-                return { ...patient, status: patient.status || 'waiting', hasPrescription: false };
-              }
-            })
-          );
+          // Patients already have status and prescription info from the API
+          setPatients(allPatients);
           
-          setPatients(patientsWithStatus);
+          toast({
+            title: "✅ Patients Loaded",
+            description: `Found ${allPatients.length} patients with completed billing`,
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
         } else {
           console.error('❌ Failed to fetch patients:', response.status, response.statusText);
           setPatients([]);
+          
+          toast({
+            title: "❌ Error Loading Patients",
+            description: "Failed to fetch patients with completed billing",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+          });
         }
       } catch (error) {
         console.error('❌ Error fetching patients:', error);
         setPatients([]);
+        
+        toast({
+          title: "❌ Error Loading Patients",
+          description: "Failed to connect to server. Please ensure backend is running.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
       } finally {
         console.log('🏁 Setting loading to false');
         setLoading(false);
@@ -145,7 +163,7 @@ const DoctorDashboard = () => {
     };
 
     fetchPatients();
-  }, []);
+  }, [toast]);
 
   const filteredPatients = patients.filter(patient => {
     const searchLower = searchTerm.toLowerCase();
@@ -277,10 +295,10 @@ const DoctorDashboard = () => {
             </Heading>
             <HStack spacing={4}>
               <Text color="gray.600" fontSize="lg">
-                Manage your patients and consultations efficiently
+                Manage patients with completed billing and consultations
               </Text>
-              <Badge colorScheme={patients.length > 0 ? 'green' : 'red'} variant="solid">
-                {patients.length > 0 ? `${patients.length} Patients Loaded` : 'No Patients'}
+              <Badge colorScheme={patients.length > 0 ? 'green' : 'orange'} variant="solid">
+                {patients.length > 0 ? `${patients.length} Patients (Billing Completed)` : 'No Patients with Completed Billing'}
               </Badge>
             </HStack>
           </Box>
@@ -416,18 +434,30 @@ const DoctorDashboard = () => {
               ) : patients.length === 0 ? (
                 <VStack spacing={4} py={8}>
                   <Icon as={FaUsers} boxSize={16} color="gray.400" />
-                  <Heading size="md" color="gray.600">No patients in the system</Heading>
+                  <Heading size="md" color="gray.600">No patients with completed billing</Heading>
                   <Text color="gray.500" textAlign="center">
-                    Start by adding your first patient to the system.
+                    Patients will appear here only after their billing is completed.
+                    <br />
+                    Complete the billing process first: Registration → Billing → Doctor Dashboard
                   </Text>
-                  <Button
-                    colorScheme="health"
-                    leftIcon={<Icon as={FaUser} />}
-                    onClick={() => navigate('/add-patient')}
-                    size="lg"
-                  >
-                    Add First Patient
-                  </Button>
+                  <HStack spacing={4}>
+                    <Button
+                      colorScheme="blue"
+                      leftIcon={<Icon as={FaUser} />}
+                      onClick={() => navigate('/add-patient')}
+                      size="lg"
+                    >
+                      Register Patient
+                    </Button>
+                    <Button
+                      colorScheme="green"
+                      leftIcon={<Icon as={FaPrescription} />}
+                      onClick={() => navigate('/billing')}
+                      size="lg"
+                    >
+                      Complete Billing
+                    </Button>
+                  </HStack>
                 </VStack>
               ) : filteredPatients.length === 0 ? (
                 <VStack spacing={4} py={8}>

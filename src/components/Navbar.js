@@ -64,6 +64,7 @@ const Navbar = () => {
     { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt /> },
     { path: '/doctor', label: 'Doctor Dashboard', icon: <FaFileAlt /> },
     { path: '/billing', label: 'Billing', icon: <FaCreditCard /> },
+    { path: '/bills-view', label: 'Bills View', icon: <FaCreditCard /> },
     { path: '/lab-tests', label: 'Lab Tests', icon: <FaPills /> },
     { path: '/e-prescription', label: 'E-Prescription', icon: <FaFileAlt /> }
   ];

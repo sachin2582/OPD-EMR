@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChakraUIProvider } from './ChakraProvider';
 import LoginPage from './components/LoginPage';
+import Login from './components/Login';
 import RegisterPage from './components/RegisterPage';
+import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
 import PatientList from './components/PatientList';
 import PatientForm from './components/PatientForm';
@@ -12,6 +14,7 @@ import DoctorDashboard from './components/DoctorDashboard';
 import ClinicalNotes from './components/ClinicalNotes';
 import EPrescription from './components/EPrescription';
 import Billing from './components/Billing';
+import BillsView from './components/BillsView';
 import LabTestManagement from './components/LabTestManagement';
 import LabTestBilling from './components/LabTestBilling';
 import PatientDashboard from './components/PatientDashboard';
@@ -20,6 +23,7 @@ import AdvancedDashboard from './components/AdvancedDashboard';
 import SmartAppointmentScheduler from './components/SmartAppointmentScheduler';
 import ClinicSetup from './components/ClinicSetup';
 import DoctorsManagement from './components/DoctorsManagement';
+import UserManagement from './components/UserManagement';
 // Pharmacy Module Imports
 import PharmacyDashboard from './components/pharmacy/PharmacyDashboard';
 import PharmacyPOS from './components/pharmacy/POS/PharmacyPOS';
@@ -63,7 +67,8 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/login-old" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             
             {/* All other routes wrapped in AppLayout */}
@@ -107,6 +112,16 @@ function App() {
                   <DoctorDashboard />
                 </AppLayout>
               } />
+              <Route path="/doctor-dashboard" element={
+                <AppLayout>
+                  <DoctorDashboard />
+                </AppLayout>
+              } />
+              <Route path="/admin-dashboard" element={
+                <AppLayout>
+                  <AdminPanel />
+                </AppLayout>
+              } />
               <Route path="/clinical-notes/:patientId" element={
                 <AppLayout>
                   <ClinicalNotes />
@@ -125,6 +140,11 @@ function App() {
               <Route path="/billing" element={
                 <AppLayout>
                   <Billing />
+                </AppLayout>
+              } />
+              <Route path="/bills-view" element={
+                <AppLayout>
+                  <BillsView />
                 </AppLayout>
               } />
               <Route path="/lab-tests" element={
@@ -181,6 +201,13 @@ function App() {
               <Route path="/doctors" element={
                 <AppLayout>
                   <DoctorsManagement />
+                </AppLayout>
+              } />
+              
+              {/* User Management Route */}
+              <Route path="/user-management" element={
+                <AppLayout>
+                  <UserManagement />
                 </AppLayout>
               } />
             </Routes>
