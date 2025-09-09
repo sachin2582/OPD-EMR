@@ -200,16 +200,17 @@ router.get('/', async (req, res) => {
     const offset = (page - 1) * limit;
     
     let sql = `
-      SELECT d.*, u.username, u.email as userEmail, u.phone as userPhone, u.isActive as userActive
-      FROM doctors d
-      LEFT JOIN users u ON d.user_id = u.id
-      WHERE 1=1
+      SELECT u.id, u.username, u.fullName as name, u.email, u.phone, u.isActive,
+             d.specialization, d.qualification, d.experienceYears, d.availability, d.doctorId
+      FROM users u
+      LEFT JOIN doctors d ON u.id = d.user_id
+      WHERE u.type = 'D' AND u.isActive = 1
     `;
     let params = [];
     
     // Search by name, specialization, or username
     if (search) {
-      sql += ` AND (d.name LIKE ? OR d.specialization LIKE ? OR d.qualification LIKE ? OR u.username LIKE ?)`;
+      sql += ` AND (u.fullName LIKE ? OR d.specialization LIKE ? OR d.qualification LIKE ? OR u.username LIKE ?)`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
@@ -220,13 +221,10 @@ router.get('/', async (req, res) => {
       params.push(specialization);
     }
     
-    // Filter by active status
-    if (isActive !== '') {
-      sql += ` AND d.isActive = ?`;
-      params.push(isActive === 'true' ? 1 : 0);
-    }
+    // Filter by active status - only allow active users (type D users are always active)
+    // Note: We only show active users with type 'D', so this filter is redundant but kept for API consistency
     
-    sql += ` ORDER BY d.name ASC LIMIT ? OFFSET ?`;
+    sql += ` ORDER BY u.fullName ASC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
     
     console.log('🔍 [DOCTORS API] Executing query:', sql);
@@ -238,14 +236,14 @@ router.get('/', async (req, res) => {
     // Get total count for pagination
     let countSql = `
       SELECT COUNT(*) as total 
-      FROM doctors d
-      LEFT JOIN users u ON d.user_id = u.id
-      WHERE 1=1
+      FROM users u
+      LEFT JOIN doctors d ON u.id = d.user_id
+      WHERE u.type = 'D' AND u.isActive = 1
     `;
     let countParams = [];
     
     if (search) {
-      countSql += ` AND (d.name LIKE ? OR d.specialization LIKE ? OR d.qualification LIKE ? OR u.username LIKE ?)`;
+      countSql += ` AND (u.fullName LIKE ? OR d.specialization LIKE ? OR d.qualification LIKE ? OR u.username LIKE ?)`;
       const searchTerm = `%${search}%`;
       countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
@@ -255,10 +253,8 @@ router.get('/', async (req, res) => {
       countParams.push(specialization);
     }
     
-    if (isActive !== '') {
-      countSql += ` AND d.isActive = ?`;
-      countParams.push(isActive === 'true' ? 1 : 0);
-    }
+    // Filter by active status - only allow active users (type D users are always active)
+    // Note: We only show active users with type 'D', so this filter is redundant but kept for API consistency
     
     const countResult = await getRow(countSql, countParams);
     const total = countResult.total;
@@ -494,6 +490,85 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// GET /api/doctors/patients - Get patients with completed billing for doctor dashboard
+router.get('/patients', async (req, res) => {
+  console.log('🔵 [DOCTORS API] GET /api/doctors/patients - Getting patients with completed billing');
+  console.log('📥 [DOCTORS API] Request headers:', req.headers);
+  console.log('📥 [DOCTORS API] Request query:', req.query);
+  console.log('📥 [DOCTORS API] Request params:', req.params);
+  
+  try {
+    // Fetch patients who have completed CONSULTATION billing only
+    const patients = await getAll(`
+      SELECT DISTINCT p.*, 
+             b.billNumber,
+             b.billDate,
+             b.total as billAmount,
+             b.billing_status,
+             b.createdAt as billingCompletedAt
+      FROM patients p
+      INNER JOIN bills b ON p.id = b.patientId
+      INNER JOIN bill_items bi ON b.id = bi.billId
+      WHERE b.billing_status = 'PAID'
+        AND bi.service_type = 'CL'
+      ORDER BY b.createdAt DESC
+    `);
+    
+    console.log('✅ [DOCTORS API] Found patients with completed CONSULTATION billing:', patients.length);
+    
+    // Check for existing prescriptions and update patient status
+    const patientsWithStatus = await Promise.all(
+      patients.map(async (patient) => {
+        try {
+          // Check if prescription exists for this patient
+          const prescriptionResponse = await getAll(
+            'SELECT * FROM prescriptions WHERE patientId = ? ORDER BY createdAt DESC LIMIT 1',
+            [patient.id]
+          );
+          
+          if (prescriptionResponse && prescriptionResponse.length > 0) {
+            // Patient has prescriptions, mark as completed
+            return { 
+              ...patient, 
+              status: 'completed', 
+              hasPrescription: true,
+              lastPrescriptionDate: prescriptionResponse[0].createdAt
+            };
+          }
+          // No prescriptions found, mark as waiting for consultation
+          return { 
+            ...patient, 
+            status: 'waiting', 
+            hasPrescription: false 
+          };
+        } catch (error) {
+          console.warn(`Failed to check prescriptions for patient ${patient.id}:`, error);
+          return { 
+            ...patient, 
+            status: 'waiting', 
+            hasPrescription: false 
+          };
+        }
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: patientsWithStatus,
+      count: patientsWithStatus.length,
+      message: 'Patients with completed billing fetched successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ [DOCTORS API] Error fetching patients with completed billing:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch patients with completed billing',
+      message: 'An internal server error occurred'
+    });
+  }
+});
+
 // GET /api/doctors/:id - Get details of a specific doctor with user info
 router.get('/:id', async (req, res) => {
   console.log('🔵 [DOCTORS API] GET /api/doctors/:id - Getting doctor details with user info');
@@ -632,79 +707,6 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// GET /api/doctors/patients - Get patients with completed billing for doctor dashboard
-router.get('/patients', async (req, res) => {
-  console.log('🔵 [DOCTORS API] GET /api/doctors/patients - Getting patients with completed billing');
-  
-  try {
-    // Fetch all patients who have completed billing (for now, show all)
-    const patients = await getAll(`
-      SELECT DISTINCT p.*, 
-             b.billNumber,
-             b.billDate,
-             b.total as billAmount,
-             b.billing_status,
-             b.createdAt as billingCompletedAt
-      FROM patients p
-      INNER JOIN bills b ON p.id = b.patientId
-      WHERE b.billing_status = 'PAID'
-      ORDER BY b.createdAt DESC
-    `);
-    
-    console.log('✅ [DOCTORS API] Found patients with completed billing:', patients.length);
-    
-    // Check for existing prescriptions and update patient status
-    const patientsWithStatus = await Promise.all(
-      patients.map(async (patient) => {
-        try {
-          // Check if prescription exists for this patient
-          const prescriptionResponse = await getAll(
-            'SELECT * FROM prescriptions WHERE patientId = ? ORDER BY createdAt DESC LIMIT 1',
-            [patient.id]
-          );
-          
-          if (prescriptionResponse && prescriptionResponse.length > 0) {
-            // Patient has prescriptions, mark as completed
-            return { 
-              ...patient, 
-              status: 'completed', 
-              hasPrescription: true,
-              lastPrescriptionDate: prescriptionResponse[0].createdAt
-            };
-          }
-          // No prescriptions found, mark as waiting for consultation
-          return { 
-            ...patient, 
-            status: 'waiting', 
-            hasPrescription: false 
-          };
-        } catch (error) {
-          console.warn(`Failed to check prescriptions for patient ${patient.id}:`, error);
-          return { 
-            ...patient, 
-            status: 'waiting', 
-            hasPrescription: false 
-          };
-        }
-      })
-    );
-    
-    res.json({
-      success: true,
-      data: patientsWithStatus,
-      count: patientsWithStatus.length,
-      message: 'Patients with completed billing fetched successfully'
-    });
-    
-  } catch (error) {
-    console.error('❌ [DOCTORS API] Error fetching patients with completed billing:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch patients with completed billing',
-      message: 'An internal server error occurred'
-    });
-  }
-});
 
 // GET /api/doctors/specializations/list - Get all specializations
 router.get('/specializations/list', async (req, res) => {

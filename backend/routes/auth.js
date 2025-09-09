@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { runQuery, getRow, getAll } = require('../database/database');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 // Generate a simple token (in production, use JWT)
 function generateToken() {
@@ -58,7 +59,7 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// POST /api/auth/login - Doctor login
+// POST /api/auth/login - User login (admin or doctor)
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -70,55 +71,90 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Find doctor by username
-    const doctor = await getRow(
-      'SELECT * FROM doctors_auth WHERE username = ? AND is_active = 1',
-      [username]
+    console.log('🔍 [AUTH] Attempting login for:', username);
+    
+    // First try to find in users table (admin) - check both username and email
+    let user = await getRow(
+      'SELECT * FROM users WHERE (username = ? OR email = ?) AND isActive = 1',
+      [username, username]
     );
     
-    if (!doctor) {
+    let userType = 'admin';
+    console.log('🔍 [AUTH] Users table search result:', user ? 'Found' : 'Not found');
+    
+    // If not found in users, try doctors table - check both email and name
+    if (!user) {
+      user = await getRow(
+        'SELECT * FROM doctors WHERE (email = ? OR name LIKE ?) AND isActive = 1',
+        [username, `%${username}%`]
+      );
+      userType = 'doctor';
+      console.log('🔍 [AUTH] Doctors table search result:', user ? 'Found' : 'Not found');
+    }
+    
+    if (!user) {
+      console.log('❌ [AUTH] No user found for:', username);
       return res.status(401).json({
         success: false,
         message: 'Invalid username or password'
       });
     }
     
-    // Check password (simple comparison for now)
-    if (doctor.password !== password) {
+    console.log('✅ [AUTH] User found:', { id: user.id, username: user.username || user.email, userType });
+    
+    // Check password using bcrypt
+    console.log('🔍 [AUTH] Password check - Hash:', user.password, 'Received:', password);
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      console.log('❌ [AUTH] Password mismatch');
       return res.status(401).json({
         success: false,
         message: 'Invalid username or password'
       });
     }
+    console.log('✅ [AUTH] Password match');
     
     // Generate token
     const token = generateToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Use SQLite's datetime function to ensure proper format
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').replace('Z', '');
     
-    // Save session
-    await runQuery(
-      'INSERT INTO doctor_sessions (doctor_id, token, expires_at) VALUES (?, ?, ?)',
-      [doctor.doctor_id, token, expiresAt]
-    );
+    // Prepare user data for response
+    const userData = {
+      id: user.id || user.id,
+      username: user.username || user.email,
+      fullName: user.fullName || user.name,
+      email: user.email,
+      role: userType,
+      department: user.department || user.specialization
+    };
     
-    // Clean up expired sessions
-    await runQuery(
-      'DELETE FROM doctor_sessions WHERE expires_at < CURRENT_TIMESTAMP',
-      []
-    );
+    // Save session (simplified for now)
+    try {
+      await runQuery(
+        'INSERT OR REPLACE INTO user_sessions (user_id, token, expires_at) VALUES (?, ?, ?)',
+        [userData.id, token, expiresAt]
+      );
+    } catch (sessionError) {
+      console.log('Session creation failed, continuing without session tracking:', sessionError.message);
+    }
+    
+    // Clean up expired sessions (commented out for testing)
+    // try {
+    //   await runQuery(
+    //     'DELETE FROM user_sessions WHERE expires_at < CURRENT_TIMESTAMP',
+    //     []
+    //   );
+    // } catch (cleanupError) {
+    //   console.log('Session cleanup failed:', cleanupError.message);
+    // }
     
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         token,
-        doctor: {
-          doctor_id: doctor.doctor_id,
-          name: doctor.name,
-          username: doctor.username,
-          specialization: doctor.specialization,
-          role: doctor.role
-        },
+        user: userData,
         expires_at: expiresAt
       }
     });

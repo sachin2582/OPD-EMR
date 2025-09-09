@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Medication API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .search-box { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+        .results { margin-top: 20px; }
+        .medication-item { padding: 10px; border: 1px solid #eee; margin: 5px 0; border-radius: 4px; }
+        .medication-name { font-weight: bold; color: #333; }
+        .medication-details { font-size: 12px; color: #666; margin-top: 5px; }
+        .loading { color: #666; font-style: italic; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Medication API</h1>
+        <p>This page tests the medication search API to see if medications are being loaded correctly.</p>
+        
+        <input 
+            type="text" 
+            class="search-box" 
+            id="searchInput" 
+            placeholder="Search for medications (e.g., AMARYL, PARACETAMOL)..."
+        />
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const resultsDiv = document.getElementById('results');
+        
+        let searchTimeout;
+        
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.trim();
+            
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            if (searchTerm.length < 2) {
+                resultsDiv.innerHTML = '<p>Type at least 2 characters to search...</p>';
+                return;
+            }
+            
+            // Show loading
+            resultsDiv.innerHTML = '<p class="loading">Searching...</p>';
+            
+            // Debounce search
+            searchTimeout = setTimeout(() => {
+                searchMedications(searchTerm);
+            }, 300);
+        });
+        
+        async function searchMedications(searchTerm) {
+            try {
+                console.log('Searching for:', searchTerm);
+                
+                const response = await fetch(`http://localhost:3001/api/item-master/search?q=${encodeURIComponent(searchTerm)}&limit=10`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    displayResults(data.data);
+                } else {
+                    resultsDiv.innerHTML = '<p>No medications found for "' + searchTerm + '"</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error searching medications:', error);
+                resultsDiv.innerHTML = '<p class="error">Error: ' + error.message + '</p>';
+            }
+        }
+        
+        function displayResults(medications) {
+            const html = medications.map(med => `
+                <div class="medication-item">
+                    <div class="medication-name">${med.item_name}</div>
+                    <div class="medication-details">
+                        Generic: ${med.generic_name} | Brand: ${med.brand} | Category: ${med.category} | Subcategory: ${med.subcategory}
+                    </div>
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Test API on page load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, testing API...');
+            searchMedications('AMARYL');
+        });
+    </script>
+</body>
+</html>

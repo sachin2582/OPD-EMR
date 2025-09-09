@@ -192,14 +192,60 @@ router.get('/prescriptions/unbilled/regular', async (req, res) => {
       try {
         // Parse lab test recommendations
         if (prescription.labTestRecommendations) {
-          const labTestIds = JSON.parse(prescription.labTestRecommendations);
+          let labTestIds;
+          
+          console.log('Raw labTestRecommendations:', prescription.labTestRecommendations);
+          console.log('Type:', typeof prescription.labTestRecommendations);
+          
+          // Handle different data formats
+          if (typeof prescription.labTestRecommendations === 'string') {
+            try {
+              // Check if it's already a JSON string or needs parsing
+              if (prescription.labTestRecommendations.startsWith('[') || prescription.labTestRecommendations.startsWith('{')) {
+                labTestIds = JSON.parse(prescription.labTestRecommendations);
+              } else {
+                // It might be a string representation of an object
+                console.log('Attempting to parse string as JSON...');
+                labTestIds = JSON.parse(prescription.labTestRecommendations);
+              }
+            } catch (error) {
+              console.error('Error parsing lab test recommendations:', error);
+              console.error('Raw data:', prescription.labTestRecommendations);
+              labTestIds = [];
+            }
+          } else if (Array.isArray(prescription.labTestRecommendations)) {
+            labTestIds = prescription.labTestRecommendations;
+          } else if (typeof prescription.labTestRecommendations === 'object') {
+            // Handle case where it's already an object
+            console.log('Data is already an object, converting to array...');
+            labTestIds = [prescription.labTestRecommendations];
+          } else {
+            console.error('Invalid lab test recommendations format:', prescription.labTestRecommendations);
+            labTestIds = [];
+          }
+          
+          console.log('Parsed labTestIds:', labTestIds);
+          
+          // Extract test codes from the parsed data
+          const testCodes = labTestIds.map(item => {
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object' && item.testCode) return item.testCode;
+            return null;
+          }).filter(code => code !== null);
+          
+          console.log('Extracted test codes:', testCodes);
+          
+          if (testCodes.length === 0) {
+            prescription.prescriptionItems = [];
+            continue;
+          }
           
           // Get lab test details from lab_tests table
           const labTests = await getAll(`
-            SELECT id, testName, testCode, category, subcategory, price, instructions
+            SELECT id, testName, testCode, category, subcategory, price, description
             FROM lab_tests 
-            WHERE testCode IN (${labTestIds.map(() => '?').join(',')})
-          `, labTestIds);
+            WHERE testCode IN (${testCodes.map(() => '?').join(',')})
+          `, testCodes);
           
           // Add lab test details to prescription
           prescription.prescriptionItems = labTests.map(test => ({
@@ -209,7 +255,7 @@ router.get('/prescriptions/unbilled/regular', async (req, res) => {
             category: test.category,
             subcategory: test.subcategory,
             price: test.price,
-            instructions: test.instructions
+            description: test.description
           }));
         }
       } catch (parseError) {
@@ -654,19 +700,19 @@ router.post('/bills', async (req, res) => {
       });
     }
     
-    // Check if prescription exists and get items
+    // Check if prescription exists and get items from regular prescriptions table
     const prescription = await getRow(`
-      SELECT lp.*, 
+      SELECT p.*, 
              pat.id as patientDbId,
              pat.firstName as patientFirstName,
              pat.lastName as patientLastName
-      FROM lab_prescriptions lp
-      JOIN patients pat ON lp.patientId = pat.id
-      WHERE lp.id = ? OR lp.prescriptionId = ?
+      FROM prescriptions p
+      JOIN patients pat ON p.patientId = pat.id
+      WHERE p.id = ? OR p.prescriptionId = ?
     `, [prescriptionId, prescriptionId]);
     
     if (!prescription) {
-      return res.status(400).json({ error: 'Lab prescription not found' });
+      return res.status(400).json({ error: 'Prescription not found' });
     }
     
     // Check if already billed
@@ -678,14 +724,65 @@ router.post('/bills', async (req, res) => {
       return res.status(400).json({ error: 'This prescription has already been billed' });
     }
     
-    // Get prescription items to calculate total
-    const prescriptionItems = await getAll(`
-      SELECT * FROM lab_prescription_items WHERE prescriptionId = ?
-    `, [prescription.id]);
-    
-    if (prescriptionItems.length === 0) {
+    // Process lab test recommendations to get prescription items
+    if (!prescription.labTestRecommendations) {
       return res.status(400).json({ error: 'No lab tests found in prescription' });
     }
+    
+    let labTestIds;
+    
+    // Handle different data formats
+    if (typeof prescription.labTestRecommendations === 'string') {
+      try {
+        if (prescription.labTestRecommendations.startsWith('[') || prescription.labTestRecommendations.startsWith('{')) {
+          labTestIds = JSON.parse(prescription.labTestRecommendations);
+        } else {
+          labTestIds = JSON.parse(prescription.labTestRecommendations);
+        }
+      } catch (error) {
+        console.error('Error parsing lab test recommendations:', error);
+        labTestIds = [];
+      }
+    } else if (Array.isArray(prescription.labTestRecommendations)) {
+      labTestIds = prescription.labTestRecommendations;
+    } else if (typeof prescription.labTestRecommendations === 'object') {
+      labTestIds = [prescription.labTestRecommendations];
+    } else {
+      labTestIds = [];
+    }
+    
+    // Extract test codes from the parsed data
+    const testCodes = labTestIds.map(item => {
+      if (typeof item === 'string') return item;
+      if (typeof item === 'object' && item.testCode) return item.testCode;
+      return null;
+    }).filter(code => code !== null);
+    
+    if (testCodes.length === 0) {
+      return res.status(400).json({ error: 'No valid lab test codes found in prescription' });
+    }
+    
+    // Get lab test details from lab_tests table
+    const labTests = await getAll(`
+      SELECT id, testName, testCode, category, subcategory, price, description
+      FROM lab_tests 
+      WHERE testCode IN (${testCodes.map(() => '?').join(',')})
+    `, testCodes);
+    
+    if (labTests.length === 0) {
+      return res.status(400).json({ error: 'No lab tests found in database for the specified codes' });
+    }
+    
+    // Create prescription items
+    const prescriptionItems = labTests.map(test => ({
+      testId: test.id,
+      testName: test.testName,
+      testCode: test.testCode,
+      category: test.category,
+      subcategory: test.subcategory,
+      price: test.price,
+      description: test.description
+    }));
     
     // Calculate totals
     const subtotal = prescriptionItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
@@ -714,8 +811,7 @@ router.post('/bills', async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         billDbId, item.testId, item.testName, item.testCode, 
-        item.category, item.subcategory, item.price, item.quantity || 1, 
-        item.price * (item.quantity || 1)
+        item.category, item.subcategory, item.price, 1, item.price
       ]);
     }
     

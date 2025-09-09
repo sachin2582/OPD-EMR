@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const config = require('./config.json');
 
 // Import routes
 const patientRoutes = require('./routes/patients');
@@ -22,12 +23,15 @@ const pharmacyRoutes = require('./routes/pharmacy');
 const clinicRoutes = require('./routes/clinic');
 const billsRoutes = require('./routes/bills');
 const usersRoutes = require('./routes/users');
+const itemMasterRoutes = require('./routes/item-master');
 
 // Import database
 const { initDatabase } = require('./database/database');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const environment = process.env.NODE_ENV || 'development';
+const envConfig = config[environment];
+const PORT = process.env.PORT || envConfig.server.port;
 
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
@@ -37,18 +41,39 @@ app.use(helmet());
 
 // Rate limiting - configurable via environment variables
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000 // limit each IP to 1000 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || envConfig.rateLimit.windowMs,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || envConfig.rateLimit.max
 });
 app.use(limiter);
 
 // CORS configuration - configurable via environment variables
 const corsOrigins = process.env.CORS_ORIGIN 
   ? [process.env.CORS_ORIGIN]
-  : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://localhost:8000', 'http://127.0.0.1:8000'];
+  : [...envConfig.cors.origins, null];
 
 app.use(cors({
-  origin: corsOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow requests from configured origins
+    if (corsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow local file protocol (file://) for testing
+    if (origin === 'null' || origin.startsWith('file://')) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost on any port for development
+    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      return callback(null, true);
+    }
+    
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -89,6 +114,7 @@ app.use('/api/pharmacy', pharmacyRoutes);
 app.use('/api/clinic', clinicRoutes);
 app.use('/api/bills', billsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/item-master', itemMasterRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

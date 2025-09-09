@@ -23,6 +23,7 @@ import {
   AlertIcon,
 } from '@chakra-ui/react';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaHospital } from 'react-icons/fa';
+import appConfig from '../config/appConfig';
 
 const ChakraLoginPage = () => {
   const [show, setShow] = useState(false);
@@ -52,24 +53,38 @@ const ChakraLoginPage = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation
-      if (formData.email === 'admin@hospital.com' && formData.password === 'admin123') {
+      // Call the actual login API
+      const response = await fetch(`${appConfig.apiBaseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.email, // Using email as username
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
         // Store user data in localStorage for session management
         const userData = {
           email: formData.email,
-          name: 'Admin User',
-          role: 'admin',
+          name: data.data.user.fullName || data.data.user.username,
+          role: data.data.user.role,
           loginTime: new Date().toISOString()
         };
         localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.setItem('authToken', 'mock-token-' + Date.now());
+        localStorage.setItem('authToken', data.data.token);
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', data.data.user.role);
+        localStorage.setItem('username', data.data.user.username);
+        localStorage.setItem('userId', data.data.user.id);
         
         toast({
           title: 'Login Successful',
-          description: 'Welcome to OPD-EMR System',
+          description: `Welcome ${data.data.user.fullName || data.data.user.username}!`,
           status: 'success',
           duration: 2000,
           isClosable: true,
@@ -80,10 +95,11 @@ const ChakraLoginPage = () => {
           navigate('/dashboard');
         }, 1000);
       } else {
-        setError('Invalid credentials. Please try again.');
+        setError(data.error || 'Invalid credentials. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      console.error('Login error:', err);
+      setError('Login failed. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }

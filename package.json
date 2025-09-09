@@ -21,6 +21,7 @@
     "react-icons": "^4.12.0",
     "react-router-dom": "^6.18.0",
     "react-scripts": "^5.0.1",
+    "serve-favicon": "^2.5.1",
     "sqlite3": "^5.1.7",
     "web-vitals": "^3.5.0",
     "xlsx": "^0.18.5",
@@ -31,7 +32,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "vercel-build": "react-scripts build"
+    "vercel-build": "react-scripts build",
+    "start:backend": "node start-backend.js",
+    "start:all": "node start-servers.js",
+    "dev": "node start-servers.js"
   },
   "eslintConfig": {
     "extends": [
@@ -53,5 +57,6 @@
   },
   "resolutions": {
     "fork-ts-checker-webpack-plugin": "^9.0.2"
-  }
+  },
+  "proxy": "http://localhost:3001"
 }

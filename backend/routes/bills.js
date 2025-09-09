@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
       billNumber,
       billDate,
       patientId,
-      `${patientData.firstName} ${patientData.middleName} ${patientData.lastName}`.trim(),
+      `${patientData.firstName}${patientData.middleName ? ` ${patientData.middleName}` : ''} ${patientData.lastName}`.trim(),
       patientData.phone || '',
       patientData.address || '',
       subtotal,
@@ -65,14 +65,23 @@ router.post('/', async (req, res) => {
 
     // Insert bill items
     for (const service of selectedServices) {
+      // Determine service_type based on category
+      let serviceType = 'I'; // Default to 'I' for lab tests
+      if (service.category === 'Consultation') {
+        serviceType = 'CL';
+      } else if (service.category === 'Laboratory') {
+        serviceType = 'I';
+      }
+      
       await runQuery(`
         INSERT INTO bill_items (
-          billId, serviceName, serviceType, quantity, unitPrice, totalPrice, createdAt
-        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          billId, serviceName, serviceType, service_type, quantity, unitPrice, totalPrice, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `, [
         billId,
         service.name,
         service.category || 'GENERAL',
+        serviceType,
         service.quantity,
         service.price,
         service.total

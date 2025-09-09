@@ -17,20 +17,68 @@ const generateToken = (userId, username, role) => {
   );
 };
 
-// Helper function to verify JWT token
-const verifyToken = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
-  }
-
+// Helper function to verify token (compatible with auth.js)
+const verifyToken = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
+    }
+    
+    // Check if token exists and is valid in user_sessions
+    console.log('🔍 [TOKEN VERIFY] Checking token:', token.substring(0, 20) + '...');
+    
+    // First check if token exists at all
+    const allSessions = await getAll('SELECT * FROM user_sessions WHERE user_id = 203 ORDER BY created_at DESC LIMIT 3');
+    console.log('🔍 [TOKEN VERIFY] All sessions for user 203:', allSessions.map(s => ({
+      token: s.token.substring(0, 20) + '...',
+      expires: s.expires_at,
+      created: s.created_at
+    })));
+    
+    const session = await getRow(
+      'SELECT * FROM user_sessions WHERE token = ? AND expires_at > datetime("now")',
+      [token]
+    );
+    
+    console.log('🔍 [TOKEN VERIFY] Session found:', session ? 'Yes' : 'No');
+    if (session) {
+      console.log('🔍 [TOKEN VERIFY] Session user_id:', session.user_id);
+      console.log('🔍 [TOKEN VERIFY] Session expires_at:', session.expires_at);
+    }
+    
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token.'
+      });
+    }
+    
+    // Get user data
+    const user = await getRow(
+      'SELECT id, username, email, fullName, role FROM users WHERE id = ?',
+      [session.user_id]
+    );
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+    
+    req.user = user;
     next();
   } catch (error) {
-    res.status(400).json({ error: 'Invalid token.' });
+    console.error('Token verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Token verification failed.'
+    });
   }
 };
 
@@ -360,6 +408,70 @@ router.post('/doctors', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Create doctor error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test route to verify routing works (no auth)
+router.get('/test-simple', async (req, res) => {
+  console.log('🔍 [TEST ROUTE] Simple test route reached!');
+  res.json({
+    success: true,
+    message: 'Simple test route working'
+  });
+});
+
+// GET /api/users/:userId/doctor-code - Get doctor code for e-prescription
+router.get('/:userId/doctor-code', verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log('🔍 [DOCTOR CODE API] Endpoint reached! Getting doctor code for user ID:', userId);
+    console.log('🔍 [DOCTOR CODE API] Request headers:', req.headers);
+    console.log('🔍 [DOCTOR CODE API] User from token:', req.user);
+    
+    // Get doctor ID using the simple join query as requested
+    const doctorData = await getRow(`
+      SELECT d.id as doctor_id, d.doctorId as doctor_code, d.name, d.specialization, d.license, 
+             d.phone, d.email, d.department, d.isActive, d.user_id,
+             u.id as user_id, u.username, u.email as user_email, u.fullName
+      FROM users u 
+      INNER JOIN doctors d ON d.user_id = u.id 
+      WHERE u.id = ? AND u.isActive = 1 AND d.isActive = 1
+    `, [userId]);
+
+    if (!doctorData) {
+      console.log('❌ [DOCTOR CODE API] No doctor found for user ID:', userId);
+      return res.status(404).json({
+        success: false,
+        error: 'Doctor not found or inactive'
+      });
+    }
+
+    console.log('✅ [DOCTOR CODE API] Doctor code found:', doctorData.doctor_code);
+    
+    res.json({
+      success: true,
+      data: {
+        doctor_id: doctorData.doctor_id,
+        doctor_code: doctorData.doctor_code,
+        name: doctorData.name,
+        specialization: doctorData.specialization,
+        license: doctorData.license,
+        phone: doctorData.phone,
+        email: doctorData.email,
+        department: doctorData.department,
+        username: doctorData.username,
+        fullName: doctorData.fullName,
+        user_id: doctorData.user_id
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [DOCTOR CODE API] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
   }
 });
 

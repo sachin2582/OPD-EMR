@@ -83,9 +83,8 @@ A modern, enterprise-grade Electronic Medical Record (EMR) system designed for o
    - Backend API: http://localhost:3001
    - Health Check: http://localhost:3001/health
 
-### Default Login Credentials
-- **Email**: admin@hospital.com
-- **Password**: admin123
+### Login Access
+Contact your system administrator for login credentials.
 
 ### Quick Verification
 Run the verification script to check if everything is set up correctly:

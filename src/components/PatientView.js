@@ -94,7 +94,7 @@ const PatientView = () => {
             </button>
             <h1 className="card-title" style={{ margin: 0 }}>
               <FaUser style={{ marginRight: '0.75rem', fontSize: '1.25rem' }} />
-              {patient.firstName} {patient.middleName} {patient.lastName}
+              {patient.firstName}{patient.middleName ? ` ${patient.middleName}` : ''} {patient.lastName}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '0.5rem' }}>
               🆔 Patient ID: #{patient.patientId || patient.id} • {calculateAge(patient.dateOfBirth)} years old • {patient.gender}
@@ -150,7 +150,7 @@ const PatientView = () => {
                 Full Name
               </div>
               <div className="detail-value">
-                {patient.firstName} {patient.middleName} {patient.lastName}
+                {patient.firstName}{patient.middleName ? ` ${patient.middleName}` : ''} {patient.lastName}
               </div>
             </div>
             

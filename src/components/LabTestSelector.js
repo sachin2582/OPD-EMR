@@ -25,7 +25,14 @@ import {
   InputLeftElement,
   Icon,
   Collapse,
-  useDisclosure
+  useDisclosure,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer
 } from '@chakra-ui/react';
 import { SearchIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import useLabTests from '../hooks/useLabTests';
@@ -171,88 +178,101 @@ const LabTestSelector = ({
     refresh();
   };
 
-  // Render test item
-  const renderTestItem = (test) => {
+  // Render test table row
+  const renderTestRow = (test) => {
     const isSelected = selectedTests.some(t => t.id === test.id);
     
     return (
-      <Card
+      <Tr
         key={test.id}
-        size="sm"
-        variant={isSelected ? "filled" : "outline"}
         bg={isSelected ? "blue.50" : "white"}
-        borderColor={isSelected ? "blue.200" : "gray.200"}
+        _hover={!disabled ? { bg: isSelected ? "blue.100" : "gray.50" } : {}}
         cursor={disabled ? "not-allowed" : "pointer"}
         opacity={disabled ? 0.6 : 1}
-        _hover={!disabled ? { shadow: "md", borderColor: "blue.300" } : {}}
         onClick={() => handleTestToggle(test)}
       >
-        <CardBody p={3}>
-          <HStack justify="space-between" align="start">
-            <VStack align="start" spacing={1} flex={1}>
-              <HStack>
-                <Checkbox
-                  isChecked={isSelected}
-                  isDisabled={disabled}
-                  onChange={() => handleTestToggle(test)}
-                />
-                <Text fontWeight="medium" fontSize="sm">
-                  {test.testName}
-                </Text>
-                <Badge size="sm" colorScheme="blue">
-                  {test.testCode}
-                </Badge>
-              </HStack>
-              
-              {test.description && (
-                <Text fontSize="xs" color="gray.600" noOfLines={2}>
-                  {test.description}
-                </Text>
-              )}
-              
-              <HStack spacing={2}>
-                <Badge size="sm" colorScheme="green">
-                  {test.category}
-                </Badge>
-                {test.subcategory && (
-                  <Badge size="sm" colorScheme="purple">
-                    {test.subcategory}
-                  </Badge>
-                )}
-                <Text fontSize="xs" color="gray.500">
-                  {test.turnaroundTime || '24-48 hours'}
-                </Text>
-              </HStack>
-            </VStack>
-            
-            <VStack align="end" spacing={1}>
-              <Text fontWeight="bold" color="green.600">
-                ₹{test.price || 0}
-              </Text>
-              {isSelected && (
-                <Badge size="sm" colorScheme="blue">
-                  Selected
-                </Badge>
-              )}
-            </VStack>
-          </HStack>
-        </CardBody>
-      </Card>
+        <Td>
+          <Checkbox
+            isChecked={isSelected}
+            isDisabled={disabled}
+            onChange={() => handleTestToggle(test)}
+          />
+        </Td>
+        <Td>
+          <VStack align="start" spacing={1}>
+            <Text fontWeight="medium" fontSize="sm">
+              {test.testName}
+            </Text>
+            <Badge size="sm" colorScheme="blue">
+              {test.testCode}
+            </Badge>
+          </VStack>
+        </Td>
+        <Td>
+          <VStack align="start" spacing={1}>
+            <Badge size="sm" colorScheme="green">
+              {test.category}
+            </Badge>
+            {test.subcategory && (
+              <Badge size="sm" colorScheme="purple">
+                {test.subcategory}
+              </Badge>
+            )}
+          </VStack>
+        </Td>
+        <Td>
+          <Text fontSize="sm" color="gray.600" noOfLines={2}>
+            {test.description || '-'}
+          </Text>
+        </Td>
+        <Td>
+          <Text fontSize="sm" color="gray.500">
+            {test.turnaroundTime || '24-48 hours'}
+          </Text>
+        </Td>
+        <Td>
+          <Text fontWeight="bold" color="green.600">
+            ₹{test.price || 0}
+          </Text>
+        </Td>
+        <Td>
+          {isSelected && (
+            <Badge size="sm" colorScheme="blue">
+              Selected
+            </Badge>
+          )}
+        </Td>
+      </Tr>
     );
   };
 
-  // Render category section
+  // Render category section with table
   const renderCategorySection = (category, tests) => (
     <Box key={category}>
-      <HStack justify="space-between" mb={2}>
+      <HStack justify="space-between" mb={3}>
         <Heading size="sm" color="gray.700">
           {category} ({tests.length})
         </Heading>
         <Badge colorScheme="blue">{tests.length}</Badge>
       </HStack>
-      <VStack spacing={2} align="stretch">
-        {tests.map(renderTestItem)}
-      </VStack>
+      <TableContainer>
+        <Table size="sm" variant="simple">
+          <Thead>
+            <Tr>
+              <Th width="50px">Select</Th>
+              <Th>Test Name & Code</Th>
+              <Th>Category</Th>
+              <Th>Description</Th>
+              <Th>Turnaround Time</Th>
+              <Th>Price</Th>
+              <Th width="100px">Status</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {tests.map(renderTestRow)}
+          </Tbody>
+        </Table>
+      </TableContainer>
       <Divider my={4} />
     </Box>
   );
@@ -363,9 +383,24 @@ const LabTestSelector = ({
                 </HStack>
                 
                 {searchResults.length > 0 ? (
-                  <VStack spacing={2} align="stretch">
-                    {searchResults.map(renderTestItem)}
-                  </VStack>
+                  <TableContainer>
+                    <Table size="sm" variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th width="50px">Select</Th>
+                          <Th>Test Name & Code</Th>
+                          <Th>Category</Th>
+                          <Th>Description</Th>
+                          <Th>Turnaround Time</Th>
+                          <Th>Price</Th>
+                          <Th width="100px">Status</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {searchResults.map(renderTestRow)}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
                 ) : (
                   <Text color="gray.500" textAlign="center" py={4}>
                     No tests found for "{searchTerm}"

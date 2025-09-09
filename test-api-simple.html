@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Doctor Patients API</title>
+</head>
+<body>
+    <h1>Test Doctor Patients API</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing API...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/doctors/patients');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>API Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                if (data.success && data.data) {
+                    resultDiv.innerHTML += `<p>✅ Found ${data.data.length} patients</p>`;
+                } else {
+                    resultDiv.innerHTML += `<p>❌ API returned unsuccessful response</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

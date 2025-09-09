@@ -623,4 +623,77 @@ router.get('/reports/expiry', (req, res) => {
     });
 });
 
+// Create pharmacy items from prescription medications
+router.post('/prescription-items', (req, res) => {
+    const { prescriptionId, items } = req.body;
+    
+    if (!prescriptionId || !items || !Array.isArray(items)) {
+        return res.status(400).json({
+            success: false,
+            error: 'prescriptionId and items array are required'
+        });
+    }
+    
+    const db = getDb();
+    
+    // Start transaction
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        const insertPromises = items.map((item) => {
+            return new Promise((resolve, reject) => {
+                const query = `
+                    INSERT INTO pharmacy_items 
+                    (item_icode, is_prescription_required, barcode, is_active, prescriptionId, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                `;
+                
+                db.run(query, [
+                    item.item_icode,
+                    item.is_prescription_required || false,
+                    item.barcode || '',
+                    item.is_active !== undefined ? item.is_active : true,
+                    prescriptionId
+                ], function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(this.lastID);
+                    }
+                });
+            });
+        });
+        
+        Promise.all(insertPromises)
+            .then((insertedIds) => {
+                db.run('COMMIT', (err) => {
+                    if (err) {
+                        db.run('ROLLBACK');
+                        res.status(500).json({
+                            success: false,
+                            error: 'Failed to save pharmacy items',
+                            details: err.message
+                        });
+                    } else {
+                        res.json({
+                            success: true,
+                            message: `${insertedIds.length} pharmacy items created successfully`,
+                            insertedIds: insertedIds
+                        });
+                    }
+                    db.close();
+                });
+            })
+            .catch((error) => {
+                db.run('ROLLBACK');
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to save pharmacy items',
+                    details: error.message
+                });
+                db.close();
+            });
+    });
+});
+
 module.exports = router;

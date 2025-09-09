@@ -147,11 +147,24 @@ const DoctorDashboard = () => {
         }
       } catch (error) {
         console.error('❌ Error fetching patients:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText
+        });
         setPatients([]);
+        
+        let errorMessage = "Failed to connect to server. Please ensure backend is running.";
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        }
         
         toast({
           title: "❌ Error Loading Patients",
-          description: "Failed to connect to server. Please ensure backend is running.",
+          description: errorMessage,
           status: "error",
           duration: 5000,
           isClosable: true,

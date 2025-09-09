@@ -1,0 +1,30 @@
+{
+  "development": {
+    "frontend": {
+      "port": 3000,
+      "host": "localhost"
+    },
+    "backend": {
+      "port": 3001,
+      "host": "localhost"
+    },
+    "api": {
+      "baseUrl": "http://localhost:3001",
+      "timeout": 30000
+    }
+  },
+  "production": {
+    "frontend": {
+      "port": 3000,
+      "host": "0.0.0.0"
+    },
+    "backend": {
+      "port": 3001,
+      "host": "0.0.0.0"
+    },
+    "api": {
+      "baseUrl": "https://your-app-name.vercel.app",
+      "timeout": 30000
+    }
+  }
+}

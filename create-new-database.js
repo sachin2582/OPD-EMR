@@ -62,12 +62,12 @@ db.run(createTableSQL, (err) => {
   
   const clinicData = [
     40,                              // id (to match existing API expectation)
-    'D"EMR Medical Center',          // clinicName
-    '123 Healthcare Street',         // address
-    'Medical City',                  // city
-    'MC',                            // state
-    '12345',                         // pincode
-    '+1-555-0123',                   // phone
+    'HIMSHIKHA NURSING HOME',        // clinicName
+    'Plot No 1,Near CRPF Camp Himshika,Pinjore', // address
+    'Panchkula',                     // city
+    'Haryana',                       // state
+    '134112',                        // pincode
+    '9815368811',                    // phone
     'info@demr.com',                 // email
     'www.demr.com',                  // website
     'CLINIC-LICENSE-001',            // license

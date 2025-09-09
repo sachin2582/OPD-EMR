@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Doctor Dashboard API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Doctor Dashboard API Test</h1>
+        <p>This page tests the doctor dashboard API endpoints to identify the connection issue.</p>
+
+        <div class="test-section info">
+            <h3>🔐 Authentication Test</h3>
+            <div>
+                <label>Auth Token (from localStorage):</label>
+                <input type="text" id="authToken" placeholder="Will be auto-filled from localStorage">
+            </div>
+            <button onclick="getAuthToken()">Get Auth Token</button>
+            <div id="authResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Backend Health Check</h3>
+            <button onclick="testBackendHealth()">Test Backend Health</button>
+            <div id="healthResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>👨‍⚕️ Test Doctors API</h3>
+            <button onclick="testDoctorsAPI()">Test /api/doctors</button>
+            <div id="doctorsResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🏥 Test Doctor Patients API</h3>
+            <button onclick="testDoctorPatientsAPI()">Test /api/doctors/patients</button>
+            <div id="doctorPatientsResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test with Authentication</h3>
+            <button onclick="testWithAuth()">Test with Auth Header</button>
+            <div id="authTestResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test All Endpoints</h3>
+            <button onclick="testAllEndpoints()">Run All Tests</button>
+            <div id="allTestsResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        function getAuthToken() {
+            const resultDiv = document.getElementById('authResult');
+            
+            // Try to get auth token from localStorage (simulating what the frontend does)
+            const authToken = localStorage.getItem('authToken');
+            const userData = localStorage.getItem('userData');
+            
+            document.getElementById('authToken').value = authToken || 'No token found';
+            
+            let result = 'Auth Token Status:\n';
+            result += `Token: ${authToken ? 'Found' : 'Not found'}\n`;
+            result += `User Data: ${userData ? 'Found' : 'Not found'}\n\n`;
+            
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    result += `User Info:\n`;
+                    result += `- Username: ${user.username}\n`;
+                    result += `- Role: ${user.role}\n`;
+                    result += `- Full Name: ${user.fullName}\n`;
+                } catch (e) {
+                    result += `Error parsing user data: ${e.message}\n`;
+                }
+            }
+            
+            resultDiv.innerHTML = result;
+            resultDiv.className = 'result info';
+        }
+
+        async function testBackendHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = 'Testing backend health...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ Backend is healthy!\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Backend health check failed: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Backend connection failed: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDoctorsAPI() {
+            const resultDiv = document.getElementById('doctorsResult');
+            resultDiv.innerHTML = 'Testing doctors API...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/doctors`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ Doctors API working!\nFound ${data.doctors ? data.doctors.length : 0} doctors\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Doctors API failed: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Doctors API error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDoctorPatientsAPI() {
+            const resultDiv = document.getElementById('doctorPatientsResult');
+            resultDiv.innerHTML = 'Testing doctor patients API...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/doctors/patients`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ Doctor Patients API working!\nFound ${data.length || 0} patients\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Doctor Patients API failed: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Doctor Patients API error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testWithAuth() {
+            const resultDiv = document.getElementById('authTestResult');
+            resultDiv.innerHTML = 'Testing with authentication...';
+            
+            const authToken = document.getElementById('authToken').value;
+            
+            if (!authToken || authToken === 'No token found') {
+                resultDiv.innerHTML = '❌ No auth token available. Please login first.';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/doctors/patients`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ Authenticated request successful!\nFound ${data.length || 0} patients\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Authenticated request failed: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Authenticated request error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testAllEndpoints() {
+            const resultDiv = document.getElementById('allTestsResult');
+            resultDiv.innerHTML = 'Running all tests...\n\n';
+            
+            // Test 1: Backend Health
+            resultDiv.innerHTML += '1. Testing Backend Health...\n';
+            try {
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                if (healthResponse.ok) {
+                    resultDiv.innerHTML += '   ✅ Backend is healthy\n';
+                } else {
+                    resultDiv.innerHTML += `   ❌ Backend health failed: ${healthResponse.status}\n`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `   ❌ Backend connection failed: ${error.message}\n`;
+            }
+            
+            // Test 2: Doctors API
+            resultDiv.innerHTML += '\n2. Testing Doctors API...\n';
+            try {
+                const doctorsResponse = await fetch(`${API_BASE}/api/doctors`);
+                const doctorsData = await doctorsResponse.json();
+                if (doctorsResponse.ok) {
+                    resultDiv.innerHTML += `   ✅ Found ${doctorsData.doctors ? doctorsData.doctors.length : 0} doctors\n`;
+                } else {
+                    resultDiv.innerHTML += `   ❌ Doctors API failed: ${doctorsResponse.status}\n`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `   ❌ Doctors API error: ${error.message}\n`;
+            }
+            
+            // Test 3: Doctor Patients API (without auth)
+            resultDiv.innerHTML += '\n3. Testing Doctor Patients API (no auth)...\n';
+            try {
+                const patientsResponse = await fetch(`${API_BASE}/api/doctors/patients`);
+                const patientsData = await patientsResponse.json();
+                if (patientsResponse.ok) {
+                    resultDiv.innerHTML += `   ✅ Found ${patientsData.length || 0} patients\n`;
+                } else {
+                    resultDiv.innerHTML += `   ❌ Doctor Patients API failed: ${patientsResponse.status}\n`;
+                    resultDiv.innerHTML += `   Response: ${JSON.stringify(patientsData, null, 2)}\n`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `   ❌ Doctor Patients API error: ${error.message}\n`;
+            }
+            
+            // Test 4: Doctor Patients API (with auth)
+            const authToken = document.getElementById('authToken').value;
+            if (authToken && authToken !== 'No token found') {
+                resultDiv.innerHTML += '\n4. Testing Doctor Patients API (with auth)...\n';
+                try {
+                    const authResponse = await fetch(`${API_BASE}/api/doctors/patients`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const authData = await authResponse.json();
+                    if (authResponse.ok) {
+                        resultDiv.innerHTML += `   ✅ Found ${authData.length || 0} patients with auth\n`;
+                    } else {
+                        resultDiv.innerHTML += `   ❌ Authenticated request failed: ${authResponse.status}\n`;
+                        resultDiv.innerHTML += `   Response: ${JSON.stringify(authData, null, 2)}\n`;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML += `   ❌ Authenticated request error: ${error.message}\n`;
+                }
+            } else {
+                resultDiv.innerHTML += '\n4. Skipping auth test (no token available)\n';
+            }
+            
+            resultDiv.innerHTML += '\n🏁 All tests completed!';
+            resultDiv.className = 'result info';
+        }
+
+        // Auto-get auth token on page load
+        window.onload = function() {
+            getAuthToken();
+        };
+    </script>
+</body>
+</html>

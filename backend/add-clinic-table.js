@@ -89,16 +89,16 @@ async function addClinicTable() {
       INSERT INTO clinic_setup (clinicName, address, city, state, pincode, phone, email, website, license, registration, prescriptionValidity)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      'Your Clinic Name',
-      'Your Clinic Address', 
-      'Your City',
-      'Your State',
-      '123456',
-      'Your Phone Number',
-      'clinic@email.com',
-      'www.yourclinic.com',
+      'HIMSHIKHA NURSING HOME',
+      'Plot No 1,Near CRPF Camp Himshika,Pinjore', 
+      'Panchkula',
+      'Haryana',
+      '134112',
+      '9815368811',
+      'info@demr.com',
+      'www.demr.com',
       'CLINIC-LICENSE-001',
-      'REG-001',
+      'REG-2024-001',
       30
     ]);
     

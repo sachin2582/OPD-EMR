@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bill Saving</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Bill Saving Test</h1>
+        <p>This page tests the bill saving functionality to ensure bills are properly saved to the database.</p>
+
+        <div class="test-section info">
+            <h3>📋 Test Bill Data</h3>
+            <div>
+                <label>Bill Number:</label>
+                <input type="text" id="billNumber" value="BILL-001" placeholder="Enter bill number">
+            </div>
+            <div>
+                <label>Patient ID:</label>
+                <input type="text" id="patientId" value="1" placeholder="Enter patient ID">
+            </div>
+            <div>
+                <label>Payment Method:</label>
+                <select id="paymentMethod">
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="upi">UPI</option>
+                </select>
+            </div>
+            <div>
+                <label>Notes:</label>
+                <input type="text" id="notes" value="Test bill from HTML" placeholder="Enter notes">
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Backend Connection</h3>
+            <button onclick="testBackendConnection()">Test Backend</button>
+            <div id="backendResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>👨‍⚕️ Test Doctors API</h3>
+            <button onclick="testDoctorsAPI()">Fetch Doctors</button>
+            <div id="doctorsResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>💾 Test Bill Saving</h3>
+            <button onclick="testBillSaving()">Save Test Bill</button>
+            <div id="billResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Bill Retrieval</h3>
+            <button onclick="testBillRetrieval()">Get Saved Bills</button>
+            <div id="retrievalResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        async function testBackendConnection() {
+            const resultDiv = document.getElementById('backendResult');
+            resultDiv.innerHTML = 'Testing backend connection...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ Backend is running!\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Backend error: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Connection failed: ${error.message}`;
+            }
+        }
+
+        async function testDoctorsAPI() {
+            const resultDiv = document.getElementById('doctorsResult');
+            resultDiv.innerHTML = 'Fetching doctors...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/doctors`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ Found ${data.doctors.length} doctors:\n${JSON.stringify(data.doctors, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Doctors API error: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Error fetching doctors: ${error.message}`;
+            }
+        }
+
+        async function testBillSaving() {
+            const resultDiv = document.getElementById('billResult');
+            resultDiv.innerHTML = 'Saving test bill...';
+            
+            const billNumber = document.getElementById('billNumber').value;
+            const patientId = document.getElementById('patientId').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const notes = document.getElementById('notes').value;
+            
+            // First get doctors to find a doctor ID
+            let doctorId = null;
+            try {
+                const doctorsResponse = await fetch(`${API_BASE}/api/doctors`);
+                const doctorsData = await doctorsResponse.json();
+                if (doctorsData.success && doctorsData.doctors.length > 0) {
+                    doctorId = doctorsData.doctors[0].id;
+                }
+            } catch (error) {
+                console.log('Could not fetch doctors, proceeding without doctor ID');
+            }
+            
+            const billData = {
+                billNumber: billNumber,
+                billDate: new Date().toISOString().split('T')[0],
+                patientId: parseInt(patientId),
+                patientData: {
+                    firstName: 'Test',
+                    middleName: '',
+                    lastName: 'Patient',
+                    phone: '1234567890',
+                    address: 'Test Address'
+                },
+                selectedServices: [
+                    {
+                        name: 'Consultation Fee',
+                        category: 'Consultation',
+                        quantity: 1,
+                        price: 500,
+                        total: 500
+                    }
+                ],
+                subtotal: 500,
+                discount: 0,
+                discountAmount: 0,
+                total: 500,
+                paymentMethod: paymentMethod,
+                notes: notes,
+                doctorId: doctorId
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/bills`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(billData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ Bill saved successfully!\nBill ID: ${data.data.billId}\nBill Number: ${data.data.billNumber}\nTotal: ₹${data.data.total}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Bill saving failed: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Error saving bill: ${error.message}`;
+            }
+        }
+
+        async function testBillRetrieval() {
+            const resultDiv = document.getElementById('retrievalResult');
+            resultDiv.innerHTML = 'Fetching saved bills...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/bills`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ Found ${data.bills.length} bills:\n${JSON.stringify(data.bills, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Bills retrieval error: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Error fetching bills: ${error.message}`;
+            }
+        }
+
+        // Auto-test backend connection on page load
+        window.onload = function() {
+            testBackendConnection();
+        };
+    </script>
+</body>
+</html>

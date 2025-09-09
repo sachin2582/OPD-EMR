@@ -80,7 +80,7 @@ const UserManagement = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await api.get('/doctors');
+      const response = await api.get('/api/doctors');
       if (response.data.success) {
         setDoctors(response.data.doctors);
       }

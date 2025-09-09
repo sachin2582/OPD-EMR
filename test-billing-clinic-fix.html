@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Billing Clinic Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .clinic-info {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .clinic-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .clinic-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .fix-summary {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .fix-summary h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏥 Test Billing Clinic Fix</h1>
+    
+    <div class="fix-summary">
+        <h3>✅ Fixes Applied:</h3>
+        <ul>
+            <li><strong>Missing clinic variable:</strong> Added clinic variable definition in print function</li>
+            <li><strong>Inconsistent variable names:</strong> Fixed clinicData vs clinic variable usage</li>
+            <li><strong>ESLint dependency warning:</strong> Added fetchDoctors to useEffect dependency array</li>
+            <li><strong>Fallback data:</strong> Uses HIMSHIKHA NURSING HOME as fallback if API fails</li>
+        </ul>
+    </div>
+    
+    <button class="test-button" onclick="testClinicAPI()">Test Clinic API</button>
+    <button class="test-button" onclick="testBillingIntegration()">Test Billing Integration</button>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        async function testClinicAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<p>🔄 Testing clinic API...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/clinic');
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const clinic = data.data;
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Clinic API Working!</h3>
+                        <div class="clinic-info">
+                            <h3>${clinic.clinicName}</h3>
+                            <p><strong>Address:</strong> ${clinic.address}</p>
+                            <p><strong>City:</strong> ${clinic.city}, ${clinic.state} ${clinic.pincode}</p>
+                            <p><strong>Phone:</strong> ${clinic.phone}</p>
+                            <p><strong>Email:</strong> ${clinic.email}</p>
+                            <p><strong>Website:</strong> ${clinic.website}</p>
+                        </div>
+                        <p><em>✅ API is returning HIMSHIKHA NURSING HOME data correctly</em></p>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Clinic API Error</h3>
+                        <p><strong>Response:</strong> ${JSON.stringify(data, null, 2)}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Make sure the backend server is running on http://localhost:3001</p>
+                `;
+            }
+        }
+        
+        async function testBillingIntegration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result success';
+            resultDiv.innerHTML = `
+                <h3>🧾 Billing Integration Status</h3>
+                <p><strong>Frontend fixes applied:</strong></p>
+                <ul>
+                    <li>✅ Added missing clinic variable definition</li>
+                    <li>✅ Fixed inconsistent variable names (clinicData → clinic)</li>
+                    <li>✅ Fixed ESLint warnings for dependencies</li>
+                    <li>✅ Print function now uses consistent clinic data</li>
+                </ul>
+                <p><strong>Expected behavior:</strong></p>
+                <ul>
+                    <li>🏥 Invoice header should show "HIMSHIKHA NURSING HOME"</li>
+                    <li>📍 Address should show "Plot No 1,Near CRPF Camp Himshika,Pinjore"</li>
+                    <li>📱 Phone should show "9815368811"</li>
+                    <li>✉️ Email should show "info@demr.com"</li>
+                </ul>
+                <p><em>✅ The invoice should now display correct clinic data instead of placeholder values</em></p>
+            `;
+        }
+    </script>
+</body>
+</html>

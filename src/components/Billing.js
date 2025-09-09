@@ -82,6 +82,11 @@ const Billing = () => {
   
   // Clinic data
   const [clinicData, setClinicData] = useState(null);
+  
+  // Doctor selection for consultation
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState('');
 
   // Available services with pricing (non-lab services)
   const availableServices = [
@@ -175,6 +180,34 @@ const Billing = () => {
     setFilteredTests(labTestsFromDB);
   };
 
+  // Function to fetch doctors from database
+  const fetchDoctors = useCallback(async () => {
+    console.log('🔄 Fetching doctors from API...');
+    
+    try {
+      setDoctorsLoading(true);
+      const response = await api.get('/api/doctors');
+      
+      if (response.data.success) {
+        console.log('✅ Doctors loaded:', response.data.doctors.length);
+        setDoctors(response.data.doctors);
+      } else {
+        console.warn('⚠️ Doctors API returned unsuccessful response:', response.data);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching doctors:', error);
+      toast({
+        title: "⚠️ Doctor Data Error",
+        description: "Failed to load doctors. Consultation billing may be limited.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setDoctorsLoading(false);
+    }
+  }, [toast]);
+
   // Function to fetch clinic data
   const fetchClinicData = useCallback(async () => {
     console.log('🔄 Fetching clinic data from API...');
@@ -221,7 +254,7 @@ const Billing = () => {
       
       // Set fallback clinic data (same as database data)
       const fallbackData = {
-        clinicName: 'HIMSHIKHA NURSING HOME',
+        clinicName: 'HIMSHIKHA NURSING HOME121',
         address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
         city: 'Panchkula',
         state: 'Haryana',
@@ -262,10 +295,14 @@ const Billing = () => {
     console.log('🔄 Fetching lab tests...');
     fetchLabTests();
     
+    // Fetch doctors from database
+    console.log('🔄 Fetching doctors...');
+    fetchDoctors();
+    
     // Fetch clinic data
     console.log('🔄 Fetching clinic data...');
     fetchClinicData();
-  }, [location.state, fetchClinicData]);
+  }, [location.state, fetchClinicData, fetchDoctors]);
 
 
   const fetchPatientByRegistrationNo = async () => {
@@ -295,6 +332,20 @@ const Billing = () => {
   };
 
   const addService = (service) => {
+    // Check if it's a consultation service and no doctor is selected
+    const isConsultationService = service.category === 'Consultation';
+    
+    if (isConsultationService && !selectedDoctor) {
+      toast({
+        title: "Doctor Selection Required",
+        description: "Please select a doctor for consultation services",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const existingService = selectedServices.find(s => s.id === service.id);
     if (existingService) {
       setSelectedServices(selectedServices.map(s => 
@@ -310,10 +361,14 @@ const Billing = () => {
         isClosable: true,
       });
     } else {
-      setSelectedServices([...selectedServices, { ...service, quantity: 1, total: service.price }]);
+      const serviceWithDoctor = isConsultationService 
+        ? { ...service, quantity: 1, total: service.price, selectedDoctor: selectedDoctor }
+        : { ...service, quantity: 1, total: service.price };
+        
+      setSelectedServices([...selectedServices, serviceWithDoctor]);
       toast({
         title: "Service Added",
-        description: `${service.name} has been added to the bill`,
+        description: `${service.name} has been added to the bill${isConsultationService ? ` with Dr. ${selectedDoctor}` : ''}`,
         status: "success",
         duration: 2000,
         isClosable: true,
@@ -349,6 +404,24 @@ const Billing = () => {
     return calculateSubtotal() - calculateDiscountAmount();
   };
 
+  // Validation function to check if consultation services have doctors
+  const validateConsultationServices = () => {
+    const consultationServices = selectedServices.filter(service => service.category === 'Consultation');
+    const servicesWithoutDoctor = consultationServices.filter(service => !service.selectedDoctor);
+    
+    if (servicesWithoutDoctor.length > 0) {
+      toast({
+        title: "Doctor Selection Required",
+        description: "All consultation services must have a doctor assigned",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return false;
+    }
+    return true;
+  };
+
   // Alternative print method using iframe
   const handlePrintAlternative = () => {
     if (!patientData || selectedServices.length === 0) {
@@ -359,6 +432,11 @@ const Billing = () => {
         duration: 3000,
         isClosable: true,
       });
+      return;
+    }
+
+    // Validate consultation services have doctors
+    if (!validateConsultationServices()) {
       return;
     }
 
@@ -637,7 +715,7 @@ const Billing = () => {
               <div class="section-card">
                 <div class="section-title">Bill To</div>
                 <div class="patient-name">
-                  ${patientData.firstName} ${patientData.middleName} ${patientData.lastName}
+                  ${patientData.firstName}${patientData.middleName ? ` ${patientData.middleName}` : ''} ${patientData.lastName}
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Patient ID:</span>
@@ -668,7 +746,7 @@ const Billing = () => {
                   <tbody>
                     ${selectedServices.map((service, index) => `
                       <tr>
-                        <td>${service.name}</td>
+                        <td>${service.name}${service.selectedDoctor ? ` (Dr. ${service.selectedDoctor})` : ''}</td>
                         <td>${service.quantity}</td>
                         <td>₹${service.price.toLocaleString()}</td>
                         <td>₹${service.total.toLocaleString()}</td>
@@ -791,7 +869,21 @@ const Billing = () => {
   };
 
   const handleSaveBill = async () => {
+    // Validate consultation services have doctors
+    if (!validateConsultationServices()) {
+      return;
+    }
+
     try {
+      // Find doctor ID from selected doctor name
+      let doctorId = null;
+      if (selectedDoctor) {
+        const selectedDoctorObj = doctors.find(doctor => doctor.name === selectedDoctor);
+        if (selectedDoctorObj) {
+          doctorId = selectedDoctorObj.id;
+        }
+      }
+
       console.log('💾 Saving bill data:', {
       billNumber,
       billDate,
@@ -803,7 +895,9 @@ const Billing = () => {
       discountAmount: calculateDiscountAmount(),
         total: calculateTotal(),
         paymentMethod,
-        notes
+        notes,
+        selectedDoctor,
+        doctorId
       });
 
       const billData = {
@@ -815,10 +909,11 @@ const Billing = () => {
         subtotal: calculateSubtotal(),
         discount,
         discountAmount: calculateDiscountAmount(),
-      total: calculateTotal(),
-      paymentMethod,
-      notes
-    };
+        total: calculateTotal(),
+        paymentMethod,
+        notes,
+        doctorId: doctorId
+      };
     
       const response = await api.post('/api/bills', billData);
       
@@ -946,7 +1041,7 @@ const Billing = () => {
                     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} p={4} bg="blue.50" borderRadius="md">
                       <VStack align="start" spacing={1}>
                         <Text fontSize="sm" color="gray.500">Patient</Text>
-                        <Text fontWeight="semibold">{patientData.firstName} {patientData.middleName} {patientData.lastName}</Text>
+                        <Text fontWeight="semibold">{patientData.firstName}{patientData.middleName ? ` ${patientData.middleName}` : ''} {patientData.lastName}</Text>
                       </VStack>
                       <VStack align="start" spacing={1}>
                         <Text fontSize="sm" color="gray.500">Reg No</Text>
@@ -1008,6 +1103,47 @@ const Billing = () => {
                         </Select>
                       </FormControl>
                     </SimpleGrid>
+                  </CardBody>
+                </Card>
+
+                {/* Doctor Selection for Consultation */}
+                <Card>
+                  <CardHeader>
+                    <HStack>
+                      <Icon as={FaUser} color="purple.500" />
+                      <VStack align="start" spacing={1}>
+                        <Heading size="md">Doctor Selection</Heading>
+                        <Text color="gray.600">Select doctor for consultation services (required for consultation fees)</Text>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    <FormControl>
+                      <FormLabel>Select Doctor</FormLabel>
+                      {doctorsLoading ? (
+                        <HStack>
+                          <Spinner size="sm" />
+                          <Text fontSize="sm" color="gray.600">Loading doctors...</Text>
+                        </HStack>
+                      ) : (
+                        <Select
+                          placeholder="Choose a doctor for consultation services"
+                          value={selectedDoctor}
+                          onChange={(e) => setSelectedDoctor(e.target.value)}
+                        >
+                          {doctors.map(doctor => (
+                            <option key={doctor.id} value={doctor.name}>
+                              Dr. {doctor.name} - {doctor.specialization}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                      {selectedDoctor && (
+                        <Text fontSize="sm" color="green.600" mt={2}>
+                          ✓ Doctor selected: Dr. {selectedDoctor}
+                        </Text>
+                      )}
+                    </FormControl>
                   </CardBody>
                 </Card>
 
@@ -1268,6 +1404,11 @@ const Billing = () => {
                                       <Text fontSize="xs" color="gray.600">
                                         ₹{service.price} × {service.quantity}
                                       </Text>
+                                      {service.selectedDoctor && (
+                                        <Text fontSize="xs" color="blue.600" fontWeight="medium">
+                                          👨‍⚕️ Dr. {service.selectedDoctor}
+                                        </Text>
+                                      )}
                                     </VStack>
                                     <HStack spacing={2}>
                                       <IconButton

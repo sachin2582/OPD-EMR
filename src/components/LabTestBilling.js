@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import api from '../config/api';
 import { 
   FaUser, 
   FaCalculator, 
@@ -85,20 +86,18 @@ const LabTestBilling = () => {
     try {
       if (activeTab === 'unbilled') {
         console.log('Fetching unbilled prescriptions from e-prescription system...');
-        const response = await fetch(`/api/lab-billing/prescriptions/unbilled/regular?page=${currentPage}&limit=10`);
+        const response = await api.get(`/api/lab-billing/prescriptions/unbilled/regular?page=${currentPage}&limit=10`);
         console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-        setPrescriptions(data.prescriptions || []);
-        setTotalPages(data.pagination?.pages || 1);
+        console.log('Response data:', response.data);
+        setPrescriptions(response.data.prescriptions || []);
+        setTotalPages(response.data.pagination?.pages || 1);
       } else if (activeTab === 'bills') {
         console.log('Fetching bills...');
-        const response = await fetch(`/api/lab-billing/bills?page=${currentPage}&limit=10&paymentStatus=${filterStatus}&date=${filterDate}`);
+        const response = await api.get(`/api/lab-billing/bills?page=${currentPage}&limit=10&paymentStatus=${filterStatus}&date=${filterDate}`);
         console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-        setBills(data.bills || []);
-        setTotalPages(data.pagination?.pages || 1);
+        console.log('Response data:', response.data);
+        setBills(response.data.bills || []);
+        setTotalPages(response.data.pagination?.pages || 1);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -110,11 +109,10 @@ const LabTestBilling = () => {
   const loadStats = async () => {
     try {
       console.log('Fetching stats...');
-      const response = await fetch('/api/lab-billing/stats');
+      const response = await api.get('/api/lab-billing/stats');
       console.log('Stats response status:', response.status);
-      const data = await response.json();
-      console.log('Stats data:', data);
-      setStats(data);
+      console.log('Stats data:', response.data);
+      setStats(response.data);
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -124,33 +122,24 @@ const LabTestBilling = () => {
     if (!selectedPrescription) return;
 
     try {
-      const response = await fetch('/api/lab-billing/bills', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          prescriptionId: selectedPrescription.id,
-          patientId: selectedPrescription.patientId,
-          ...billForm
-        })
+      const response = await api.post('/api/lab-billing/bills', {
+        prescriptionId: selectedPrescription.id,
+        patientId: selectedPrescription.patientId,
+        ...billForm
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 201) {
         alert('Bill generated successfully!');
         setShowBillModal(false);
         setSelectedPrescription(null);
         loadData();
         loadStats();
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
+        alert(`Error: ${response.data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error generating bill:', error);
-      alert('Failed to generate bill');
+      alert(`Failed to generate bill: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -158,39 +147,29 @@ const LabTestBilling = () => {
     if (!selectedBill) return;
 
     try {
-      const response = await fetch(`/api/lab-billing/bills/${selectedBill.id}/payment`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(paymentForm)
-      });
+      const response = await api.put(`/api/lab-billing/bills/${selectedBill.id}/payment`, paymentForm);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
         alert('Payment status updated successfully!');
         setShowPaymentModal(false);
         setSelectedBill(null);
         loadData();
         loadStats();
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
+        alert(`Error: ${response.data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating payment:', error);
-      alert('Failed to update payment status');
+      alert(`Failed to update payment status: ${error.response?.data?.error || error.message}`);
     }
   };
 
   const handleViewPrescription = async (prescription) => {
     try {
       // Fetch complete prescription details including prescriptionItems
-      const response = await fetch(`/api/lab-billing/prescriptions/${prescription.id}`);
-      if (response.ok) {
-        const completePrescription = await response.json();
-        setSelectedPrescription(completePrescription);
+      const response = await api.get(`/api/lab-billing/prescriptions/${prescription.id}`);
+      if (response.status === 200) {
+        setSelectedPrescription(response.data);
       } else {
         // Fallback to basic prescription data
         setSelectedPrescription(prescription);
@@ -625,12 +604,15 @@ const LabTestBilling = () => {
         </div>
       )}
 
-             {/* Prescription View Modal */}
+             {/* Enhanced Prescription View Modal */}
        {selectedPrescription && !showBillModal && (
          <div className="modal-overlay">
-           <div className="modal">
+           <div className="modal prescription-modal">
              <div className="modal-header">
-               <h3>Lab Test Prescription Details</h3>
+               <div className="header-content">
+                 <h3><FaFlask /> Lab Test Prescription Details</h3>
+                 <p>Comprehensive view of prescribed laboratory tests</p>
+               </div>
                <button 
                  className="close-btn"
                  onClick={() => setSelectedPrescription(null)}
@@ -640,16 +622,19 @@ const LabTestBilling = () => {
              </div>
              <div className="modal-body">
                <div className="prescription-details">
-                 <div className="detail-section">
-                   <h4>Patient Information</h4>
+                 {/* Patient Information Card */}
+                 <div className="detail-section patient-card">
+                   <div className="section-header">
+                     <h4><FaUser /> Patient Information</h4>
+                   </div>
                    <div className="detail-grid">
                      <div className="detail-item">
-                       <label>Name:</label>
-                       <span>{selectedPrescription.patientFirstName} {selectedPrescription.patientLastName}</span>
+                       <label>Full Name:</label>
+                       <span className="patient-name">{selectedPrescription.patientFirstName} {selectedPrescription.patientLastName}</span>
                      </div>
                      <div className="detail-item">
                        <label>Patient ID:</label>
-                       <span>{selectedPrescription.patientUniqueId}</span>
+                       <span className="patient-id">{selectedPrescription.patientUniqueId}</span>
                      </div>
                      <div className="detail-item">
                        <label>Phone:</label>
@@ -666,26 +651,32 @@ const LabTestBilling = () => {
                    </div>
                  </div>
                  
-                 <div className="detail-section">
-                   <h4>Doctor Information</h4>
+                 {/* Doctor Information Card */}
+                 <div className="detail-section doctor-card">
+                   <div className="section-header">
+                     <h4><FaUserInjured /> Doctor Information</h4>
+                   </div>
                    <div className="detail-grid">
                      <div className="detail-item">
-                       <label>Name:</label>
-                       <span>{selectedPrescription.doctorName}</span>
+                       <label>Doctor Name:</label>
+                       <span className="doctor-name">{selectedPrescription.doctorName}</span>
                      </div>
                      <div className="detail-item">
                        <label>Specialization:</label>
-                       <span>{selectedPrescription.doctorSpecialization}</span>
+                       <span className="specialization">{selectedPrescription.doctorSpecialization}</span>
                      </div>
                    </div>
                  </div>
                  
-                 <div className="detail-section">
-                   <h4>Prescription Information</h4>
+                 {/* Prescription Information Card */}
+                 <div className="detail-section prescription-card">
+                   <div className="section-header">
+                     <h4><FaFileAlt /> Prescription Information</h4>
+                   </div>
                    <div className="detail-grid">
                      <div className="detail-item">
                        <label>Prescription ID:</label>
-                       <span>{selectedPrescription.prescriptionId}</span>
+                       <span className="prescription-id">{selectedPrescription.prescriptionId}</span>
                      </div>
                      <div className="detail-item">
                        <label>Date:</label>
@@ -693,7 +684,7 @@ const LabTestBilling = () => {
                      </div>
                      <div className="detail-item">
                        <label>Diagnosis:</label>
-                       <span>{selectedPrescription.diagnosis || 'N/A'}</span>
+                       <span className="diagnosis">{selectedPrescription.diagnosis || 'N/A'}</span>
                      </div>
                      <div className="detail-item">
                        <label>Symptoms:</label>
@@ -710,34 +701,80 @@ const LabTestBilling = () => {
                    </div>
                  </div>
                  
-                 <div className="detail-section">
-                   <h4>Lab Tests</h4>
+                 {/* Lab Tests Section - Enhanced */}
+                 <div className="detail-section lab-tests-card">
+                   <div className="section-header">
+                     <h4><FaFlask /> Prescribed Laboratory Tests</h4>
+                     <div className="tests-summary">
+                       {selectedPrescription.prescriptionItems && selectedPrescription.prescriptionItems.length > 0 ? (
+                         <span className="tests-count">
+                           {selectedPrescription.prescriptionItems.length} test(s) prescribed
+                         </span>
+                       ) : (
+                         <span className="no-tests-count">No tests prescribed</span>
+                       )}
+                     </div>
+                   </div>
+                   
                    <div className="lab-tests-list">
                      {selectedPrescription.prescriptionItems && selectedPrescription.prescriptionItems.length > 0 ? (
-                       <table className="tests-table">
-                         <thead>
-                           <tr>
-                             <th>Test Name</th>
-                             <th>Test Code</th>
-                             <th>Category</th>
-                             <th>Price</th>
-                             <th>Instructions</th>
-                           </tr>
-                         </thead>
-                         <tbody>
-                           {selectedPrescription.prescriptionItems.map((item, index) => (
-                             <tr key={index}>
-                               <td>{item.testName}</td>
-                               <td>{item.testCode}</td>
-                               <td>{item.category}</td>
-                               <td>{formatCurrency(item.price)}</td>
-                               <td>{item.instructions || 'N/A'}</td>
+                       <div className="tests-container">
+                         <table className="tests-table">
+                           <thead>
+                             <tr>
+                               <th>#</th>
+                               <th>Test Name</th>
+                               <th>Test Code</th>
+                               <th>Category</th>
+                               <th>Subcategory</th>
+                               <th>Price</th>
+                               <th>Description</th>
                              </tr>
-                           ))}
-                         </tbody>
-                       </table>
+                           </thead>
+                           <tbody>
+                             {selectedPrescription.prescriptionItems.map((item, index) => (
+                               <tr key={index} className="test-row">
+                                 <td className="test-number">{index + 1}</td>
+                                 <td className="test-name">
+                                   <strong>{item.testName}</strong>
+                                 </td>
+                                 <td className="test-code">
+                                   <span className="code-badge">{item.testCode}</span>
+                                 </td>
+                                 <td className="test-category">
+                                   <span className="category-badge">{item.category}</span>
+                                 </td>
+                                 <td className="test-subcategory">
+                                   <span className="subcategory-badge">{item.subcategory || 'N/A'}</span>
+                                 </td>
+                                 <td className="test-price">
+                                   <strong className="price">{formatCurrency(item.price)}</strong>
+                                 </td>
+                                 <td className="test-description">
+                                   <span className="description">{item.description || 'N/A'}</span>
+                                 </td>
+                               </tr>
+                             ))}
+                           </tbody>
+                           <tfoot>
+                             <tr className="total-row">
+                               <td colSpan="5"><strong>Total Amount:</strong></td>
+                               <td className="total-price">
+                                 <strong>{formatCurrency(selectedPrescription.prescriptionItems.reduce((sum, item) => sum + (item.price || 0), 0))}</strong>
+                               </td>
+                               <td></td>
+                             </tr>
+                           </tfoot>
+                         </table>
+                       </div>
                      ) : (
-                       <p className="no-tests">No lab tests found for this prescription.</p>
+                       <div className="no-tests-container">
+                         <div className="no-tests-icon">
+                           <FaFlask />
+                         </div>
+                         <p className="no-tests">No laboratory tests have been prescribed for this patient.</p>
+                         <p className="no-tests-subtitle">Please check the prescription or contact the doctor for clarification.</p>
+                       </div>
                      )}
                    </div>
                  </div>
@@ -748,16 +785,18 @@ const LabTestBilling = () => {
                  className="btn btn-secondary"
                  onClick={() => setSelectedPrescription(null)}
                >
-                 Close
+                 <FaTimesCircle /> Close
                </button>
-               <button 
-                 className="btn btn-primary"
-                 onClick={() => {
-                   setShowBillModal(true);
-                 }}
-               >
-                 <FaReceipt /> Generate Bill
-               </button>
+               {selectedPrescription.prescriptionItems && selectedPrescription.prescriptionItems.length > 0 && (
+                 <button 
+                   className="btn btn-primary"
+                   onClick={() => {
+                     setShowBillModal(true);
+                   }}
+                 >
+                   <FaReceipt /> Generate Bill
+                 </button>
+               )}
              </div>
            </div>
          </div>

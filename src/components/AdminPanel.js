@@ -64,12 +64,12 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
-      const response = await api.get('/api/auth/doctors', {
+      const response = await api.get('/api/doctors', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data.success) {
-        setDoctors(response.data.data);
+        setDoctors(response.data.doctors);
       }
     } catch (error) {
       console.error('Error fetching doctors:', error);

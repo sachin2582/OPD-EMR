@@ -617,85 +617,336 @@
   }
 }
 
-/* Prescription Details Modal */
+/* Enhanced Prescription Details Modal */
+.prescription-modal {
+  max-width: 1000px;
+  max-height: 95vh;
+}
+
+.prescription-modal .modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px 15px 0 0;
+}
+
+.prescription-modal .modal-header .header-content h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prescription-modal .modal-header .header-content p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.95rem;
+}
+
 .prescription-details {
-  padding: 20px 0;
+  padding: 0;
 }
 
 .detail-section {
   margin-bottom: 25px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
+  padding: 25px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
 }
 
-.detail-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: 600;
+.detail-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Card-specific styling */
+.patient-card {
+  border-left: 5px solid #28a745;
+}
+
+.doctor-card {
+  border-left: 5px solid #17a2b8;
+}
+
+.prescription-card {
+  border-left: 5px solid #ffc107;
+}
+
+.lab-tests-card {
+  border-left: 5px solid #dc3545;
 }
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .detail-item {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .detail-item label {
   font-weight: 600;
-  color: #666;
+  color: #6c757d;
   font-size: 0.9rem;
-  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .detail-item span {
-  color: #333;
+  color: #2c3e50;
   font-size: 1rem;
+  font-weight: 500;
 }
 
-/* Lab Tests Table */
+/* Special styling for important fields */
+.patient-name {
+  color: #28a745 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+.patient-id {
+  color: #667eea !important;
+  font-weight: 600 !important;
+  font-family: 'Courier New', monospace;
+}
+
+.doctor-name {
+  color: #17a2b8 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+.specialization {
+  color: #6c757d !important;
+  font-style: italic;
+}
+
+.prescription-id {
+  color: #ffc107 !important;
+  font-weight: 600 !important;
+  font-family: 'Courier New', monospace;
+}
+
+.diagnosis {
+  color: #dc3545 !important;
+  font-weight: 600 !important;
+}
+
+/* Enhanced Lab Tests Section */
+.tests-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tests-count {
+  background: #d4edda;
+  color: #155724;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.no-tests-count {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .lab-tests-list {
-  margin-top: 15px;
+  margin-top: 20px;
+}
+
+.tests-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .tests-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tests-table th {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 12px;
+  padding: 15px 12px;
   text-align: left;
   font-weight: 600;
   font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .tests-table td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 15px 12px;
+  border-bottom: 1px solid #f8f9fa;
   font-size: 0.9rem;
+  vertical-align: top;
 }
 
-.tests-table tr:hover {
+.test-row:hover {
   background: #f8f9fa;
+  transform: scale(1.01);
+  transition: all 0.2s ease;
+}
+
+.test-number {
+  text-align: center;
+  font-weight: 700;
+  color: #667eea;
+  width: 50px;
+}
+
+.test-name {
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 200px;
+}
+
+.code-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.category-badge {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.subcategory-badge {
+  background: #e8f5e8;
+  color: #2e7d32;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.test-price .price {
+  color: #28a745;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.test-description .description {
+  color: #6c757d;
+  font-style: italic;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.total-row {
+  background: #f8f9fa !important;
+  border-top: 2px solid #667eea;
+}
+
+.total-row td {
+  padding: 15px 12px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.total-price {
+  color: #28a745 !important;
+  font-size: 1.1rem !important;
+}
+
+/* No Tests State */
+.no-tests-container {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+}
+
+.no-tests-icon {
+  font-size: 3rem;
+  color: #6c757d;
+  margin-bottom: 15px;
 }
 
 .no-tests {
-  text-align: center;
-  color: #666;
-  font-style: italic;
-  padding: 20px;
+  color: #6c757d;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.no-tests-subtitle {
+  color: #adb5bd;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Responsive Design for Prescription Modal */
+@media (max-width: 768px) {
+  .prescription-modal {
+    margin: 10px;
+    max-height: calc(100vh - 20px);
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tests-container {
+    overflow-x: scroll;
+  }
+  
+  .tests-table {
+    min-width: 600px;
+  }
+  
+  .test-description .description {
+    max-width: 150px;
+  }
 }

@@ -10,9 +10,9 @@ This document outlines all the completed features in the OPD-EMR (Outpatient Dep
 - **User Types**: Support for both doctor and admin user roles
 - **JWT Tokens**: Secure session management with JSON Web Tokens
 - **Password Management**: Secure password hashing and change functionality
-- **Demo Credentials**: 
-  - Admin: `admin` / `admin123`
-  - Doctor: Use registered email/license
+- **User Access**: 
+  - Admin: Contact system administrator
+  - Doctor: Use registered credentials
 
 **Files**: `src/components/Login.js`, `backend/routes/auth.js`
 

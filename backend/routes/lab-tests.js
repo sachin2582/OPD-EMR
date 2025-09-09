@@ -269,55 +269,66 @@ router.post('/orders', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Calculate total amount
-    let totalAmount = 0;
-    for (const test of tests) {
-      const testData = await getRow('SELECT price FROM lab_tests WHERE id = ?', [test.testId]);
-      if (testData) {
-        totalAmount += parseFloat(testData.price);
-      }
-    }
+    // Create separate lab orders for each test (one order per test with direct testId relationship)
+    const createdOrders = [];
     
-    const orderId = generateOrderId();
-    
-    // Create lab order
-    const orderResult = await runQuery(`
-      INSERT INTO lab_orders (orderId, prescriptionId, patientId, doctorId, clinicalNotes, instructions, totalAmount, priority)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [orderId, prescriptionId, patientId, doctorId, clinicalNotes, instructions, totalAmount, priority]);
-    
-    // Create lab order items
     for (const test of tests) {
       const testData = await getRow('SELECT testName, testCode, price FROM lab_tests WHERE id = ?', [test.testId]);
       if (testData) {
+        const orderId = generateOrderId();
+        const testPrice = parseFloat(testData.price);
+        
+        // Create lab order with direct testId relationship
+        const orderResult = await runQuery(`
+          INSERT INTO lab_orders (orderId, prescriptionId, patientId, doctorId, testId, clinicalNotes, instructions, totalAmount, priority)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [orderId, prescriptionId, patientId, doctorId, test.testId, test.clinicalNotes, test.instructions, testPrice, priority]);
+        
+        // Create lab order item for this specific test
         await runQuery(`
           INSERT INTO lab_order_items (orderId, testId, testName, testCode, price, clinicalNotes, instructions)
           VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [orderResult.id, test.testId, testData.testName, testData.testCode, testData.price, test.clinicalNotes, test.instructions]);
+        `, [orderResult.id, test.testId, testData.testName, testData.testCode, testPrice, test.clinicalNotes, test.instructions]);
+        
+        createdOrders.push(orderResult);
       }
     }
     
-    // Create sample collection record
-    const collectionId = generateCollectionId();
-    await runQuery(`
-      INSERT INTO sample_collection (collectionId, orderId, patientId, status, priority)
-      VALUES (?, ?, ?, 'pending', ?)
-    `, [collectionId, orderResult.id, patientId, priority]);
+    // Create sample collection records for each order
+    for (const orderResult of createdOrders) {
+      const collectionId = generateCollectionId();
+      await runQuery(`
+        INSERT INTO sample_collection (collectionId, orderId, patientId, status, priority)
+        VALUES (?, ?, ?, 'pending', ?)
+      `, [collectionId, orderResult.id, patientId, priority]);
+    }
     
-    const newOrder = await getRow(`
-      SELECT lo.*, 
-             p.prescriptionId as prescriptionUniqueId,
-             pat.firstName as patientFirstName,
-             pat.lastName as patientLastName,
-             d.name as doctorName
-      FROM lab_orders lo
-      JOIN prescriptions p ON lo.prescriptionId = p.id
-      JOIN patients pat ON lo.patientId = pat.id
-      JOIN doctors d ON lo.doctorId = d.id
-      WHERE lo.id = ?
-    `, [orderResult.id]);
+    // Get details for all created orders
+    const newOrders = [];
+    for (const orderResult of createdOrders) {
+      const orderDetails = await getRow(`
+        SELECT lo.*, 
+               p.prescriptionId as prescriptionUniqueId,
+               pat.firstName as patientFirstName,
+               pat.lastName as patientLastName,
+               d.name as doctorName,
+               lt.testName,
+               lt.testCode
+        FROM lab_orders lo
+        JOIN prescriptions p ON lo.prescriptionId = p.id
+        JOIN patients pat ON lo.patientId = pat.id
+        JOIN doctors d ON lo.doctorId = d.id
+        LEFT JOIN lab_tests lt ON lo.testId = lt.id
+        WHERE lo.id = ?
+      `, [orderResult.id]);
+      newOrders.push(orderDetails);
+    }
     
-    res.status(201).json(newOrder);
+    res.status(201).json({
+      message: `${createdOrders.length} lab order(s) created successfully`,
+      orders: newOrders,
+      orderCount: createdOrders.length
+    });
   } catch (error) {
     console.error('Error creating lab order:', error);
     res.status(500).json({ error: 'Failed to create lab order' });

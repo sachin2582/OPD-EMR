@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+    
+    import React, { useState, useEffect, useCallback } from 'react';
+import appConfig from '../config/appConfig';
 import {
   Box,
   Container,
@@ -60,7 +62,7 @@ const BillsView = () => {
     try {
       console.log('📅 Fetching bills for date:', date, 'status:', status);
       console.log('🌐 API Base URL:', process.env.REACT_APP_API_BASE_URL);
-      console.log('🔗 Full API URL:', `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}/api/bills`);
+      console.log('🔗 Full API URL:', `${appConfig.apiBaseUrl}/api/bills`);
       
       const params = new URLSearchParams();
       if (date) params.append('date', date);
@@ -783,7 +785,7 @@ const BillsView = () => {
                       onClick={async () => {
                         console.log('🧪 Testing API directly...');
                         try {
-                          const response = await fetch('http://localhost:3001/api/bills');
+                          const response = await fetch(`${appConfig.apiBaseUrl}/api/bills`);
                           const data = await response.json();
                           console.log('🧪 Direct API response:', data);
                           alert(`API Response: ${JSON.stringify(data, null, 2)}`);

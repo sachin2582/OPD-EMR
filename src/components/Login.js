@@ -57,16 +57,24 @@ const Login = () => {
     setError('');
 
     try {
-      // Simple validation - you can customize this
-      if (formData.username === 'admin' && formData.password === 'admin') {
-        // Store basic auth info
+      // Call the actual login API
+      const response = await api.post('/api/auth/login', {
+        username: formData.username,
+        password: formData.password
+      });
+
+      if (response.data.success) {
+        // Store authentication data
         localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', 'admin');
-        localStorage.setItem('username', formData.username);
+        localStorage.setItem('userRole', response.data.data.user.role);
+        localStorage.setItem('username', response.data.data.user.username);
+        localStorage.setItem('userId', response.data.data.user.id);
+        localStorage.setItem('authToken', response.data.data.token);
+        localStorage.setItem('userData', JSON.stringify(response.data.data.user));
         
         toast({
           title: "Login Successful",
-          description: "Welcome to OPD-EMR System!",
+          description: `Welcome ${response.data.data.user.fullName || response.data.data.user.username}!`,
           status: "success",
           duration: 3000,
           isClosable: true,
@@ -75,15 +83,20 @@ const Login = () => {
         // Navigate to dashboard
         navigate('/dashboard');
       } else {
-        setError('Invalid username or password');
+        setError(response.data.error || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('Login failed. Please try again.');
+      
+      if (error.response && error.response.data) {
+        setError(error.response.data.error || 'Invalid credentials');
+      } else {
+        setError('Login failed. Please check your connection and try again.');
+      }
       
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: error.response?.data?.error || "Invalid credentials. Please try again.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -168,14 +181,8 @@ const Login = () => {
 
               <VStack spacing={2} textAlign="center">
                 <Text fontSize="sm" color="gray.600">
-                  Demo Credentials:
+                  Need help? Contact your system administrator.
                 </Text>
-                <VStack spacing={1} fontSize="xs" color="gray.500">
-                  <HStack>
-                    <Icon as={FaShieldAlt} />
-                    <Text>Admin: admin / admin</Text>
-                  </HStack>
-                </VStack>
               </VStack>
             </VStack>
           </form>

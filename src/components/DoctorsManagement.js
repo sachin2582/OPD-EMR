@@ -9,7 +9,6 @@ import {
   Select,
   FormControl,
   FormLabel,
-  FormErrorMessage,
   Textarea,
   Grid,
   GridItem,
@@ -21,7 +20,6 @@ import {
   HStack,
   VStack,
   Flex,
-  Spacer,
   Alert,
   AlertIcon,
   AlertTitle,
@@ -38,8 +36,6 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
-  Divider,
   IconButton,
   Tooltip
 } from '@chakra-ui/react';
@@ -68,7 +64,9 @@ const DoctorsManagement = () => {
     email: '',
     qualification: '',
     experienceYears: '',
-    availability: 'Mon-Fri 9AM-5PM'
+    availability: 'Mon-Fri 9AM-5PM',
+    username: '',
+    password: ''
   });
 
   // Load doctors on component mount
@@ -125,6 +123,7 @@ const DoctorsManagement = () => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log(`Form field changed: ${name} = ${name === 'password' ? '***' : value}`);
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -140,6 +139,10 @@ const DoctorsManagement = () => {
         experienceYears: parseInt(formData.experienceYears) || null
       };
       
+      console.log('Submitting doctor data:', doctorData);
+      console.log('Username:', doctorData.username);
+      console.log('Password:', doctorData.password ? '***' : 'NOT SET');
+      
       const response = await api.post('/api/doctors', doctorData);
       setDoctors(prev => [...prev, response.data.doctor]);
       onClose();
@@ -147,12 +150,13 @@ const DoctorsManagement = () => {
       loadStats(); // Refresh stats
       toast({
         title: 'Doctor Added Successfully',
-        description: `${response.data.doctor.name} has been added to the system.`,
+        description: `${response.data.doctor.name} has been added to the system with login credentials.`,
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
     } catch (err) {
+      console.error('Error adding doctor:', err);
       setError('Failed to add doctor: ' + (err.response?.data?.error || err.message));
     }
   };
@@ -217,7 +221,9 @@ const DoctorsManagement = () => {
       email: doctor.email || '',
       qualification: doctor.qualification || '',
       experienceYears: doctor.experienceYears || '',
-      availability: doctor.availability || 'Mon-Fri 9AM-5PM'
+      availability: doctor.availability || 'Mon-Fri 9AM-5PM',
+      username: doctor.username || '',
+      password: '' // Don't pre-fill password for security
     });
     onOpen();
   };
@@ -231,7 +237,9 @@ const DoctorsManagement = () => {
       email: '',
       qualification: '',
       experienceYears: '',
-      availability: 'Mon-Fri 9AM-5PM'
+      availability: 'Mon-Fri 9AM-5PM',
+      username: '',
+      password: ''
     });
     setEditingDoctor(null);
   };
@@ -311,7 +319,7 @@ const DoctorsManagement = () => {
           <CardBody>
             <HStack spacing={4} wrap="wrap">
               <Input
-                placeholder="Search by name, specialization, or qualification..."
+                placeholder="Search by name, specialization, qualification, or username..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -450,6 +458,58 @@ const DoctorsManagement = () => {
                       rows={3}
                     />
                   </FormControl>
+                  
+                  {/* Login Credentials Section */}
+                  <Box w="full" p={4} bg="blue.50" borderRadius="md" border="2px" borderColor="blue.200">
+                    <Heading size="md" mb={4} color="blue.700">
+                      🔐 Login Credentials (Required)
+                    </Heading>
+                    <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+                      <GridItem>
+                        <FormControl isRequired={!editingDoctor}>
+                          <FormLabel fontWeight="bold" color="blue.600">Username *</FormLabel>
+                          <Input
+                            name="username"
+                            value={formData.username}
+                            onChange={handleInputChange}
+                            placeholder="doctor_username"
+                            disabled={editingDoctor}
+                            bg="white"
+                            borderColor="blue.300"
+                            _focus={{ borderColor: "blue.500", boxShadow: "0 0 0 1px blue.500" }}
+                          />
+                          {editingDoctor && (
+                            <Text fontSize="xs" color="gray.500" mt={1}>
+                              Username cannot be changed after creation
+                            </Text>
+                          )}
+                        </FormControl>
+                      </GridItem>
+                      <GridItem>
+                        <FormControl isRequired={!editingDoctor}>
+                          <FormLabel fontWeight="bold" color="blue.600">Password *</FormLabel>
+                          <Input
+                            name="password"
+                            type="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder={editingDoctor ? "Leave blank to keep current password" : "Enter password"}
+                            bg="white"
+                            borderColor="blue.300"
+                            _focus={{ borderColor: "blue.500", boxShadow: "0 0 0 1px blue.500" }}
+                          />
+                          {editingDoctor && (
+                            <Text fontSize="xs" color="gray.500" mt={1}>
+                              Leave blank to keep current password
+                            </Text>
+                          )}
+                        </FormControl>
+                      </GridItem>
+                    </Grid>
+                    <Text fontSize="sm" color="blue.600" mt={2} fontStyle="italic">
+                      These credentials will be used by the doctor to login to the system.
+                    </Text>
+                  </Box>
                 </VStack>
               </ModalBody>
               
@@ -540,6 +600,7 @@ const DoctorsManagement = () => {
                         <Text><Text as="span" fontWeight="bold">Experience:</Text> {doctor.experienceYears || 0} years</Text>
                         <Text><Text as="span" fontWeight="bold">Phone:</Text> {doctor.phone}</Text>
                         <Text><Text as="span" fontWeight="bold">Email:</Text> {doctor.email || 'Not specified'}</Text>
+                        <Text><Text as="span" fontWeight="bold">Username:</Text> {doctor.username || 'Not set'}</Text>
                         <Text><Text as="span" fontWeight="bold">Availability:</Text> {doctor.availability}</Text>
                       </VStack>
                     </CardBody>

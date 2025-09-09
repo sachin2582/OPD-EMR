@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Prescription Save Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .medication-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .remove-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>E-Prescription Save Test</h1>
+        <p>This test will verify that e-prescriptions can be saved to the database correctly.</p>
+        
+        <form id="prescriptionForm">
+            <div class="form-group">
+                <label for="patientId">Patient ID:</label>
+                <input type="number" id="patientId" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="doctorId">Doctor ID:</label>
+                <input type="number" id="doctorId" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="date">Date:</label>
+                <input type="date" id="date" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="diagnosis">Diagnosis:</label>
+                <textarea id="diagnosis" placeholder="Enter diagnosis" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="symptoms">Symptoms:</label>
+                <textarea id="symptoms" placeholder="Enter symptoms" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="examination">Examination:</label>
+                <textarea id="examination" placeholder="Enter examination findings" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Medications:</label>
+                <div id="medications">
+                    <div class="medication-item">
+                        <input type="text" placeholder="Medication name" class="med-name" required>
+                        <input type="text" placeholder="Dosage" class="med-dosage" required>
+                        <input type="text" placeholder="Duration (e.g., 7 days)" class="med-duration" required>
+                        <input type="text" placeholder="Instructions" class="med-instructions">
+                        <button type="button" class="remove-btn" onclick="removeMedication(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addMedication()">Add Medication</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="instructions">General Instructions:</label>
+                <textarea id="instructions" placeholder="Enter general instructions" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="followUp">Follow-up:</label>
+                <textarea id="followUp" placeholder="Enter follow-up instructions" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                <textarea id="notes" placeholder="Enter additional notes" rows="3"></textarea>
+            </div>
+            
+            <button type="button" onclick="testSavePrescription()">Test Save Prescription</button>
+            <button type="button" onclick="testGetPrescriptions()">Test Get Prescriptions</button>
+            <button type="button" onclick="clearResults()">Clear Results</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Set today's date
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        
+        function addMedication() {
+            const medicationsDiv = document.getElementById('medications');
+            const medicationDiv = document.createElement('div');
+            medicationDiv.className = 'medication-item';
+            medicationDiv.innerHTML = `
+                <input type="text" placeholder="Medication name" class="med-name" required>
+                <input type="text" placeholder="Dosage" class="med-dosage" required>
+                <input type="text" placeholder="Duration (e.g., 7 days)" class="med-duration" required>
+                <input type="text" placeholder="Instructions" class="med-instructions">
+                <button type="button" class="remove-btn" onclick="removeMedication(this)">Remove</button>
+            `;
+            medicationsDiv.appendChild(medicationDiv);
+        }
+        
+        function removeMedication(button) {
+            button.parentElement.remove();
+        }
+        
+        function collectMedications() {
+            const medications = [];
+            const medicationItems = document.querySelectorAll('.medication-item');
+            
+            medicationItems.forEach(item => {
+                const name = item.querySelector('.med-name').value;
+                const dosage = item.querySelector('.med-dosage').value;
+                const duration = item.querySelector('.med-duration').value;
+                const instructions = item.querySelector('.med-instructions').value;
+                
+                if (name && dosage && duration) {
+                    medications.push({
+                        name: name,
+                        dosage: dosage,
+                        duration: duration,
+                        instructions: instructions || ''
+                    });
+                }
+            });
+            
+            return medications;
+        }
+        
+        function showResult(message, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${isError ? 'error' : 'success'}`;
+            resultDiv.textContent = message;
+        }
+        
+        function clearResults() {
+            document.getElementById('result').textContent = '';
+        }
+        
+        async function testSavePrescription() {
+            try {
+                const medications = collectMedications();
+                
+                if (medications.length === 0) {
+                    showResult('Error: Please add at least one medication', true);
+                    return;
+                }
+                
+                const prescriptionData = {
+                    patientId: parseInt(document.getElementById('patientId').value),
+                    doctorId: parseInt(document.getElementById('doctorId').value),
+                    date: document.getElementById('date').value,
+                    diagnosis: document.getElementById('diagnosis').value,
+                    symptoms: document.getElementById('symptoms').value,
+                    examination: document.getElementById('examination').value,
+                    medications: medications,
+                    instructions: document.getElementById('instructions').value,
+                    followUp: document.getElementById('followUp').value,
+                    notes: document.getElementById('notes').value
+                };
+                
+                console.log('Sending prescription data:', prescriptionData);
+                
+                const response = await fetch('/api/prescriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(prescriptionData)
+                });
+                
+                const result = await response.text();
+                console.log('Response status:', response.status);
+                console.log('Response:', result);
+                
+                if (response.ok) {
+                    const data = JSON.parse(result);
+                    showResult(`✅ Prescription saved successfully!\n\nPrescription ID: ${data.prescription.prescriptionId}\nDatabase ID: ${data.prescription.id}\nPatient: ${data.prescription.patientFirstName} ${data.prescription.patientLastName}\nDoctor: ${data.prescription.doctorName}\nMedications: ${medications.length} items\n\nFull Response:\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`❌ Error saving prescription (${response.status}):\n${result}`, true);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showResult(`❌ Network error: ${error.message}`, true);
+            }
+        }
+        
+        async function testGetPrescriptions() {
+            try {
+                const response = await fetch('/api/prescriptions');
+                const result = await response.text();
+                
+                if (response.ok) {
+                    const data = JSON.parse(result);
+                    showResult(`✅ Retrieved ${data.prescriptions.length} prescriptions:\n\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`❌ Error getting prescriptions (${response.status}):\n${result}`, true);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showResult(`❌ Network error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

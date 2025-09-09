@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Medication API - Server Version</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .search-box { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 2px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px;
+        }
+        .search-box:focus {
+            border-color: #3182ce;
+            outline: none;
+        }
+        .results { 
+            margin-top: 20px; 
+        }
+        .medication-item { 
+            padding: 15px; 
+            border: 1px solid #e2e8f0; 
+            margin: 8px 0; 
+            border-radius: 6px; 
+            background: #f8f9fa;
+            transition: all 0.2s;
+        }
+        .medication-item:hover {
+            background: #e6f3ff;
+            border-color: #3182ce;
+        }
+        .medication-name { 
+            font-weight: bold; 
+            color: #2d3748; 
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .medication-details { 
+            font-size: 14px; 
+            color: #718096; 
+            margin-top: 5px;
+        }
+        .loading { 
+            color: #3182ce; 
+            font-style: italic; 
+            text-align: center;
+            padding: 20px;
+        }
+        .error { 
+            color: #e53e3e; 
+            background: #fed7d7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #38a169;
+            background: #c6f6d5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .stats {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+        .test-button {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2c5aa0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Medication API Test</h1>
+        <p>This page tests the medication search API to verify it's working correctly.</p>
+        
+        <div class="test-section">
+            <h3>🔍 Search Medications</h3>
+            <input 
+                type="text" 
+                class="search-box" 
+                id="searchInput" 
+                placeholder="Search for medications (e.g., AMARYL, PARACETAMOL, CEFPODOXIME)..."
+            />
+            <div id="searchStats" class="stats" style="display: none;">
+                <strong>Search Results:</strong> <span id="resultCount">0</span> medications found
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Quick Tests</h3>
+            <button class="test-button" onclick="testSearch('AMARYL')">Test AMARYL</button>
+            <button class="test-button" onclick="testSearch('PARACETAMOL')">Test PARACETAMOL</button>
+            <button class="test-button" onclick="testSearch('CEFPODOXIME')">Test CEFPODOXIME</button>
+            <button class="test-button" onclick="testSearch('TABLET')">Test TABLET</button>
+            <button class="test-button" onclick="testSearch('INJECTION')">Test INJECTION</button>
+        </div>
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const resultsDiv = document.getElementById('results');
+        const searchStatsDiv = document.getElementById('searchStats');
+        const resultCountSpan = document.getElementById('resultCount');
+        
+        let searchTimeout;
+        let totalSearches = 0;
+        let totalResults = 0;
+        
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.trim();
+            
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            if (searchTerm.length < 2) {
+                resultsDiv.innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">Type at least 2 characters to search...</p>';
+                searchStatsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Show loading
+            resultsDiv.innerHTML = '<div class="loading">🔍 Searching for "' + searchTerm + '"...</div>';
+            
+            // Debounce search
+            searchTimeout = setTimeout(() => {
+                searchMedications(searchTerm);
+            }, 300);
+        });
+        
+        async function testSearch(searchTerm) {
+            searchInput.value = searchTerm;
+            searchMedications(searchTerm);
+        }
+        
+        async function searchMedications(searchTerm) {
+            try {
+                totalSearches++;
+                console.log('🔍 Search #' + totalSearches + ' for:', searchTerm);
+                
+                const response = await fetch(`http://localhost:3001/api/item-master/search?q=${encodeURIComponent(searchTerm)}&limit=20`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('📡 API Response:', data);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    totalResults += data.data.length;
+                    displayResults(data.data, searchTerm);
+                    showStats(data.data.length);
+                } else {
+                    resultsDiv.innerHTML = '<div class="error">❌ No medications found for "' + searchTerm + '"</div>';
+                    showStats(0);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error searching medications:', error);
+                resultsDiv.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+                showStats(0);
+            }
+        }
+        
+        function displayResults(medications, searchTerm) {
+            const html = `
+                <div class="success">
+                    ✅ Found ${medications.length} medications for "${searchTerm}"
+                </div>
+                ${medications.map(med => `
+                    <div class="medication-item">
+                        <div class="medication-name">${med.item_name}</div>
+                        <div class="medication-details">
+                            <strong>Generic:</strong> ${med.generic_name} | 
+                            <strong>Brand:</strong> ${med.brand} | 
+                            <strong>Category:</strong> ${med.category} | 
+                            <strong>Type:</strong> ${med.subcategory} |
+                            <strong>Unit:</strong> ${med.unit}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function showStats(count) {
+            resultCountSpan.textContent = count;
+            searchStatsDiv.style.display = 'block';
+        }
+        
+        // Test API on page load
+        window.addEventListener('load', function() {
+            console.log('🚀 Page loaded, testing API connection...');
+            searchMedications('AMARYL');
+        });
+    </script>
+</body>
+</html>

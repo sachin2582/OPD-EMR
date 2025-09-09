@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../config/api';
+import appConfig from '../config/appConfig';
+import { correctAndFormatMedicalText, handleMedicalTextInput, applyMedicalTextCorrection } from '../utils/textCorrection';
 import { FaPrescription, FaPrint, FaSave, FaArrowLeft, FaPlus, FaTrash, FaStethoscope, FaPills, FaNotesMedical, FaUser, FaHeartbeat, FaFlask, FaSearch, FaTimes, FaCheck, FaList } from 'react-icons/fa';
 import {
   Box,
@@ -154,6 +156,7 @@ const EPrescription = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const [patientData, setPatientData] = useState(null);
   const [clinicData, setClinicData] = useState(null);
+  const [doctorData, setDoctorData] = useState(null);
   const [mode, setMode] = useState('new');
   const [prescription, setPrescription] = useState({
     prescriptionId: '',
@@ -167,7 +170,6 @@ const EPrescription = () => {
     doctorName: 'Dr. [Your Name]',
     doctorSpecialization: 'General Physician',
     doctorLicense: 'MD[Your License]',
-    notes: '',
     labTestRecommendations: [], // Array for selected lab tests
     status: 'in-progress'
   });
@@ -197,111 +199,29 @@ const EPrescription = () => {
   const [dosePatternsLoading, setDosePatternsLoading] = useState(false);
   const [dosePatternsError, setDosePatternsError] = useState(null);
   
+  // Item master functionality
+  const [itemMasterItems, setItemMasterItems] = useState([]);
+  const [itemMasterLoading, setItemMasterLoading] = useState(false);
+  const [itemMasterError, setItemMasterError] = useState(null);
+  const [medicationSearchTerm, setMedicationSearchTerm] = useState('');
+  const [filteredMedications, setFilteredMedications] = useState([]);
+  const [showMedicationDropdown, setShowMedicationDropdown] = useState({});
+  const [selectedMedication, setSelectedMedication] = useState(null);
+  const [isMedicationModalOpen, setIsMedicationModalOpen] = useState(false);
+  const [currentMedicationId, setCurrentMedicationId] = useState(null);
+  
   // Fallback dose patterns in case API fails
-  const fallbackDosePatterns = [
+  const fallbackDosePatterns = useMemo(() => [
     { id: 'fallback-1', pattern: '1-0-0', description: 'Once a day, morning' },
     { id: 'fallback-2', pattern: '0-0-1', description: 'Once a day, night' },
     { id: 'fallback-3', pattern: '1-0-1', description: 'Twice a day, morning and night' },
     { id: 'fallback-4', pattern: '1-1-1', description: 'Thrice a day, morning, noon, and night' },
     { id: 'fallback-5', pattern: '0.5-0-0', description: 'Half tablet once daily, morning' }
-  ];
+  ], []);
   
 
 
      // Fetch lab tests from database
-   useEffect(() => {
-     
-     const fetchLabTests = async () => {
-       try {
-         setLabTestsLoading(true);
-         setLabTestsError(null);
-         
-         // Use robust retry logic for database busy errors
-         let response;
-         let retryCount = 0;
-         const maxRetries = 3;
-         
-         while (retryCount < maxRetries) {
-           try {
-             console.log(`🔄 Attempting to fetch lab tests... (attempt ${retryCount + 1}/${maxRetries})`);
-             response = await api.get('/api/lab-tests/tests?all=true');
-             
-             if (response.status === 200) {
-               console.log('✅ Lab tests fetched successfully');
-               break; // Success, exit retry loop
-             } else if (response.status === 503) {
-               // Service unavailable, retry
-               retryCount++;
-               if (retryCount < maxRetries) {
-                 const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-                 console.log(`⚠️  Service unavailable, retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-                 await new Promise(resolve => setTimeout(resolve, delay));
-                 continue;
-               }
-             }
-             
-             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-           } catch (fetchError) {
-             console.error(`❌ Fetch error on attempt ${retryCount + 1}:`, fetchError.message);
-             
-             // Check if it's a network error or server error that we should retry
-             if ((fetchError.message.includes('Failed to fetch') || 
-                  fetchError.message.includes('Network Error') ||
-                  fetchError.message.includes('ECONNREFUSED') ||
-                  fetchError.code === 'ECONNREFUSED') && 
-                 retryCount < maxRetries - 1) {
-               retryCount++;
-               const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-               console.log(`⚠️  Network error, retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-               await new Promise(resolve => setTimeout(resolve, delay));
-               continue;
-             }
-             throw fetchError;
-           }
-         }
-         
-         if (!response || response.status !== 200) {
-           throw new Error(`Failed to fetch lab tests after ${maxRetries} attempts`);
-         }
-         
-         const data = response.data;
-         const tests = data.tests || [];
-            
-            if (tests.length === 0) {
-              setLabTestsError('No tests available in the database.');
-            } else {
-              // Set all tests from database
-              setLabTestsFromDB(tests);
-              // Initialize filteredTests with all tests
-              setFilteredTests(tests);
-              
-              // Try to organize tests by category and subcategory
-              try {
-                const organizedTests = organizeTestsByCategory(tests);
-                setLabTestCategories(organizedTests);
-              } catch (orgError) {
-                // If organization fails, still show tests in simple list
-                setLabTestCategories([]);
-              }
-           
-           console.log(`✅ Lab tests loaded successfully: ${tests.length} tests`);
-          }
-       } catch (error) {
-         console.error('❌ Error fetching lab tests:', error.message);
-         setLabTestsError(`Failed to load laboratory tests: ${error.message}`);
-         setLabTestsFromDB([]);
-         setLabTestCategories([]);
-       } finally {
-         setLabTestsLoading(false);
-       }
-     };
-
-                                       fetchLabTests();
-           
-           
-           // Fetch dose patterns
-           fetchDosePatterns();
-    }, []);
  
        // Filter tests based on search term
     useEffect(() => {
@@ -377,10 +297,15 @@ const EPrescription = () => {
   const addDiagnosis = () => {
     if (diagnosisInput.trim() === '') return;
     
-    const newDiagnosis = diagnosisInput.trim();
+    // Apply text correction and formatting
+    const correctedDiagnosis = correctAndFormatMedicalText(diagnosisInput.trim());
     
-    // Check if diagnosis already exists
-    if (prescription.diagnoses.includes(newDiagnosis)) {
+    // Check if diagnosis already exists (case-insensitive)
+    const existingDiagnosis = prescription.diagnoses.find(d => 
+      d.toLowerCase() === correctedDiagnosis.toLowerCase()
+    );
+    
+    if (existingDiagnosis) {
       toast({
         title: "Duplicate Diagnosis",
         description: "This diagnosis has already been added",
@@ -393,18 +318,10 @@ const EPrescription = () => {
     
     setPrescription(prev => ({
       ...prev,
-      diagnoses: [...prev.diagnoses, newDiagnosis]
+      diagnoses: [...prev.diagnoses, correctedDiagnosis]
     }));
     
     setDiagnosisInput('');
-    
-    toast({
-      title: "Diagnosis Added",
-      description: `${newDiagnosis} has been added to the prescription`,
-      status: "success",
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const removeDiagnosis = (diagnosisToRemove) => {
@@ -412,14 +329,6 @@ const EPrescription = () => {
       ...prev,
       diagnoses: prev.diagnoses.filter(diagnosis => diagnosis !== diagnosisToRemove)
     }));
-    
-    toast({
-      title: "Diagnosis Removed",
-      description: `${diagnosisToRemove} has been removed from the prescription`,
-      status: "info",
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const handleDiagnosisKeyPress = (e) => {
@@ -433,10 +342,15 @@ const EPrescription = () => {
   const addComplaint = () => {
     if (complaintInput.trim() === '') return;
     
-    const newComplaint = complaintInput.trim();
+    // Apply text correction and formatting
+    const correctedComplaint = correctAndFormatMedicalText(complaintInput.trim());
     
-    // Check if complaint already exists
-    if (prescription.complaints.includes(newComplaint)) {
+    // Check if complaint already exists (case-insensitive)
+    const existingComplaint = prescription.complaints.find(c => 
+      c.toLowerCase() === correctedComplaint.toLowerCase()
+    );
+    
+    if (existingComplaint) {
       toast({
         title: "Duplicate Complaint",
         description: "This complaint has already been added",
@@ -449,18 +363,10 @@ const EPrescription = () => {
     
     setPrescription(prev => ({
       ...prev,
-      complaints: [...prev.complaints, newComplaint]
+      complaints: [...prev.complaints, correctedComplaint]
     }));
     
     setComplaintInput('');
-    
-    toast({
-      title: "Complaint Added",
-      description: `${newComplaint} has been added to the prescription`,
-      status: "success",
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const removeComplaint = (complaintToRemove) => {
@@ -468,14 +374,6 @@ const EPrescription = () => {
       ...prev,
       complaints: prev.complaints.filter(complaint => complaint !== complaintToRemove)
     }));
-    
-    toast({
-      title: "Complaint Removed",
-      description: `${complaintToRemove} has been removed from the prescription`,
-      status: "info",
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const handleComplaintKeyPress = (e) => {
@@ -488,19 +386,81 @@ const EPrescription = () => {
 
 
 
+  // Fetch logged-in doctor information
+  const fetchDoctorData = useCallback(async () => {
+    try {
+      console.log('🔍 Fetching doctor data...');
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userId = localStorage.getItem('userId');
+      
+      console.log('👤 User data from localStorage:', userData);
+      console.log('🆔 User ID from localStorage:', userId);
+      
+      if (userId && (userData.type === 'D' || userData.role === 'admin' || userData.role === 'doctor' || userData.userType === 'admin')) {
+        console.log('✅ User is a doctor, fetching details...');
+        // Fetch doctor details including doctor code from doctors table
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${appConfig.apiBaseUrl}/api/users/${userId}/doctor-code`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('📡 Doctor Code API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📋 Doctor Code API response data:', data);
+          
+          if (data.success && data.data) {
+            setDoctorData(data.data);
+            console.log('✅ Doctor data with code set:', data.data);
+            
+            // Update prescription with doctor information including doctor code
+            setPrescription(prev => ({
+              ...prev,
+              doctorId: data.data.doctor_id,
+              doctorCode: data.data.doctor_code,
+              doctorName: data.data.name || data.data.fullName || 'Dr. [Your Name]',
+              doctorSpecialization: data.data.specialization || 'General Physician',
+              doctorLicense: data.data.license || 'MD[Your License]'
+            }));
+            
+            // Also update doctorData for the handleSave function
+            setDoctorData({
+              id: data.data.doctor_id,
+              doctor_code: data.data.doctor_code,
+              name: data.data.name || data.data.fullName,
+              specialization: data.data.specialization,
+              license: data.data.license
+            });
+          } else {
+            console.log('❌ Doctor Code API response not successful:', data);
+          }
+        } else {
+          console.log('❌ Doctor Code API request failed:', response.status, response.statusText);
+        }
+      } else {
+        console.log('❌ User is not a doctor or missing data:', { userId, userType: userData.type });
+      }
+    } catch (error) {
+      console.error('💥 Error fetching doctor data:', error);
+    }
+  }, []);
+
   // Function to fetch dose patterns
   const fetchDosePatterns = useCallback(async () => {
     try {
       setDosePatternsLoading(true);
       
-      const response = await api.get('/api/dose-patterns/all');
+      const response = await api.get('/api/dose-patterns');
       
       if (response.status === 200) {
         const data = response.data;
         
         // Check if we have patterns in the response
-        if (data.patterns && data.patterns.length > 0) {
-          setDosePatterns(data.patterns);
+        if (data.success && data.data && data.data.length > 0) {
+          setDosePatterns(data.data);
           setDosePatternsError(null);
         } else {
           setDosePatterns(fallbackDosePatterns);
@@ -518,7 +478,131 @@ const EPrescription = () => {
     } finally {
       setDosePatternsLoading(false);
     }
-  }, []);
+  }, [fallbackDosePatterns]);
+
+  // Function to fetch item master data
+  const fetchItemMasterItems = useCallback(async (searchTerm = '') => {
+    try {
+      console.log('🔍 Fetching item master items for search term:', searchTerm);
+      
+      setItemMasterLoading(true);
+      setItemMasterError(null);
+      
+      let url;
+      if (searchTerm && searchTerm.trim().length >= 2) {
+        // Use search endpoint for specific searches
+        const params = new URLSearchParams();
+        params.append('q', searchTerm);
+        params.append('limit', '50');
+        url = `/api/item-master/search?${params.toString()}`;
+      } else {
+        // Use main endpoint to load ALL items - explicitly set no limit
+        url = `/api/item-master?offset=0`;
+      }
+      
+      console.log('🌐 API URL:', url);
+      console.log('🌐 Full URL:', `${appConfig.apiBaseUrl}${url}`);
+      
+      const response = await api.get(url);
+      console.log('📡 API Response:', response);
+      
+      if (response.status === 200) {
+        const data = response.data;
+        console.log('📋 Response data:', data);
+        
+        if (data.success && data.data && Array.isArray(data.data)) {
+          setItemMasterItems(data.data);
+          setFilteredMedications(data.data);
+          console.log('✅ Item master items loaded:', data.data.length);
+          console.log('📋 First few items:', data.data.slice(0, 3));
+          console.log('📋 All items for dropdown:', data.data.map(item => item.item_name).slice(0, 10));
+        } else {
+          console.log('⚠️ No items found in response:', data);
+          setItemMasterItems([]);
+          setFilteredMedications([]);
+        }
+      } else {
+        console.log('❌ Failed to fetch item master items:', response.status);
+        setItemMasterError('Failed to fetch medication items');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching item master items:', error);
+      console.error('❌ Error details:', error.response?.data || error.message);
+      setItemMasterError(error.message);
+    } finally {
+      setItemMasterLoading(false);
+    }
+  }, []); // Remove dependency to prevent circular dependency
+
+  // useEffect to load initial data after functions are defined
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchLabTests = async () => {
+      try {
+        if (!isMounted) return;
+        setLabTestsLoading(true);
+        setLabTestsError(null);
+        
+        const response = await api.get('/api/lab-tests/tests?all=true');
+        
+        if (response.status === 200 && isMounted) {
+          const data = response.data;
+          const tests = data.tests || [];
+             
+          if (tests.length === 0) {
+            setLabTestsError('No tests available in the database.');
+          } else {
+            setLabTestsFromDB(tests);
+            setFilteredTests(tests);
+            
+            try {
+              const organizedTests = organizeTestsByCategory(tests);
+              setLabTestCategories(organizedTests);
+            } catch (orgError) {
+              setLabTestCategories([]);
+            }
+         
+            console.log(`✅ Lab tests loaded successfully: ${tests.length} tests`);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('❌ Error fetching lab tests:', error.message);
+          setLabTestsError(`Failed to load laboratory tests: ${error.message}`);
+          setLabTestsFromDB([]);
+          setLabTestCategories([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLabTestsLoading(false);
+        }
+      }
+    };
+
+    const loadInitialData = async () => {
+      if (!isMounted) return;
+      
+      // Load lab tests
+      await fetchLabTests();
+      
+      // Load dose patterns only if not already loaded
+      if (dosePatterns.length === 0) {
+        await fetchDosePatterns();
+      }
+      
+      // Load item master items only if not already loaded
+      if (itemMasterItems.length === 0) {
+        await fetchItemMasterItems('');
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   // Function to organize tests by category and subcategory
   const organizeTestsByCategory = (tests) => {
@@ -559,17 +643,38 @@ const EPrescription = () => {
 
   
 
-  const commonMedications = [
-    { name: 'Paracetamol', dosage: '500mg', frequency: 'Every 6 hours', duration: '3-5 days' },
-    { name: 'Ibuprofen', dosage: '400mg', frequency: 'Every 8 hours', duration: '5-7 days' },
-    { name: 'Amoxicillin', dosage: '500mg', frequency: 'Every 8 hours', duration: '7-10 days' },
-    { name: 'Omeprazole', dosage: '20mg', frequency: 'Once daily', duration: '4-8 weeks' }
-  ];
+
+  // Function to load past prescriptions
+  const loadPastPrescriptions = useCallback(async () => {
+    try {
+      
+      const response = await api.get(`/api/prescriptions/patient/${patientId}`);
+      
+      if (response.status === 200) {
+        const prescriptions = response.data;
+        
+        // Filter out the current prescription if we're editing
+        const pastPrescriptions = prescriptions.filter(p => 
+          mode !== 'edit' || p.prescriptionId !== prescription.prescriptionId
+        );
+        
+        
+        setPastPrescriptions(pastPrescriptions);
+      } else {
+        setPastPrescriptions([]);
+      }
+    } catch (error) {
+      setPastPrescriptions([]);
+    }
+  }, [patientId, mode, prescription.prescriptionId]);
 
   // Fetch patient data based on patientId from URL
   useEffect(() => {
     console.log('🔍 EPrescription useEffect - patientId:', patientId);
     console.log('🔍 EPrescription useEffect - location.state:', location.state);
+    
+    // Fetch doctor data first
+    fetchDoctorData();
     
     const fetchPatientData = async () => {
       if (patientId) {
@@ -595,7 +700,6 @@ const EPrescription = () => {
               doctorName: 'Dr. [Your Name]',
               doctorSpecialization: 'General Physician',
               doctorLicense: 'MD[Your License]',
-              notes: '',
               status: 'in-progress'
             };
             setPrescription(newPrescription);
@@ -676,7 +780,6 @@ const EPrescription = () => {
           doctorName: 'Dr. [Your Name]',
           doctorSpecialization: 'General Physician',
           doctorLicense: 'MD[Your License]',
-          notes: '',
           status: 'in-progress'
         };
         setPrescription(newPrescription);
@@ -694,28 +797,6 @@ const EPrescription = () => {
     }
   }, [patientId, location.state, navigate, toast]);
 
-  const loadPastPrescriptions = useCallback(async () => {
-    try {
-      
-      const response = await api.get(`/api/prescriptions/patient/${patientId}`);
-      
-      if (response.status === 200) {
-        const prescriptions = response.data;
-        
-        // Filter out the current prescription if we're editing
-        const pastPrescriptions = prescriptions.filter(p => 
-          mode !== 'edit' || p.prescriptionId !== prescription.prescriptionId
-        );
-        
-        
-        setPastPrescriptions(pastPrescriptions);
-      } else {
-        setPastPrescriptions([]);
-      }
-    } catch (error) {
-      setPastPrescriptions([]);
-    }
-  }, [patientId, mode, prescription.prescriptionId]);
 
 
   // Fetch clinic data
@@ -735,15 +816,16 @@ const EPrescription = () => {
           } else {
             // Set fallback data
             setClinicData({
-              clinicName: 'Your Clinic Name',
-              address: 'Your Clinic Address',
-              city: 'Your City',
-              state: 'Your State',
-              pincode: '123456',
-              phone: 'Your Phone Number',
-              email: 'clinic@email.com',
-              website: 'www.yourclinic.com',
+              clinicName: 'HIMSHIKHA NURSING HOME',
+              address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
+              city: 'Panchkula',
+              state: 'Haryana',
+              pincode: '134112',
+              phone: '9815368811',
+              email: 'info@demr.com',
+              website: 'www.demr.com',
               license: 'CLINIC-LICENSE-001',
+              registration: 'REG-2024-001',
               prescriptionValidity: 30
             });
           }
@@ -751,15 +833,16 @@ const EPrescription = () => {
           console.error('❌ Failed to fetch clinic data, status:', response.status);
           // Set fallback data
           setClinicData({
-            clinicName: 'Your Clinic Name',
-            address: 'Your Clinic Address',
-            city: 'Your City',
-            state: 'Your State',
-            pincode: '123456',
-            phone: 'Your Phone Number',
-            email: 'clinic@email.com',
-            website: 'www.yourclinic.com',
+            clinicName: 'HIMSHIKHA NURSING HOME',
+            address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
+            city: 'Panchkula',
+            state: 'Haryana',
+            pincode: '134112',
+            phone: '9815368811',
+            email: 'info@demr.com',
+            website: 'www.demr.com',
             license: 'CLINIC-LICENSE-001',
+            registration: 'REG-2024-001',
             prescriptionValidity: 30
           });
         }
@@ -767,15 +850,16 @@ const EPrescription = () => {
         console.error('❌ Error fetching clinic data:', error);
         // Set fallback data
         setClinicData({
-          clinicName: 'Your Clinic Name',
-          address: 'Your Clinic Address',
-          city: 'Your City',
-          state: 'Your State',
-          pincode: '123456',
-          phone: 'Your Phone Number',
-          email: 'clinic@email.com',
-          website: 'www.yourclinic.com',
+          clinicName: 'HIMSHIKHA NURSING HOME',
+          address: 'Plot No 1,Near CRPF Camp Himshika,Pinjore',
+          city: 'Panchkula',
+          state: 'Haryana',
+          pincode: '134112',
+          phone: '9815368811',
+          email: 'info@demr.com',
+          website: 'www.demr.com',
           license: 'CLINIC-LICENSE-001',
+          registration: 'REG-2024-001',
           prescriptionValidity: 30
         });
       }
@@ -786,28 +870,29 @@ const EPrescription = () => {
 
      // Load existing prescription data if editing or viewing
    useEffect(() => {
-     if (mode === 'edit' || mode === 'view') {
+     // Only load existing prescription data in edit or view mode
+     // Don't run this in new mode to avoid overwriting freshly saved data
+     if ((mode === 'edit' || mode === 'view') && prescription.prescriptionId) {
        const savedPrescriptions = JSON.parse(localStorage.getItem('prescriptions') || '[]');
        const existingPrescription = savedPrescriptions.find(p => 
          p.prescriptionId === prescription.prescriptionId && p.patientId === parseInt(patientId)
        );
        
-               if (existingPrescription) {
-          setPrescription(existingPrescription);
-          if (existingPrescription.labTestRecommendations) {
-            setSelectedLabTests(existingPrescription.labTestRecommendations);
-          }
-        }
+       if (existingPrescription) {
+         console.log('🔄 Loading existing prescription from localStorage:', existingPrescription);
+         setPrescription(existingPrescription);
+         if (existingPrescription.labTestRecommendations) {
+           setSelectedLabTests(existingPrescription.labTestRecommendations);
+         }
+       }
      }
-   }, [mode, prescription.prescriptionId, patientId, loadPastPrescriptions]);
+   }, [mode, prescription.prescriptionId, patientId]);
 
   const addMedication = () => {
     const newMedication = {
       id: Date.now(),
       name: '',
-      type: 'TAB',
       dosage: '',
-      frequency: '',
       durationValue: 1,
       durationUnit: 'Month',
       instructions: '',
@@ -821,12 +906,17 @@ const EPrescription = () => {
   };
 
   const updateMedication = (id, field, value) => {
-    setPrescription(prev => ({
-      ...prev,
-      medications: prev.medications.map(med => 
-        med.id === id ? { ...med, [field]: value } : med
-      )
-    }));
+    console.log('🔄 Updating medication:', { id, field, value });
+    setPrescription(prev => {
+      const updated = {
+        ...prev,
+        medications: prev.medications.map(med => 
+          med.id === id ? { ...med, [field]: value } : med
+        )
+      };
+      console.log('📝 Updated prescription medications:', updated.medications);
+      return updated;
+    });
   };
 
   const removeMedication = (id) => {
@@ -836,25 +926,103 @@ const EPrescription = () => {
     }));
   };
 
-     const addCommonMedication = (med) => {
-     const newMedication = {
-       id: Date.now(),
-       name: med.name,
-       type: 'TAB',
-       dosage: med.dosage,
-       when: 'After Food',
-       frequency: med.frequency,
-       durationValue: 1,
-       durationUnit: 'Month',
-       instructions: '',
-       beforeMeal: false,
-       afterMeal: false
-     };
-     setPrescription(prev => ({
-       ...prev,
-       medications: [...prev.medications, newMedication]
-     }));
-   };
+  // Handle medication search
+  const handleMedicationSearch = (medId, searchTerm) => {
+    console.log('🔍 Medication search:', { medId, searchTerm });
+    console.log('🔍 Current itemMasterItems length:', itemMasterItems.length);
+    console.log('🔍 Current filteredMedications length:', filteredMedications.length);
+    
+    setMedicationSearchTerm(prev => ({
+      ...prev,
+      [medId]: searchTerm
+    }));
+    
+    if (searchTerm.length >= 2) {
+      // Show dropdown while searching
+      console.log('🔍 Showing dropdown for medId:', medId);
+      setShowMedicationDropdown(prev => ({
+        ...prev,
+        [medId]: true
+      }));
+      fetchItemMasterItems(searchTerm);
+    } else {
+      setFilteredMedications(itemMasterItems);
+      // Hide dropdown if search term is too short
+      setShowMedicationDropdown(prev => ({
+        ...prev,
+        [medId]: false
+      }));
+    }
+  };
+
+  // Handle medication selection from dropdown
+  const handleMedicationSelect = (medId, selectedItem) => {
+    console.log('🎯 Medication selected for medId:', medId, 'Item:', selectedItem);
+    
+    // Update medication with selected item data
+    updateMedication(medId, 'name', selectedItem.item_name);
+    updateMedication(medId, 'genericName', selectedItem.generic_name);
+    updateMedication(medId, 'brand', selectedItem.brand);
+    updateMedication(medId, 'category', selectedItem.category);
+    updateMedication(medId, 'subcategory', selectedItem.subcategory);
+    updateMedication(medId, 'unit', selectedItem.unit);
+    updateMedication(medId, 'hsnCode', selectedItem.hsn_code);
+    updateMedication(medId, 'gstRate', selectedItem.gst_rate);
+    
+    console.log('✅ Medication updated with:', {
+      name: selectedItem.item_name,
+      genericName: selectedItem.generic_name,
+      brand: selectedItem.brand
+    });
+    
+    // Close dropdown
+    setShowMedicationDropdown(prev => ({
+      ...prev,
+      [medId]: false
+    }));
+    
+    // Clear search term
+    setMedicationSearchTerm(prev => ({
+      ...prev,
+      [medId]: ''
+    }));
+    
+    console.log('🔒 Dropdown closed for medId:', medId);
+    
+    // Show success message
+    setSelectedMedication({ medId, item: selectedItem });
+    setTimeout(() => {
+      setSelectedMedication(null);
+    }, 2000);
+  };
+
+  // Toggle medication dropdown
+  const toggleMedicationDropdown = (medId) => {
+    setShowMedicationDropdown(prev => ({
+      ...prev,
+      [medId]: !prev[medId]
+    }));
+  };
+
+  // Close all medication dropdowns
+  const closeAllMedicationDropdowns = () => {
+    setShowMedicationDropdown({});
+  };
+
+  // Handle clicking outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.medication-dropdown')) {
+        closeAllMedicationDropdowns();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
 
      const copyFromPastPrescription = (pastPrescription) => {
      if (pastPrescription.medications && pastPrescription.medications.length > 0) {
@@ -894,8 +1062,11 @@ const EPrescription = () => {
    };
 
   const handleSave = async () => {
+    console.log('🚀 Starting handleSave function...');
+    
     // Validate required fields - check diagnoses array
     if (!prescription.diagnoses || prescription.diagnoses.length === 0) {
+      console.log('❌ Validation failed: No diagnoses');
       toast({
         title: "Validation Error",
         description: "Please add at least one diagnosis.",
@@ -906,7 +1077,9 @@ const EPrescription = () => {
       return;
     }
     
+    // Check if there are any medications at all (before filtering)
     if (!prescription.medications || prescription.medications.length === 0) {
+      console.log('❌ Validation failed: No medications');
       toast({
         title: "Validation Error",
         description: "Please add at least one medication.",
@@ -917,44 +1090,67 @@ const EPrescription = () => {
       return;
     }
     
-    // Validate that all medications have required fields
-    const invalidMedications = (prescription.medications || []).filter(med => 
-      !med.name || !med.dosage || !med.frequency || !med.durationValue || !med.durationUnit
+    // Filter out empty/incomplete medications - only save medications that are properly filled
+    const validMedications = (prescription.medications || []).filter(med => 
+      med.name && med.name.trim() !== '' && 
+      med.dosage && med.dosage.trim() !== '' && 
+      med.durationValue && med.durationUnit
     );
     
-    if (invalidMedications.length > 0) {
+    if (validMedications.length === 0) {
+      console.log('❌ Validation failed: No valid medications');
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields for medications (name, dosage, frequency, duration).",
+        description: "Please add at least one medication with all required fields (name, dosage, duration).",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
       return;
     }
+    
+    console.log('✅ Valid medications to save:', validMedications.length, 'out of', (prescription.medications || []).length);
+
+    console.log('✅ Validation passed, proceeding with save...');
 
     try {
       // First, save prescription to backend database
       const prescriptionData = {
         patientId: parseInt(patientId),
-        doctorId: 1, // Default doctor ID - should be replaced with actual logged-in doctor
+        doctorId: doctorData ? parseInt(doctorData.id) : 200, // Use actual logged-in doctor ID, fallback to valid doctor
         date: prescription.date,
-        diagnoses: prescription.diagnoses,
-        complaints: prescription.complaints,
+        diagnosis: prescription.diagnoses ? prescription.diagnoses.join(', ') : '', // Convert array to string
+        symptoms: prescription.complaints ? prescription.complaints.join(', ') : '', // Map complaints to symptoms
         examination: prescription.examination,
-        medications: prescription.medications,
+        medications: validMedications, // Only save valid/selected medications
         instructions: prescription.instructions,
         followUp: prescription.followUp,
-        notes: prescription.notes
+        labTestRecommendations: selectedLabTests
       };
 
 
       // Determine if this is a new prescription or an update
-      const isUpdate = mode === 'edit' && prescription.id;
+      // For new prescriptions, we should always use POST
+      // For edit mode, we should use PUT only if prescription.id exists
+      const isUpdate = mode === 'edit' && prescription.id && prescription.id !== undefined;
       const url = isUpdate ? `/api/prescriptions/${prescription.id}` : '/api/prescriptions';
       const method = isUpdate ? 'PUT' : 'POST';
+      
+      console.log('🔍 Prescription Save Debug:', {
+        mode,
+        prescriptionId: prescription.prescriptionId,
+        prescriptionDbId: prescription.id,
+        isUpdate,
+        url,
+        method,
+        doctorId: doctorData ? doctorData.id : 'No doctor data',
+        prescriptionData: prescriptionData
+      });
 
-      const prescriptionResponse = await fetch(url, {
+      console.log('📤 Making API request to:', url, 'with method:', method);
+      console.log('📤 Request body:', JSON.stringify(prescriptionData, null, 2));
+
+      const prescriptionResponse = await fetch(`${appConfig.apiBaseUrl}${url}`, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
@@ -962,8 +1158,12 @@ const EPrescription = () => {
         body: JSON.stringify(prescriptionData),
       });
 
+      console.log('📥 API Response status:', prescriptionResponse.status);
+      console.log('📥 API Response headers:', prescriptionResponse.headers);
+
       if (!prescriptionResponse.ok) {
         const errorText = await prescriptionResponse.text();
+        console.log('❌ API Error Response:', errorText);
         toast({
           title: "Save Failed",
           description: `Error ${prescriptionResponse.status}. Please try again.`,
@@ -975,9 +1175,26 @@ const EPrescription = () => {
       }
 
       const savedPrescription = await prescriptionResponse.json();
+      console.log('✅ API Success Response:', savedPrescription);
 
       // Handle response format for both POST and PUT
       const savedPrescriptionData = isUpdate ? savedPrescription.prescription : savedPrescription.prescription;
+      console.log('📋 Saved Prescription Data:', savedPrescriptionData);
+
+      // Parse medications from the saved prescription data
+      let savedMedications = validMedications; // Use only valid medications that were saved
+      if (savedPrescriptionData.medications) {
+        try {
+          if (typeof savedPrescriptionData.medications === 'string') {
+            savedMedications = JSON.parse(savedPrescriptionData.medications);
+          } else {
+            savedMedications = savedPrescriptionData.medications;
+          }
+          console.log('📋 Parsed saved medications:', savedMedications);
+        } catch (error) {
+          console.error('❌ Error parsing saved medications:', error);
+        }
+      }
 
       // Update the current prescription state with the saved data from backend
       const updatedPrescription = {
@@ -986,6 +1203,7 @@ const EPrescription = () => {
         id: savedPrescriptionData.id,
         patientId: parseInt(patientId),
         patientData,
+        medications: savedMedications, // Include the saved medications
         labTestRecommendations: selectedLabTests,
         createdAt: savedPrescriptionData.createdAt,
         updatedAt: savedPrescriptionData.updatedAt,
@@ -1011,6 +1229,11 @@ const EPrescription = () => {
         await createLabTestOrders(updatedPrescription);
       }
       
+      // Create pharmacy items for selected medications
+      if (savedMedications && savedMedications.length > 0) {
+        await createPharmacyItems(updatedPrescription, savedMedications);
+      }
+      
       // Reload past prescriptions to show the updated list
       loadPastPrescriptions();
       
@@ -1022,9 +1245,12 @@ const EPrescription = () => {
         isClosable: true,
       });
     } catch (error) {
+      console.log('💥 handleSave Error:', error);
+      console.log('💥 Error message:', error.message);
+      console.log('💥 Error stack:', error.stack);
       toast({
         title: "Save Error",
-        description: "Error saving prescription. Please try again.",
+        description: `Error saving prescription: ${error.message}`,
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -1040,26 +1266,28 @@ const EPrescription = () => {
       }
       
       // Get test details for selected lab tests
-      const testDetails = selectedLabTests.map(testId => {
+      const testDetails = selectedLabTests.map(testObj => {
         // Find test in the database data
-        const test = labTestsFromDB.find(t => t.testCode === testId);
+        const test = labTestsFromDB.find(t => t.testCode === testObj.testCode);
         
         if (test) {
           return {
             testId: test.id, // Use the database ID, not testCode
             testName: test.testName,
             testCode: test.testCode,
+            price: test.price || testObj.price || 0,
             clinicalNotes: (prescriptionData.diagnoses && prescriptionData.diagnoses.length > 0) 
               ? prescriptionData.diagnoses.join(', ') 
               : '',
             instructions: prescriptionData.instructions || ''
           };
         } else {
-          console.warn(`Test not found for ID: ${testId}`);
+          console.warn(`Test not found for testCode: ${testObj.testCode}`);
           return {
-            testId: testId,
-            testName: testId,
-            testCode: testId,
+            testId: testObj.testCode,
+            testName: testObj.testName || testObj.testCode,
+            testCode: testObj.testCode,
+            price: testObj.price || 0,
             clinicalNotes: (prescriptionData.diagnoses && prescriptionData.diagnoses.length > 0) 
               ? prescriptionData.diagnoses.join(', ') 
               : '',
@@ -1072,20 +1300,22 @@ const EPrescription = () => {
       const orderData = {
         prescriptionId: prescriptionData.id, // Use the database ID from backend
         patientId: parseInt(patientId),
-        doctorId: 1, // Default doctor ID - should be replaced with actual logged-in doctor
+        doctorId: doctorData ? parseInt(doctorData.id) : 200, // Use actual logged-in doctor ID, fallback to valid doctor
         tests: testDetails,
         clinicalNotes: prescriptionData.diagnosis || '',
         instructions: prescriptionData.instructions || '',
         priority: 'routine'
       };
 
-      const response = await api.post('/api/lab-tests/orders', orderData);
+      const response = await api.post(`/api/prescriptions/${prescriptionData.id}/lab-order`, orderData);
 
       if (response.status === 200 || response.status === 201) {
         const orderResult = response.data;
+        const orderCount = orderResult.orderCount || 1;
+        const orderIds = orderResult.orders ? orderResult.orders.map(o => o.orderId).join(', ') : orderResult.orderId;
         toast({
           title: "Lab Test Order Created",
-          description: `Order ID: ${orderResult.orderId}`,
+          description: `${orderCount} order(s) created. Order ID(s): ${orderIds}`,
           status: "success",
           duration: 5000,
           isClosable: true,
@@ -1111,6 +1341,100 @@ const EPrescription = () => {
     }
   };
 
+  // Function to create pharmacy items for selected medications
+  const createPharmacyItems = async (prescriptionData, medications) => {
+    try {
+      console.log('🏥 Creating pharmacy items for medications:', medications);
+      console.log('🏥 Prescription ID:', prescriptionData.id);
+      
+      if (!medications || medications.length === 0) {
+        console.log('⚠️ No medications to create pharmacy items for');
+        return;
+      }
+      
+      // Check if pharmacy items already exist for this prescription
+      try {
+        const existingItemsResponse = await api.get(`/api/pharmacy/prescription-items/${prescriptionData.id}`);
+        if (existingItemsResponse.status === 200 && existingItemsResponse.data.data && existingItemsResponse.data.data.length > 0) {
+          console.log('⏭️ Pharmacy items already exist for this prescription, skipping creation');
+          return;
+        }
+      } catch (error) {
+        // If error, continue with creation (items might not exist yet)
+        console.log('🔍 No existing pharmacy items found, proceeding with creation');
+      }
+
+      // Find the item_code for each medication from item_master
+      const pharmacyItems = [];
+      
+      for (const medication of medications) {
+        if (medication.name) {
+          // Find the corresponding item in item_master by name
+          const matchingItem = itemMasterItems.find(item => 
+            item.item_name === medication.name
+          );
+          
+          if (matchingItem) {
+            pharmacyItems.push({
+              item_icode: matchingItem.item_code,
+              is_prescription_required: matchingItem.is_prescription_required || false,
+              barcode: matchingItem.barcode || '',
+              is_active: true,
+              prescriptionId: prescriptionData.id
+            });
+            console.log('✅ Found item for medication:', medication.name, '→ item_code:', matchingItem.item_code);
+          } else {
+            console.warn('⚠️ No matching item found for medication:', medication.name);
+            // Create a fallback entry with a generated item_code
+            pharmacyItems.push({
+              item_icode: `GEN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              is_prescription_required: true,
+              barcode: '',
+              is_active: true,
+              prescriptionId: prescriptionData.id
+            });
+          }
+        }
+      }
+
+      if (pharmacyItems.length === 0) {
+        console.log('⚠️ No pharmacy items to save');
+        return;
+      }
+
+      // Save pharmacy items to database
+      console.log('💾 Saving pharmacy items:', pharmacyItems);
+      
+      const response = await api.post('/api/pharmacy/prescription-items', {
+        prescriptionId: prescriptionData.id,
+        items: pharmacyItems
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        console.log('✅ Pharmacy items saved successfully');
+        toast({
+          title: "Pharmacy Items Created",
+          description: `${pharmacyItems.length} medication(s) added to pharmacy orders.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        console.warn('⚠️ Pharmacy items save response:', response.status);
+      }
+
+    } catch (error) {
+      console.error('❌ Error creating pharmacy items:', error);
+      toast({
+        title: "Pharmacy Items Warning",
+        description: "Medications saved but pharmacy items creation failed. Contact pharmacy staff.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleNewPrescription = () => {
     const newPrescription = {
       prescriptionId: `PRESC-${Date.now().toString().slice(-6)}`,
@@ -1124,7 +1448,6 @@ const EPrescription = () => {
       doctorName: 'Dr. [Your Name]',
       doctorSpecialization: 'General Physician',
       doctorLicense: 'MD[Your License]',
-      notes: '',
       status: 'in-progress' // Mark as in progress
     };
          setPrescription(newPrescription);
@@ -1133,13 +1456,20 @@ const EPrescription = () => {
   };
 
      // Check if prescription is ready to be saved
-   const isPrescriptionReady = () => {
-     return (prescription.diagnoses && prescription.diagnoses.length > 0) && 
-            (prescription.medications && prescription.medications.length > 0) &&
-            (prescription.medications || []).every(med => 
-              med.name && med.dosage && med.frequency && med.durationValue && med.durationUnit
-            );
-   };
+  const isPrescriptionReady = () => {
+    // Check if there are diagnoses
+    const hasDiagnoses = prescription.diagnoses && prescription.diagnoses.length > 0;
+    
+    // Check if there are valid medications (properly filled out)
+    const validMedications = (prescription.medications || []).filter(med => 
+      med.name && med.name.trim() !== '' && 
+      med.dosage && med.dosage.trim() !== '' && 
+      med.durationValue && med.durationUnit
+    );
+    const hasValidMedications = validMedications.length > 0;
+    
+    return hasDiagnoses && hasValidMedications;
+  };
 
   const handlePrint = () => {
     const printContent = document.getElementById('printable-prescription').innerHTML;
@@ -1176,7 +1506,7 @@ const EPrescription = () => {
               <Text>URL: {window.location.pathname}</Text>
               <Text>Patient ID from URL: {patientId}</Text>
               <Text>Has location state: {location.state ? 'Yes' : 'No'}</Text>
-              <Text>Backend API: {process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}</Text>
+              <Text>Backend API: {appConfig.apiBaseUrl}</Text>
             </VStack>
           </Box>
           
@@ -1219,345 +1549,211 @@ const EPrescription = () => {
 
   return (
     <Box minH="100vh" bg="gray.50" display="flex" flexDirection="column">
+      {/* Success message for medication selection */}
+      {selectedMedication && (
+        <Box
+          position="fixed"
+          top="20px"
+          right="20px"
+          bg="green.500"
+          color="white"
+          p={4}
+          borderRadius="md"
+          boxShadow="lg"
+          zIndex={100000}
+        >
+          <Text fontWeight="bold">
+            ✅ Medication Selected: {selectedMedication.item.item_name}
+          </Text>
+        </Box>
+      )}
+
+      {/* Doctor Login Information */}
+      {doctorData && (
+        <Box
+          bg="blue.50"
+          border="1px solid"
+          borderColor="blue.200"
+          borderRadius="md"
+          p={4}
+          m={4}
+          mx="auto"
+          maxW="7xl"
+        >
+          <Flex align="center" gap={3}>
+            <Box
+              bg="blue.500"
+              color="white"
+              borderRadius="full"
+              p={2}
+              fontSize="sm"
+              fontWeight="bold"
+            >
+              👨‍⚕️
+            </Box>
+            <VStack align="start" spacing={1}>
+              <Text fontWeight="bold" color="blue.700">
+                Logged in as: {doctorData.name || 'Dr. Suneet Verma'}
+              </Text>
+              <Text fontSize="sm" color="blue.600">
+                Specialization: {doctorData.specialization || 'Internal Medicine'} | 
+                Doctor Code: {doctorData.doctor_code || 'DOC-419433-N3Y'}
+              </Text>
+            </VStack>
+          </Flex>
+        </Box>
+      )}
 
       <Container maxW="7xl" flex="1" p={4} pb={24}>
-        <VStack spacing={4} align="stretch">
-      {/* Header */}
-          <Card>
-            <CardBody>
-              <VStack spacing={4} align="stretch">
-                <Button
-                  leftIcon={<Icon as={FaArrowLeft} />}
-                  variant="outline"
-                  colorScheme="gray"
-              onClick={() => navigate('/doctor')} 
-                  alignSelf="flex-start"
-            >
-              Back to Doctor Dashboard
-                </Button>
-                
-                <HStack justify="space-between" align="flex-start" w="full">
-                  <VStack align="start" spacing={2}>
-                    <Heading size="xl" color="health.600">
-                      <HStack>
-                        <Icon as={FaPrescription} />
-                        <Text>
-              {mode === 'new' ? 'New E-Prescription' : mode === 'edit' ? 'Edit E-Prescription' : 'View E-Prescription'}
-                        </Text>
-                      </HStack>
-                    </Heading>
-                    
-                    <HStack spacing={4} wrap="wrap">
-                      <Text color="gray.600" fontSize="lg">
-               🆔 Patient #{patientData.patientId || patientData.id} • {patientData.firstName} {patientData.lastName} • {patientData.age} years • {patientData.gender}
+        {/* Header */}
+        <Card mb={4}>
+          <CardBody p={4}>
+            <Flex direction="column" gap={4}>
+              <Button
+                leftIcon={<Icon as={FaArrowLeft} />}
+                variant="outline"
+                colorScheme="gray"
+                onClick={() => navigate('/doctor')} 
+                alignSelf="flex-start"
+                size="sm"
+              >
+                Back to Doctor Dashboard
+              </Button>
+              
+              <Flex justify="space-between" align="flex-start" wrap="wrap" gap={4}>
+                <Box>
+                  <Heading size="lg" color="health.600" mb={2}>
+                    <HStack>
+                      <Icon as={FaPrescription} />
+                      <Text>
+                        {mode === 'new' ? 'New E-Prescription' : mode === 'edit' ? 'Edit E-Prescription' : 'View E-Prescription'}
                       </Text>
-                      
-               {pastPrescriptions && pastPrescriptions.length > 0 && (
-                        <Badge colorScheme="success" variant="solid" fontSize="sm">
-                   🔄 Follow-up Patient ({pastPrescriptions.length} previous)
-                        </Badge>
-                      )}
-                      
-                      <Badge 
-                        colorScheme={prescription.status === 'completed' ? 'success' : 'warning'} 
-                        variant="solid" 
-                        fontSize="sm"
-                      >
-                        {prescription.status === 'completed' ? '✅ Completed' : '⏳ In Progress'}
-                      </Badge>
                     </HStack>
-                  </VStack>
+                  </Heading>
                   
-                  <HStack spacing={3} wrap="wrap">
-                    <Text fontSize="sm" color="gray.500">
-                      💡 Use the action bar at the bottom to save, print, or create new prescriptions
+                  <Flex wrap="wrap" gap={2} align="center">
+                    <Text color="gray.600" fontSize="sm">
+                      🆔 Patient #{patientData.patientId || patientData.id} • {patientData.firstName} {patientData.lastName} • {patientData.age} years • {patientData.gender}
                     </Text>
-                  </HStack>
-                </HStack>
-              </VStack>
-            </CardBody>
-          </Card>
+                    
+                    {pastPrescriptions && pastPrescriptions.length > 0 && (
+                      <Badge colorScheme="success" variant="solid" fontSize="xs">
+                        🔄 Follow-up Patient ({pastPrescriptions.length} previous)
+                      </Badge>
+                    )}
+                    
+                    <Badge 
+                      colorScheme={prescription.status === 'completed' ? 'success' : 'warning'} 
+                      variant="solid" 
+                      fontSize="xs"
+                    >
+                      {prescription.status === 'completed' ? '✅ Completed' : '⏳ In Progress'}
+                    </Badge>
+                  </Flex>
+                </Box>
+                
+                <Text fontSize="xs" color="gray.500" maxW="300px">
+                  💡 Use the action bar at the bottom to save, print, or create new prescriptions
+                </Text>
+              </Flex>
+            </Flex>
+          </CardBody>
+        </Card>
 
-          <Grid templateColumns="1fr" gap={8}>
-        {/* Left Column - Prescription Form */}
-            <GridItem>
-              <VStack spacing={6} align="stretch">
-          {/* Patient Information */}
-                <Card>
-                  <CardHeader>
-                    <Heading size="md" color="health.600">
+        {/* Main Content Grid */}
+        <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={4}>
+          {/* Left Column - Prescription Form */}
+          <GridItem>
+            <Flex direction="column" gap={4}>
+              {/* Patient Information & Vital Signs */}
+              <Card>
+                <CardHeader pb={2}>
+                  <Flex justify="space-between" align="center">
+                    <Heading size="sm" color="health.600">
                       <HStack>
                         <Icon as={FaUser} />
                         <Text>Patient Information</Text>
                       </HStack>
                     </Heading>
-                  </CardHeader>
-                  <CardBody>
-                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">🆔 Patient ID</Text>
-                        <Text fontWeight="semibold">#{patientData.patientId || patientData.id}</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">Name</Text>
-                        <Text fontWeight="semibold">{patientData.firstName} {patientData.middleName} {patientData.lastName}</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">Age</Text>
-                        <Text fontWeight="semibold">{patientData.age} years</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">Gender</Text>
-                        <Text fontWeight="semibold">{patientData.gender}</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">Blood Group</Text>
-                        <Text fontWeight="semibold">{patientData.bloodGroup}</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1}>
-                        <Text fontSize="sm" color="gray.500">Phone</Text>
-                        <Text fontWeight="semibold">{patientData.phone}</Text>
-                      </VStack>
-                      <VStack align="start" spacing={1} colSpan={{ base: 1, md: 2, lg: 3 }}>
-                        <Text fontSize="sm" color="gray.500">Address</Text>
-                        <Text fontWeight="semibold">{patientData.address}</Text>
-                      </VStack>
+                    <Badge colorScheme="blue" variant="subtle" fontSize="xs">
+                      {patientData.age} years • {patientData.gender}
+                    </Badge>
+                  </Flex>
+                </CardHeader>
+                <CardBody p={4}>
+                  <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" mb={1}>🆔 Patient ID</Text>
+                      <Text fontWeight="semibold" fontSize="sm">#{patientData.patientId || patientData.id}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" mb={1}>Name</Text>
+                      <Text fontWeight="semibold" fontSize="sm">{patientData.firstName}{patientData.middleName ? ` ${patientData.middleName}` : ''} {patientData.lastName}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" mb={1}>Blood Group</Text>
+                      <Text fontWeight="semibold" fontSize="sm">{patientData.bloodGroup || 'Not recorded'}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" mb={1}>Phone</Text>
+                      <Text fontWeight="semibold" fontSize="sm">{patientData.phone}</Text>
+                    </Box>
+                  </SimpleGrid>
+                  
+                  <Box mt={4}>
+                    <Text fontSize="xs" color="gray.500" mb={1}>Address</Text>
+                    <Text fontWeight="semibold" fontSize="sm">{patientData.address}</Text>
+                  </Box>
+
+                  {/* Vital Signs */}
+                  <Box mt={4} pt={4} borderTop="1px solid" borderColor="gray.200">
+                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={3}>
+                      <HStack>
+                        <Icon as={FaHeartbeat} />
+                        <Text>Vital Signs</Text>
+                      </HStack>
+                    </Text>
+                    <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">Temperature</Text>
+                        <Text fontWeight="semibold" fontSize="sm">{patientData.vitalSigns?.temperature || 'Not recorded'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">Blood Pressure</Text>
+                        <Text fontWeight="semibold" fontSize="sm">{patientData.vitalSigns?.bloodPressure || 'Not recorded'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">Pulse</Text>
+                        <Text fontWeight="semibold" fontSize="sm">{patientData.vitalSigns?.pulse || 'Not recorded'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">Weight</Text>
+                        <Text fontWeight="semibold" fontSize="sm">{patientData.vitalSigns?.weight || 'Not recorded'}</Text>
+                      </Box>
                     </SimpleGrid>
-                  </CardBody>
-                </Card>
+                  </Box>
+                </CardBody>
+              </Card>
 
 
-          {/* Completed Prescriptions Section */}
-          {pastPrescriptions && pastPrescriptions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <Flex justify="space-between" align="center">
-                  <Heading size="md" color="health.600">
+
+              {/* Diagnosis & Symptoms */}
+              <Card>
+                <CardHeader pb={2}>
+                  <Heading size="sm" color="health.600">
                     <HStack>
-                      <Icon as={FaPrescription} />
-                      <Text>Completed Prescriptions ({pastPrescriptions.length})</Text>
+                      <Icon as={FaStethoscope} />
+                      <Text>Diagnosis & Symptoms</Text>
                     </HStack>
                   </Heading>
-                  <Button 
-                    colorScheme="gray"
-                    size="sm"
-                    onClick={() => setShowPastPrescriptions(!showPastPrescriptions)}
-                  >
-                    {showPastPrescriptions ? 'Hide' : 'Show'} All Prescriptions
-                  </Button>
-                </Flex>
-              </CardHeader>
-              
-              {showPastPrescriptions && (
-                <CardBody>
-                  <VStack spacing={4} align="stretch">
-                    {/* Show all completed prescriptions */}
-                    {pastPrescriptions.map((prescription, index) => (
-                      <Box 
-                        key={prescription.prescriptionId}
-                        p={4}
-                        border="1px solid"
-                        borderColor="gray.200"
-                        borderRadius="md"
-                        bg="white"
-                        position="relative"
-                      >
-                        <Flex justify="space-between" align="flex-start" mb={3}>
-                          <Box>
-                            <Heading size="sm" color="gray.800" mb={2}>
-                              Prescription #{prescription.prescriptionId}
-                            </Heading>
-                            <Text fontSize="sm" color="gray.600">
-                              <Text as="span" fontWeight="bold">Date:</Text> {new Date(prescription.date).toLocaleDateString()} • 
-                              <Text as="span" fontWeight="bold">Diagnosis:</Text> {
-                                prescription.diagnoses && prescription.diagnoses.length > 0 
-                                  ? prescription.diagnoses.join(', ') 
-                                  : 'Not specified'
-                              }
-                            </Text>
-                          </Box>
-                          {mode !== 'view' && (
-                            <Button 
-                              colorScheme="blue"
-                              size="sm"
-                              onClick={() => copyFromPastPrescription(prescription)}
-                              leftIcon={<Icon as={FaPlus} />}
-                            >
-                              Copy
-                            </Button>
-                          )}
-                        </Flex>
-                        
-                        {prescription.medications && prescription.medications.length > 0 && (
-                          <Box mb={3}>
-                            <Text fontWeight="bold" color="gray.800" mb={2}>Medications:</Text>
-                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                              {prescription.medications.map((med, medIndex) => (
-                                <Box 
-                                  key={medIndex}
-                                  p={2}
-                                  bg="blue.50"
-                                  borderRadius="md"
-                                  border="1px solid"
-                                  borderColor="blue.200"
-                                >
-                                  <Text fontWeight="semibold" color="gray.800" fontSize="sm">{med.name}</Text>
-                                  <Text fontSize="xs" color="gray.600">
-                                    {med.dosage} • {med.frequency} • {med.durationValue || 1} {med.durationUnit || 'Month'}
-                                  </Text>
-                                </Box>
-                              ))}
-                            </SimpleGrid>
-                          </Box>
-                        )}
-                        
-                        {(prescription.instructions || prescription.followUp) && (
-                          <Box fontSize="sm">
-                            {prescription.instructions && (
-                              <Box mb={2}>
-                                <Text as="span" fontWeight="bold" color="gray.800">Instructions:</Text> {prescription.instructions}
-                              </Box>
-                            )}
-                            {prescription.followUp && (
-                              <Box>
-                                <Text as="span" fontWeight="bold" color="gray.800">Follow-up:</Text> {prescription.followUp}
-                              </Box>
-                            )}
-                          </Box>
-                        )}
-                        
-                        {prescription.labTestRecommendations && (
-                          <Box fontSize="sm" mt={3}>
-                            <Text fontWeight="bold" color="gray.800" mb={1}>Lab Tests:</Text>
-                            <Box 
-                              p={2}
-                              bg="blue.50"
-                              borderRadius="md"
-                              border="1px solid"
-                              borderColor="blue.200"
-                              color="gray.600"
-                            >
-                              {Array.isArray(prescription.labTestRecommendations) 
-                                ? prescription.labTestRecommendations.map(testId => {
-                                    // Try to find test in organized categories first
-                                    let test = labTestCategories.flatMap(cat => cat.subcategories).flatMap(sub => sub.tests).find(t => t.id === testId);
-                                    
-                                    // If not found in organized categories, try raw data
-                                    if (!test && labTestsFromDB.length > 0) {
-                                      const rawTest = labTestsFromDB.find(t => t.testCode === testId);
-                                      if (rawTest) {
-                                        test = {
-                                          id: rawTest.testCode,
-                                          name: rawTest.testName,
-                                          code: rawTest.testCode
-                                        };
-                                      }
-                                    }
-                                    
-                                    return test ? `${test.name} (${test.code})` : testId;
-                                  }).join(', ')
-                                : prescription.labTestRecommendations
-                              }
-                            </Box>
-                          </Box>
-                        )}
-                        
-                      </Box>
-                    ))}
-                  
-                    {/* Add a status badge for each prescription */}
-                    <Box 
-                      textAlign="center" 
-                      p={2} 
-                      bg="green.50" 
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="green.200"
-                      color="green.700"
-                      fontSize="sm"
-                    >
-                      ✅ <Text as="span" fontWeight="bold">All prescriptions completed successfully</Text>
-                    </Box>
-                    
-                    <Box 
-                      textAlign="center" 
-                      p={4} 
-                      bg="blue.50" 
-                      borderRadius="md"
-                      border="1px dashed"
-                      borderColor="blue.300"
-                    >
-                      <Text color="gray.600" fontSize="sm">
-                        💡 <Text as="span" fontWeight="bold">Tip:</Text> Use the "Copy" button to quickly add medications and details from any previous prescription
+                </CardHeader>
+                <CardBody p={4}>
+                  <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                    {/* Chief Complaints */}
+                    <Box>
+                      <Text fontWeight="semibold" mb={2} color="gray.700" fontSize="sm">
+                        Chief Complaints
                       </Text>
-                    </Box>
-                  </VStack>
-                </CardBody>
-              )}
-            </Card>
-          )}
-
-          {/* No Prescriptions Message */}
-          {(!pastPrescriptions || pastPrescriptions.length === 0) && patientId && (
-            <Card bg="yellow.50" border="1px solid" borderColor="yellow.200">
-              <CardBody textAlign="center">
-                <Heading size="md" color="yellow.800" mb={2}>📋 No Previous Prescriptions</Heading>
-                <Text fontSize="sm" color="yellow.700">
-                  This is the first prescription for this patient.
-                </Text>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Vital Signs */}
-          <Card>
-            <CardHeader>
-              <Heading size="md" color="health.600">
-                <HStack>
-                  <Icon as={FaHeartbeat} />
-                  <Text>Vital Signs</Text>
-                </HStack>
-              </Heading>
-            </CardHeader>
-            <CardBody>
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                <VStack align="start" spacing={1}>
-                  <Text fontSize="sm" color="gray.500">Temperature</Text>
-                  <Text fontWeight="semibold">{patientData.vitalSigns?.temperature || 'Not recorded'}</Text>
-                </VStack>
-                <VStack align="start" spacing={1}>
-                  <Text fontSize="sm" color="gray.500">Blood Pressure</Text>
-                  <Text fontWeight="semibold">{patientData.vitalSigns?.bloodPressure || 'Not recorded'}</Text>
-                </VStack>
-                <VStack align="start" spacing={1}>
-                  <Text fontSize="sm" color="gray.500">Pulse</Text>
-                  <Text fontWeight="semibold">{patientData.vitalSigns?.pulse || 'Not recorded'}</Text>
-                </VStack>
-                <VStack align="start" spacing={1}>
-                  <Text fontSize="sm" color="gray.500">Weight</Text>
-                  <Text fontWeight="semibold">{patientData.vitalSigns?.weight || 'Not recorded'}</Text>
-                </VStack>
-              </SimpleGrid>
-            </CardBody>
-          </Card>
-
-                {/* Diagnosis & Symptoms */}
-                <Card>
-                  <CardHeader>
-                    <Heading size="md" color="health.600">
-                      <HStack>
-                        <Icon as={FaStethoscope} />
-                        <Text>Diagnosis & Symptoms</Text>
-                      </HStack>
-                    </Heading>
-                  </CardHeader>
-                  <CardBody>
-                    <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
-                      {/* Chief Complaints */}
-                      <Box>
-                        <Text fontWeight="semibold" mb={3} color="gray.700">
-                          Chief Complaints
-                        </Text>
                         {/* Multiple Complaint Tags */}
                         {prescription.complaints && prescription.complaints.length > 0 && (
                           <Box
@@ -1610,9 +1806,12 @@ const EPrescription = () => {
                           <HStack spacing={2}>
                             <Input
                               value={complaintInput}
-                              onChange={(e) => setComplaintInput(e.target.value)}
+                              onChange={(e) => handleMedicalTextInput(e.target.value, setComplaintInput)}
                               onKeyPress={handleComplaintKeyPress}
-                              placeholder="Enter complaint and press Enter or click Add"
+                              onBlur={() => {
+                                const corrected = applyMedicalTextCorrection(complaintInput, setComplaintInput);
+                              }}
+                              placeholder="Enter complaint and press Enter or click Add (Auto-corrects on blur)"
                               size="sm"
                             />
                             <Button
@@ -1628,11 +1827,11 @@ const EPrescription = () => {
                         )}
                       </Box>
                       
-                      {/* Diagnoses */}
-                      <Box>
-                        <Text fontWeight="semibold" mb={3} color="gray.700">
-                          Diagnoses
-                        </Text>
+                    {/* Diagnoses */}
+                    <Box>
+                      <Text fontWeight="semibold" mb={2} color="gray.700" fontSize="sm">
+                        Diagnoses
+                      </Text>
                         
                         {/* Multiple Diagnosis Tags */}
                         {prescription.diagnoses && prescription.diagnoses.length > 0 && (
@@ -1686,9 +1885,12 @@ const EPrescription = () => {
                           <HStack spacing={2}>
                             <Input
                               value={diagnosisInput}
-                              onChange={(e) => setDiagnosisInput(e.target.value)}
+                              onChange={(e) => handleMedicalTextInput(e.target.value, setDiagnosisInput)}
                               onKeyPress={handleDiagnosisKeyPress}
-                              placeholder="Enter diagnosis and press Enter or click Add"
+                              onBlur={() => {
+                                const corrected = applyMedicalTextCorrection(diagnosisInput, setDiagnosisInput);
+                              }}
+                              placeholder="Enter diagnosis and press Enter or click Add (Auto-corrects on blur)"
                               size="sm"
                             />
                             <Button
@@ -1707,64 +1909,30 @@ const EPrescription = () => {
                   </CardBody>
                 </Card>
 
-                {/* Medications */}
-                <Card>
-                  <CardHeader>
-                    <Flex justify="space-between" align="center">
-                      <Heading size="md" color="health.600">
-                        <HStack>
-                          <Icon as={FaPills} />
-                          <Text>Medicine Prescription</Text>
-                        </HStack>
-                      </Heading>
-                      {mode !== 'view' && (
-                        <Button
-                          onClick={addMedication}
-                          colorScheme="blue"
-                          size="sm"
-                          leftIcon={<Icon as={FaPlus} />}
-                        >
-                          Add Medication
-                        </Button>
-                      )}
-                    </Flex>
-                  </CardHeader>
-                  <CardBody>
+              {/* Medications */}
+              <Card>
+                <CardHeader pb={2}>
+                  <Flex justify="space-between" align="center">
+                    <Heading size="sm" color="health.600">
+                      <HStack>
+                        <Icon as={FaPills} />
+                        <Text>Medicine Prescription</Text>
+                      </HStack>
+                    </Heading>
+                    {mode !== 'view' && (
+                      <Button
+                        onClick={addMedication}
+                        colorScheme="blue"
+                        size="xs"
+                        leftIcon={<Icon as={FaPlus} />}
+                      >
+                        Add Medication
+                      </Button>
+                    )}
+                  </Flex>
+                </CardHeader>
+                <CardBody p={4}>
 
-                    {/* Common Medications */}
-                    <Box mb={6}>
-                      <Text fontWeight="semibold" mb={4} color="gray.700">
-                        Quick Add Common Medications
-                      </Text>
-                      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
-                        {commonMedications.map(med => (
-                          <Box
-                            key={med.name}
-                            p={3}
-                            border="1px solid"
-                            borderColor="gray.200"
-                            borderRadius="md"
-                            cursor={mode === 'view' ? 'default' : 'pointer'}
-                            transition="all 0.3s ease"
-                            bg="white"
-                            opacity={mode === 'view' ? 0.6 : 1}
-                            _hover={mode !== 'view' ? { 
-                              borderColor: "blue.300", 
-                              boxShadow: "md",
-                              transform: "translateY(-2px)"
-                            } : {}}
-                            onClick={() => mode !== 'view' && addCommonMedication(med)}
-                          >
-                            <Text fontWeight="semibold" color="gray.800" mb={1}>
-                              {med.name}
-                            </Text>
-                            <Text fontSize="sm" color="gray.600">
-                              {med.dosage} • {med.frequency} • {med.durationValue || 1} {med.durationUnit || 'Month'}
-                            </Text>
-                          </Box>
-                        ))}
-                      </SimpleGrid>
-                    </Box>
 
                     {/* Prescribed Medications Table */}
                     {prescription.medications && prescription.medications.length > 0 && (
@@ -1772,14 +1940,14 @@ const EPrescription = () => {
                         border="1px solid"
                         borderColor="gray.200"
                         borderRadius="md"
-                        overflow="hidden"
+                        overflow="visible"
                         bg="white"
                         maxW="100%"
                       >
                         <Box
                           overflowX="auto"
                           maxH="400px"
-                          overflowY="auto"
+                          overflowY="visible"
                         >
                           <Table size="sm" variant="simple">
                             <Thead position="sticky" top={0} bg="blue.600" zIndex={10}>
@@ -1801,20 +1969,7 @@ const EPrescription = () => {
                                   color="white" 
                                   fontSize="sm" 
                                   fontWeight="bold" 
-                                  w="100px"
-                                  bg="blue.600"
-                                  border="1px solid"
-                                  borderColor="blue.700"
-                                  px={2}
-                                  py={3}
-                                >
-                                  Type
-                                </Th>
-                                <Th 
-                                  color="white" 
-                                  fontSize="sm" 
-                                  fontWeight="bold" 
-                                  minW="250px"
+                                  minW="200px"
                                   bg="blue.600"
                                   border="1px solid"
                                   borderColor="blue.700"
@@ -1827,7 +1982,7 @@ const EPrescription = () => {
                                   color="white" 
                                   fontSize="sm" 
                                   fontWeight="bold" 
-                                  w="180px"
+                                  w="280px"
                                   bg="blue.600"
                                   border="1px solid"
                                   borderColor="blue.700"
@@ -1840,20 +1995,7 @@ const EPrescription = () => {
                                   color="white" 
                                   fontSize="sm" 
                                   fontWeight="bold" 
-                                  w="150px"
-                                  bg="blue.600"
-                                  border="1px solid"
-                                  borderColor="blue.700"
-                                  px={2}
-                                  py={3}
-                                >
-                                  Frequency
-                                </Th>
-                                <Th 
-                                  color="white" 
-                                  fontSize="sm" 
-                                  fontWeight="bold" 
-                                  w="140px"
+                                  w="220px"
                                   bg="blue.600"
                                   border="1px solid"
                                   borderColor="blue.700"
@@ -1862,25 +2004,12 @@ const EPrescription = () => {
                                 >
                                   Duration
                                 </Th>
-                                <Th 
-                                  color="white" 
-                                  fontSize="sm" 
-                                  fontWeight="bold" 
-                                  minW="200px"
-                                  bg="blue.600"
-                                  border="1px solid"
-                                  borderColor="blue.700"
-                                  px={2}
-                                  py={3}
-                                >
-                                  Notes
-                                </Th>
                                 {mode !== 'view' && (
                                   <Th 
                                     color="white" 
                                     fontSize="sm" 
                                     fontWeight="bold" 
-                                    w="100px" 
+                                    w="60px" 
                                     textAlign="center"
                                     bg="blue.600"
                                     border="1px solid"
@@ -1888,7 +2017,7 @@ const EPrescription = () => {
                                     px={2}
                                     py={3}
                                   >
-                                    Action
+                                    #
                                   </Th>
                                 )}
                               </Tr>
@@ -1907,45 +2036,71 @@ const EPrescription = () => {
                                   >
                                     {index + 1}
                                   </Td>
-                                  <Td 
-                                    fontSize="sm"
-                                    border="1px solid"
-                                    borderColor="gray.200"
-                                    px={2}
-                                    py={2}
-                                  >
-                                    <Select
-                                      value={med.type || 'TAB'}
-                                      onChange={(e) => updateMedication(med.id, 'type', e.target.value)}
-                                      disabled={mode === 'view'}
-                                      size="sm"
-                                      fontSize="sm"
-                                      border="1px solid"
-                                      borderColor="gray.300"
-                                      bg="white"
-                                      _focus={{ border: "1px solid", borderColor: "blue.300" }}
-                                    >
-                                      <option value="TAB">TAB.</option>
-                                      <option value="CAP">CAP.</option>
-                                      <option value="SYRUP">SYRUP</option>
-                                      <option value="INJ">INJ.</option>
-                                      <option value="DROPS">DROPS</option>
-                                      <option value="CREAM">CREAM</option>
-                                      <option value="OINT">OINT.</option>
-                                    </Select>
-                                  </Td>
                                   <Td fontSize="sm">
-                                    <Input
-                                      value={med.name}
-                                      onChange={(e) => updateMedication(med.id, 'name', e.target.value)}
+                                    <Select
+                                      value={(() => {
+                                        const selectValue = med.name && med.genericName && med.brand ? `${med.name}|${med.genericName}|${med.brand}` : '';
+                                        console.log('🎯 Select value for med', med.id, ':', selectValue);
+                                        return selectValue;
+                                      })()}
+                                      onChange={(e) => {
+                                        console.log('🎯 Medication selection changed:', e.target.value);
+                                        console.log('🎯 For medication ID:', med.id);
+                                        console.log('🎯 Current medication values:', { name: med.name, genericName: med.genericName, brand: med.brand });
+                                        const selectedValue = e.target.value;
+                                        if (selectedValue) {
+                                          // Parse the selected medication data
+                                          const [itemName, genericName, brand] = selectedValue.split('|');
+                                          console.log('🎯 Parsed values:', { itemName, genericName, brand });
+                                          updateMedication(med.id, 'name', itemName);
+                                          updateMedication(med.id, 'genericName', genericName);
+                                          updateMedication(med.id, 'brand', brand);
+                                          console.log('✅ Medication updated successfully');
+                                        } else {
+                                          console.log('🎯 Clearing medication');
+                                          updateMedication(med.id, 'name', '');
+                                        }
+                                      }}
                                       disabled={mode === 'view'}
-                                      placeholder="Enter medicine name"
                                       size="sm"
                                       fontSize="sm"
                                       border="none"
                                       bg="transparent"
                                       _focus={{ border: "1px solid", borderColor: "blue.300" }}
-                                    />
+                                    >
+                                      <option value="">Select medication</option>
+                                      {itemMasterLoading ? (
+                                        <option value="" disabled>Loading medications...</option>
+                                      ) : itemMasterError ? (
+                                        <>
+                                          <option value="" disabled>Error: {itemMasterError}</option>
+                                          <option value="AMARYL 1mg Tablet|Glimepiride|Sanofi">AMARYL 1mg Tablet (Glimepiride - Sanofi)</option>
+                                          <option value="Paracetamol 500mg Tablet|Paracetamol|Generic">Paracetamol 500mg Tablet (Paracetamol - Generic)</option>
+                                          <option value="Ibuprofen 400mg Tablet|Ibuprofen|Generic">Ibuprofen 400mg Tablet (Ibuprofen - Generic)</option>
+                                        </>
+                                      ) : filteredMedications && filteredMedications.length > 0 ? (
+                                        filteredMedications.map(item => {
+                                          const optionValue = `${item.item_name}|${item.generic_name}|${item.brand}`;
+                                          // Only log every 10th item to reduce console spam
+                                          if (item.id % 10 === 0) {
+                                            console.log('📋 Rendering medication option:', item.item_name, 'Value:', optionValue);
+                                          }
+                                          return (
+                                            <option key={item.id} value={optionValue}>
+                                              {item.item_name} ({item.generic_name} - {item.brand})
+                                            </option>
+                                          );
+                                        })
+                                      ) : (
+                                        <>
+                                          <option value="AMARYL 1mg Tablet|Glimepiride|Sanofi">AMARYL 1mg Tablet (Glimepiride - Sanofi)</option>
+                                          <option value="Paracetamol 500mg Tablet|Paracetamol|Generic">Paracetamol 500mg Tablet (Paracetamol - Generic)</option>
+                                          <option value="Ibuprofen 400mg Tablet|Ibuprofen|Generic">Ibuprofen 400mg Tablet (Ibuprofen - Generic)</option>
+                                          <option value="Omeprazole 20mg Capsule|Omeprazole|Generic">Omeprazole 20mg Capsule (Omeprazole - Generic)</option>
+                                          <option value="Metformin 500mg Tablet|Metformin|Generic">Metformin 500mg Tablet (Metformin - Generic)</option>
+                                        </>
+                                      )}
+                                    </Select>
                                   </Td>
                                   <Td fontSize="sm">
                                     <Select
@@ -1972,8 +2127,8 @@ const EPrescription = () => {
                                         </>
                                       ) : dosePatterns && dosePatterns.length > 0 ? (
                                         dosePatterns.map(pattern => (
-                                          <option key={pattern.id} value={pattern.pattern}>
-                                            {pattern.pattern} ({pattern.description})
+                                          <option key={pattern.id} value={pattern.dose_value}>
+                                            {pattern.dose_value} - {pattern.description_hindi}
                                           </option>
                                         ))
                                       ) : (
@@ -1986,19 +2141,6 @@ const EPrescription = () => {
                                     </Select>
                                   </Td>
                          
-                                  <Td fontSize="sm">
-                                    <Input
-                                      value={med.frequency}
-                                      onChange={(e) => updateMedication(med.id, 'frequency', e.target.value)}
-                                      disabled={mode === 'view'}
-                                      placeholder="e.g., Daily"
-                                      size="sm"
-                                      fontSize="sm"
-                                      border="none"
-                                      bg="transparent"
-                                      _focus={{ border: "1px solid", borderColor: "blue.300" }}
-                                    />
-                                  </Td>
                                   <Td fontSize="sm">
                                     <HStack spacing={1}>
                                       <Input
@@ -2033,29 +2175,15 @@ const EPrescription = () => {
                                       </Select>
                                     </HStack>
                                   </Td>
-                                  <Td fontSize="sm">
-                                    <Input
-                                      value={med.instructions || ''}
-                                      onChange={(e) => updateMedication(med.id, 'instructions', e.target.value)}
-                                      disabled={mode === 'view'}
-                                      placeholder="Special instructions"
-                                      size="sm"
-                                      fontSize="sm"
-                                      border="none"
-                                      bg="transparent"
-                                      _focus={{ border: "1px solid", borderColor: "blue.300" }}
-                                    />
-                                  </Td>
                                   {mode !== 'view' && (
                                     <Td textAlign="center">
-                                      <Button
+                                      <IconButton
                                         onClick={() => removeMedication(med.id)}
                                         colorScheme="red"
-                                        size="xs"
-                                        leftIcon={<Icon as={FaTrash} />}
-                                      >
-                                        Remove
-                                      </Button>
+                                        size="sm"
+                                        icon={<Icon as={FaTrash} />}
+                                        aria-label="Remove medication"
+                                      />
                                     </Td>
                                   )}
                                 </Tr>
@@ -2133,20 +2261,27 @@ const EPrescription = () => {
                   </Accordion>
                 </Card>
 
-                {/* Lab Test Recommendations - Collapsible */}
-                <Card>
-                  <Accordion allowToggle>
-                    <AccordionItem>
-                      <AccordionButton>
-                        <Box flex="1" textAlign="left">
+              {/* Lab Test Recommendations */}
+              <Card>
+                <Accordion allowToggle>
+                  <AccordionItem>
+                    <AccordionButton>
+                      <Box flex="1" textAlign="left">
+                        <Flex justify="space-between" align="center" w="full">
                           <HStack>
                             <Icon as={FaFlask} />
-                            <Text fontWeight="semibold">Laboratory Test Recommendations</Text>
+                            <Text fontWeight="semibold" fontSize="sm">Laboratory Test Recommendations</Text>
                           </HStack>
-                        </Box>
-                        <AccordionIcon />
-                      </AccordionButton>
-                      <AccordionPanel pb={4}>
+                          {selectedLabTests.length > 0 && (
+                            <Badge colorScheme="green" variant="solid" fontSize="xs">
+                              {selectedLabTests.length} selected
+                            </Badge>
+                          )}
+                        </Flex>
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel pb={4}>
                         {labTestsLoading ? (
                           <VStack spacing={4} align="center" py={8}>
                             <Spinner size="lg" color="blue.500" thickness="4px" />
@@ -2316,12 +2451,143 @@ const EPrescription = () => {
                     </AccordionItem>
                   </Accordion>
                 </Card>
-              </VStack>
+              </Flex>
             </GridItem>
 
-            </Grid>
-        </VStack>
-      </Container>
+            {/* Right Column - Past Prescriptions */}
+            <GridItem>
+              <Flex direction="column" gap={4}>
+                {/* Past Prescriptions */}
+                {pastPrescriptions && pastPrescriptions.length > 0 && (
+                  <Card>
+                    <CardHeader pb={2}>
+                      <Flex justify="space-between" align="center">
+                        <Heading size="sm" color="health.600">
+                          <HStack>
+                            <Icon as={FaPrescription} />
+                            <Text>Previous Prescriptions ({pastPrescriptions.length})</Text>
+                          </HStack>
+                        </Heading>
+                        <Button 
+                          colorScheme="gray"
+                          size="xs"
+                          onClick={() => setShowPastPrescriptions(!showPastPrescriptions)}
+                        >
+                          {showPastPrescriptions ? 'Hide' : 'Show'}
+                        </Button>
+                      </Flex>
+                    </CardHeader>
+                    
+                    {showPastPrescriptions && (
+                      <CardBody p={4}>
+                        <VStack spacing={3} align="stretch">
+                          {pastPrescriptions.slice(0, 3).map((prescription, index) => (
+                            <Box 
+                              key={prescription.prescriptionId}
+                              p={3}
+                              border="1px solid"
+                              borderColor="gray.200"
+                              borderRadius="md"
+                              bg="white"
+                            >
+                              <Flex justify="space-between" align="flex-start" mb={2}>
+                                <Box>
+                                  <Text fontWeight="semibold" fontSize="sm" color="gray.800">
+                                    #{prescription.prescriptionId}
+                                  </Text>
+                                  <Text fontSize="xs" color="gray.600">
+                                    {new Date(prescription.date).toLocaleDateString()}
+                                  </Text>
+                                </Box>
+                                {mode !== 'view' && (
+                                  <Button 
+                                    colorScheme="blue"
+                                    size="xs"
+                                    onClick={() => copyFromPastPrescription(prescription)}
+                                    leftIcon={<Icon as={FaPlus} />}
+                                  >
+                                    Copy
+                                  </Button>
+                                )}
+                              </Flex>
+                              
+                              {prescription.medications && prescription.medications.length > 0 && (
+                                <Box mb={2}>
+                                  <Text fontWeight="semibold" color="gray.800" fontSize="xs" mb={1}>Medications:</Text>
+                                  <Text fontSize="xs" color="gray.600">
+                                    {prescription.medications.slice(0, 2).map(med => med.name).join(', ')}
+                                    {prescription.medications.length > 2 && ` +${prescription.medications.length - 2} more`}
+                                  </Text>
+                                </Box>
+                              )}
+                            </Box>
+                          ))}
+                          
+                          {pastPrescriptions.length > 3 && (
+                            <Text fontSize="xs" color="gray.500" textAlign="center">
+                              +{pastPrescriptions.length - 3} more prescriptions
+                            </Text>
+                          )}
+                        </VStack>
+                      </CardBody>
+                    )}
+                  </Card>
+                )}
+
+                {/* No Prescriptions Message */}
+                {(!pastPrescriptions || pastPrescriptions.length === 0) && patientId && (
+                  <Card bg="yellow.50" border="1px solid" borderColor="yellow.200">
+                    <CardBody p={4} textAlign="center">
+                      <Text fontWeight="semibold" color="yellow.800" fontSize="sm" mb={1}>📋 No Previous Prescriptions</Text>
+                      <Text fontSize="xs" color="yellow.700">
+                        This is the first prescription for this patient.
+                      </Text>
+                    </CardBody>
+                  </Card>
+                )}
+
+                {/* Quick Actions */}
+                <Card>
+                  <CardHeader pb={2}>
+                    <Heading size="sm" color="health.600">
+                      <HStack>
+                        <Icon as={FaNotesMedical} />
+                        <Text>Quick Actions</Text>
+                      </HStack>
+                    </Heading>
+                  </CardHeader>
+                  <CardBody p={4}>
+                    <VStack spacing={2} align="stretch">
+                      <Button
+                        onClick={handlePrint}
+                        variant="outline"
+                        size="sm"
+                        leftIcon={<Icon as={FaPrint} />}
+                        colorScheme="blue"
+                        w="full"
+                      >
+                        Print Prescription
+                      </Button>
+                      
+                      {mode !== 'view' && (
+                        <Button
+                          leftIcon={<Icon as={FaPlus} />}
+                          colorScheme="blue"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNewPrescription}
+                          w="full"
+                        >
+                          New Prescription
+                        </Button>
+                      )}
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </Flex>
+            </GridItem>
+          </Grid>
+        </Container>
       
       {/* Sticky Footer with Action Buttons */}
       <Box
@@ -2329,40 +2595,38 @@ const EPrescription = () => {
         bottom={0}
         zIndex={100}
         bg="white"
-        borderTop="2px solid"
+        borderTop="1px solid"
         borderColor="gray.200"
-        p={4}
-        boxShadow="lg"
+        p={3}
+        boxShadow="sm"
       >
         <Container maxW="7xl">
-          <HStack justify="space-between" align="center" wrap="wrap">
-            <VStack align="start" spacing={1}>
-              <Text fontSize="sm" color="gray.600">
-                Patient: {patientData?.firstName} {patientData?.lastName}
+          <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
+            <Flex align="center" gap={3}>
+              <Text fontSize="sm" color="gray.600" fontWeight="medium">
+                {patientData?.firstName} {patientData?.lastName}
               </Text>
-              <HStack spacing={2}>
-                <Text fontSize="xs" color="gray.500">
-                  ID: {prescription.prescriptionId}
-                </Text>
-                <Badge 
-                  colorScheme={isPrescriptionReady() ? 'green' : 'yellow'} 
-                  variant="subtle" 
-                  fontSize="xs"
-                >
-                  {isPrescriptionReady() ? 'Ready to Save' : 'Incomplete'}
-                </Badge>
-              </HStack>
-            </VStack>
+              <Text fontSize="xs" color="gray.500">
+                ID: {prescription.prescriptionId}
+              </Text>
+              <Badge 
+                colorScheme={isPrescriptionReady() ? 'green' : 'yellow'} 
+                variant="subtle" 
+                fontSize="xs"
+              >
+                {isPrescriptionReady() ? 'Ready to Save' : 'Incomplete'}
+              </Badge>
+            </Flex>
             
-            <HStack spacing={3} wrap="wrap">
+            <Flex gap={2} wrap="wrap">
               <Button
                 onClick={handlePrint}
                 variant="outline"
-                size="md"
+                size="sm"
                 leftIcon={<Icon as={FaPrint} />}
                 colorScheme="blue"
               >
-                Print Prescription
+                Print
               </Button>
               
               {mode !== 'view' && (
@@ -2370,10 +2634,10 @@ const EPrescription = () => {
                   leftIcon={<Icon as={FaPlus} />}
                   colorScheme="blue"
                   variant="outline"
-                  size="md"
+                  size="sm"
                   onClick={handleNewPrescription}
                 >
-                  New Prescription
+                  New
                 </Button>
               )}
               
@@ -2382,14 +2646,14 @@ const EPrescription = () => {
                 colorScheme={isPrescriptionReady() ? 'green' : 'gray'}
                 onClick={handleSave}
                 isDisabled={!isPrescriptionReady()}
-                size="lg"
-                px={8}
+                size="md"
+                px={6}
                 fontWeight="semibold"
               >
-                {isPrescriptionReady() ? 'Complete Prescription' : 'Complete Prescription'}
+                {isPrescriptionReady() ? 'Save Prescription' : 'Save Prescription'}
               </Button>
-            </HStack>
-          </HStack>
+            </Flex>
+          </Flex>
         </Container>
       </Box>
 
@@ -2427,6 +2691,7 @@ const EPrescription = () => {
           <Text>Prescription content will be rendered here for printing</Text>
         </Box>
       </Box>
+
     </Box>
   );
 };

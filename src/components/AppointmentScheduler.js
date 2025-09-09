@@ -278,9 +278,9 @@ const AppointmentScheduler = () => {
       const response = await api.get('/api/doctors');
       console.log('✅ [APPOINTMENTS] Doctors API response received:', response.data);
       
-      if (response.data && Array.isArray(response.data)) {
-        setDoctors(response.data);
-        console.log('✅ [APPOINTMENTS] Doctors loaded successfully:', response.data.length);
+      if (response.data && response.data.success && response.data.doctors) {
+        setDoctors(response.data.doctors);
+        console.log('✅ [APPOINTMENTS] Doctors loaded successfully:', response.data.doctors.length);
       } else {
         console.log('⚠️ [APPOINTMENTS] Unexpected doctors response format, using empty array');
         setDoctors([]);

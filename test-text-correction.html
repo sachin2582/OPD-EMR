@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Text Correction Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: #f7fafc;
+        }
+        .test-section h3 {
+            color: #4a5568;
+            margin-top: 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+        button {
+            background-color: #4299e1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #3182ce;
+        }
+        .result {
+            background-color: #e6fffa;
+            border: 1px solid #38b2ac;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .examples {
+            background-color: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .examples h4 {
+            color: #c53030;
+            margin-top: 0;
+        }
+        .example-item {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .before {
+            color: #e53e3e;
+            font-weight: bold;
+        }
+        .after {
+            color: #38a169;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🩺 Medical Text Correction Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Chief Complaint Input</h3>
+            <input type="text" id="complaintInput" placeholder="Enter complaint (e.g., 'fever', 'headache', 'chest pain')">
+            <button onclick="testComplaint()">Test Correction</button>
+            <button onclick="clearComplaint()">Clear</button>
+            <div id="complaintResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Diagnosis Input</h3>
+            <input type="text" id="diagnosisInput" placeholder="Enter diagnosis (e.g., 'hypertension', 'diabetes', 'pneumonia')">
+            <button onclick="testDiagnosis()">Test Correction</button>
+            <button onclick="clearDiagnosis()">Clear</button>
+            <div id="diagnosisResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="examples">
+            <h4>📝 Example Corrections:</h4>
+            <div class="example-item">
+                <span class="before">fever</span> → <span class="after">FEVER</span>
+            </div>
+            <div class="example-item">
+                <span class="before">headache</span> → <span class="after">HEADACHE</span>
+            </div>
+            <div class="example-item">
+                <span class="before">hypertension</span> → <span class="after">HYPERTENSION</span>
+            </div>
+            <div class="example-item">
+                <span class="before">diarrhoea</span> → <span class="after">DIARRHEA</span>
+            </div>
+            <div class="example-item">
+                <span class="before">tumour</span> → <span class="after">TUMOR</span>
+            </div>
+            <div class="example-item">
+                <span class="before">chest pain</span> → <span class="after">CHEST PAIN</span>
+            </div>
+            <div class="example-item">
+                <span class="before">shortness of breath</span> → <span class="after">SHORTNESS OF BREATH</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Medical text correction utility (simplified version)
+        const medicalCorrections = {
+            'fever': 'FEVER',
+            'headache': 'HEADACHE',
+            'cough': 'COUGH',
+            'cold': 'COLD',
+            'pain': 'PAIN',
+            'nausea': 'NAUSEA',
+            'vomiting': 'VOMITING',
+            'diarrhea': 'DIARRHEA',
+            'diarrhoea': 'DIARRHEA',
+            'hypertension': 'HYPERTENSION',
+            'diabetes': 'DIABETES',
+            'asthma': 'ASTHMA',
+            'pneumonia': 'PNEUMONIA',
+            'bronchitis': 'BRONCHITIS',
+            'gastritis': 'GASTRITIS',
+            'ulcer': 'ULCER',
+            'arthritis': 'ARTHRITIS',
+            'migraine': 'MIGRAINE',
+            'anemia': 'ANEMIA',
+            'anaemia': 'ANEMIA',
+            'infection': 'INFECTION',
+            'inflammation': 'INFLAMMATION',
+            'allergy': 'ALLERGY',
+            'allergic': 'ALLERGIC',
+            'dizziness': 'DIZZINESS',
+            'fatigue': 'FATIGUE',
+            'weakness': 'WEAKNESS',
+            'shortness': 'SHORTNESS',
+            'breath': 'BREATH',
+            'breathing': 'BREATHING',
+            'chest': 'CHEST',
+            'abdominal': 'ABDOMINAL',
+            'stomach': 'STOMACH',
+            'back': 'BACK',
+            'joint': 'JOINT',
+            'muscle': 'MUSCLE',
+            'skin': 'SKIN',
+            'rash': 'RASH',
+            'swelling': 'SWELLING',
+            'bleeding': 'BLEEDING',
+            'urine': 'URINE',
+            'urinary': 'URINARY',
+            'kidney': 'KIDNEY',
+            'liver': 'LIVER',
+            'heart': 'HEART',
+            'cardiac': 'CARDIAC',
+            'respiratory': 'RESPIRATORY',
+            'gastrointestinal': 'GASTROINTESTINAL',
+            'neurological': 'NEUROLOGICAL',
+            'psychological': 'PSYCHOLOGICAL',
+            'mental': 'MENTAL',
+            'depression': 'DEPRESSION',
+            'anxiety': 'ANXIETY',
+            'stress': 'STRESS',
+            'insomnia': 'INSOMNIA',
+            'sleep': 'SLEEP',
+            'appetite': 'APPETITE',
+            'weight': 'WEIGHT',
+            'blood': 'BLOOD',
+            'pressure': 'PRESSURE',
+            'sugar': 'SUGAR',
+            'cholesterol': 'CHOLESTEROL',
+            'thyroid': 'THYROID',
+            'hormone': 'HORMONE',
+            'vitamin': 'VITAMIN',
+            'deficiency': 'DEFICIENCY',
+            'syndrome': 'SYNDROME',
+            'disease': 'DISEASE',
+            'disorder': 'DISORDER',
+            'condition': 'CONDITION',
+            'symptom': 'SYMPTOM',
+            'sign': 'SIGN',
+            'acute': 'ACUTE',
+            'chronic': 'CHRONIC',
+            'severe': 'SEVERE',
+            'mild': 'MILD',
+            'moderate': 'MODERATE',
+            'recurrent': 'RECURRENT',
+            'persistent': 'PERSISTENT',
+            'temporary': 'TEMPORARY',
+            'permanent': 'PERMANENT',
+            'progressive': 'PROGRESSIVE',
+            'stable': 'STABLE',
+            'unstable': 'UNSTABLE',
+            'critical': 'CRITICAL',
+            'emergency': 'EMERGENCY',
+            'urgent': 'URGENT',
+            'routine': 'ROUTINE',
+            'preventive': 'PREVENTIVE',
+            'diagnostic': 'DIAGNOSTIC',
+            'therapeutic': 'THERAPEUTIC',
+            'surgical': 'SURGICAL',
+            'medical': 'MEDICAL',
+            'clinical': 'CLINICAL',
+            'pathological': 'PATHOLOGICAL',
+            'physiological': 'PHYSIOLOGICAL',
+            'anatomical': 'ANATOMICAL',
+            'functional': 'FUNCTIONAL',
+            'structural': 'STRUCTURAL',
+            'organic': 'ORGANIC',
+            'systemic': 'SYSTEMIC',
+            'local': 'LOCAL',
+            'general': 'GENERAL',
+            'specific': 'SPECIFIC',
+            'nonspecific': 'NONSPECIFIC',
+            'primary': 'PRIMARY',
+            'secondary': 'SECONDARY',
+            'tertiary': 'TERTIARY',
+            'congenital': 'CONGENITAL',
+            'acquired': 'ACQUIRED',
+            'hereditary': 'HEREDITARY',
+            'genetic': 'GENETIC',
+            'environmental': 'ENVIRONMENTAL',
+            'infectious': 'INFECTIOUS',
+            'contagious': 'CONTAGIOUS',
+            'viral': 'VIRAL',
+            'bacterial': 'BACTERIAL',
+            'fungal': 'FUNGAL',
+            'parasitic': 'PARASITIC',
+            'autoimmune': 'AUTOIMMUNE',
+            'inflammatory': 'INFLAMMATORY',
+            'degenerative': 'DEGENERATIVE',
+            'malignant': 'MALIGNANT',
+            'benign': 'BENIGN',
+            'cancer': 'CANCER',
+            'tumor': 'TUMOR',
+            'tumour': 'TUMOR',
+            'cyst': 'CYST',
+            'polyp': 'POLYP',
+            'lesion': 'LESION',
+            'mass': 'MASS',
+            'lump': 'LUMP',
+            'nodule': 'NODULE',
+            'growth': 'GROWTH',
+            'abnormal': 'ABNORMAL',
+            'normal': 'NORMAL',
+            'healthy': 'HEALTHY',
+            'unhealthy': 'UNHEALTHY',
+            'positive': 'POSITIVE',
+            'negative': 'NEGATIVE',
+            'elevated': 'ELEVATED',
+            'reduced': 'REDUCED',
+            'increased': 'INCREASED',
+            'decreased': 'DECREASED',
+            'high': 'HIGH',
+            'low': 'LOW'
+        };
+
+        function correctAndFormatMedicalText(text) {
+            if (!text || typeof text !== 'string') return '';
+            
+            const words = text.trim().split(/\s+/);
+            const correctedWords = words.map(word => {
+                const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+                const punctuation = word.replace(/[\w]/g, '');
+                
+                if (medicalCorrections[cleanWord]) {
+                    return medicalCorrections[cleanWord] + punctuation;
+                }
+                
+                return word.toUpperCase();
+            });
+            
+            return correctedWords.join(' ');
+        }
+
+        function testComplaint() {
+            const input = document.getElementById('complaintInput').value;
+            const result = correctAndFormatMedicalText(input);
+            const resultDiv = document.getElementById('complaintResult');
+            
+            resultDiv.innerHTML = `
+                <strong>Original:</strong> "${input}"<br>
+                <strong>Corrected:</strong> "${result}"<br>
+                <strong>Status:</strong> ${input.toLowerCase() !== result.toLowerCase() ? '✅ Corrected' : 'ℹ️ No correction needed'}
+            `;
+            resultDiv.style.display = 'block';
+        }
+
+        function testDiagnosis() {
+            const input = document.getElementById('diagnosisInput').value;
+            const result = correctAndFormatMedicalText(input);
+            const resultDiv = document.getElementById('diagnosisResult');
+            
+            resultDiv.innerHTML = `
+                <strong>Original:</strong> "${input}"<br>
+                <strong>Corrected:</strong> "${result}"<br>
+                <strong>Status:</strong> ${input.toLowerCase() !== result.toLowerCase() ? '✅ Corrected' : 'ℹ️ No correction needed'}
+            `;
+            resultDiv.style.display = 'block';
+        }
+
+        function clearComplaint() {
+            document.getElementById('complaintInput').value = '';
+            document.getElementById('complaintResult').style.display = 'none';
+        }
+
+        function clearDiagnosis() {
+            document.getElementById('diagnosisInput').value = '';
+            document.getElementById('diagnosisResult').style.display = 'none';
+        }
+
+        // Add event listeners for Enter key
+        document.getElementById('complaintInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testComplaint();
+            }
+        });
+
+        document.getElementById('diagnosisInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testDiagnosis();
+            }
+        });
+    </script>
+</body>
+</html>

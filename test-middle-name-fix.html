@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Middle Name Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .test-case {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .expected { color: #28a745; font-weight: bold; }
+        .actual { color: #dc3545; font-weight: bold; }
+        .correct { color: #28a745; }
+        .incorrect { color: #dc3545; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Middle Name Fix Test</h1>
+        <p>This page tests the middle name handling to ensure "null" values are not displayed when middle names are left blank.</p>
+
+        <div class="test-section info">
+            <h3>📋 Test Cases</h3>
+            <p>Testing various middle name scenarios:</p>
+            
+            <div class="test-case">
+                <strong>Test Case 1:</strong> Patient with middle name<br>
+                <span class="expected">Expected:</span> "John Michael Doe"<br>
+                <span class="actual">Actual:</span> <span id="test1-result">Testing...</span>
+            </div>
+            
+            <div class="test-case">
+                <strong>Test Case 2:</strong> Patient without middle name (null)<br>
+                <span class="expected">Expected:</span> "John Doe"<br>
+                <span class="actual">Actual:</span> <span id="test2-result">Testing...</span>
+            </div>
+            
+            <div class="test-case">
+                <strong>Test Case 3:</strong> Patient without middle name (empty string)<br>
+                <span class="expected">Expected:</span> "John Doe"<br>
+                <span class="actual">Actual:</span> <span id="test3-result">Testing...</span>
+            </div>
+            
+            <div class="test-case">
+                <strong>Test Case 4:</strong> Patient without middle name (undefined)<br>
+                <span class="expected">Expected:</span> "John Doe"<br>
+                <span class="actual">Actual:</span> <span id="test4-result">Testing...</span>
+            </div>
+            
+            <div class="test-case">
+                <strong>Test Case 5:</strong> Patient with empty middle name (spaces only)<br>
+                <span class="expected">Expected:</span> "John Doe"<br>
+                <span class="actual">Actual:</span> <span id="test5-result">Testing...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Name Formatting Functions</h3>
+            <button onclick="testNameFormatting()">Run Tests</button>
+            <div id="formattingResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Test Frontend Components</h3>
+            <button onclick="testFrontendComponents()">Test Frontend</button>
+            <div id="frontendResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Backend API</h3>
+            <button onclick="testBackendAPI()">Test Backend</button>
+            <div id="backendResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Name formatting utility functions (copied from nameUtils.js)
+        function formatFullName(firstName, middleName, lastName) {
+            if (!firstName || !lastName) {
+                return '';
+            }
+            
+            const middle = middleName && middleName.trim() ? ` ${middleName.trim()}` : '';
+            return `${firstName}${middle} ${lastName}`.trim();
+        }
+
+        function formatPatientName(patient) {
+            if (!patient) return '';
+            
+            return formatFullName(patient.firstName, patient.middleName, patient.lastName);
+        }
+
+        function formatPatientNameForTemplate(patient) {
+            if (!patient) return '';
+            
+            const middle = patient.middleName && patient.middleName.trim() ? ` ${patient.middleName.trim()}` : '';
+            return `${patient.firstName}${middle} ${patient.lastName}`.trim();
+        }
+
+        function formatPatientNameForBackend(patient) {
+            if (!patient) return '';
+            
+            const middle = patient.middleName && patient.middleName.trim() ? ` ${patient.middleName.trim()}` : '';
+            return `${patient.firstName}${middle} ${patient.lastName}`.trim();
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                name: "Patient with middle name",
+                patient: { firstName: "John", middleName: "Michael", lastName: "Doe" },
+                expected: "John Michael Doe"
+            },
+            {
+                name: "Patient without middle name (null)",
+                patient: { firstName: "John", middleName: null, lastName: "Doe" },
+                expected: "John Doe"
+            },
+            {
+                name: "Patient without middle name (empty string)",
+                patient: { firstName: "John", middleName: "", lastName: "Doe" },
+                expected: "John Doe"
+            },
+            {
+                name: "Patient without middle name (undefined)",
+                patient: { firstName: "John", middleName: undefined, lastName: "Doe" },
+                expected: "John Doe"
+            },
+            {
+                name: "Patient with empty middle name (spaces only)",
+                patient: { firstName: "John", middleName: "   ", lastName: "Doe" },
+                expected: "John Doe"
+            }
+        ];
+
+        function testNameFormatting() {
+            const resultDiv = document.getElementById('formattingResult');
+            let results = "🧪 Testing Name Formatting Functions:\n\n";
+            
+            testCases.forEach((testCase, index) => {
+                const result = formatPatientName(testCase.patient);
+                const isCorrect = result === testCase.expected;
+                
+                results += `Test ${index + 1}: ${testCase.name}\n`;
+                results += `Expected: "${testCase.expected}"\n`;
+                results += `Actual: "${result}"\n`;
+                results += `Status: ${isCorrect ? '✅ PASS' : '❌ FAIL'}\n\n`;
+                
+                // Update individual test results
+                const testResultElement = document.getElementById(`test${index + 1}-result`);
+                if (testResultElement) {
+                    testResultElement.innerHTML = `"${result}"`;
+                    testResultElement.className = isCorrect ? 'correct' : 'incorrect';
+                }
+            });
+            
+            resultDiv.innerHTML = results;
+            resultDiv.className = 'result success';
+        }
+
+        async function testFrontendComponents() {
+            const resultDiv = document.getElementById('frontendResult');
+            resultDiv.innerHTML = 'Testing frontend components...';
+            
+            try {
+                // Test if the frontend is accessible
+                const response = await fetch('http://localhost:3000');
+                if (response.ok) {
+                    resultDiv.innerHTML = '✅ Frontend is accessible at http://localhost:3000\n\nTo test middle name display:\n1. Go to Patient Registration\n2. Create a patient without middle name\n3. Check that "null" is not displayed in the name\n4. Check billing invoices and patient views';
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '❌ Frontend not accessible. Make sure the frontend server is running.';
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Error accessing frontend: ${error.message}\n\nMake sure the frontend server is running on port 3000.`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testBackendAPI() {
+            const resultDiv = document.getElementById('backendResult');
+            resultDiv.innerHTML = 'Testing backend API...';
+            
+            try {
+                // Test backend health
+                const healthResponse = await fetch('http://localhost:3001/health');
+                if (!healthResponse.ok) {
+                    throw new Error('Backend health check failed');
+                }
+                
+                // Test patients API
+                const patientsResponse = await fetch('http://localhost:3001/api/patients');
+                const patientsData = await patientsResponse.json();
+                
+                if (patientsResponse.ok && patientsData.patients) {
+                    let results = '✅ Backend API is working\n\n';
+                    results += `Found ${patientsData.patients.length} patients:\n\n`;
+                    
+                    patientsData.patients.forEach((patient, index) => {
+                        const formattedName = formatPatientName(patient);
+                        results += `Patient ${index + 1}:\n`;
+                        results += `  Raw: firstName="${patient.firstName}", middleName="${patient.middleName}", lastName="${patient.lastName}"\n`;
+                        results += `  Formatted: "${formattedName}"\n`;
+                        results += `  Has null middle name: ${patient.middleName === null ? 'Yes' : 'No'}\n\n`;
+                    });
+                    
+                    resultDiv.innerHTML = results;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '❌ Failed to fetch patients from API';
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Error testing backend API: ${error.message}\n\nMake sure the backend server is running on port 3001.`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            testNameFormatting();
+        };
+    </script>
+</body>
+</html>

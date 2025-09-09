@@ -490,6 +490,19 @@ async function initDatabase() {
         )
       `);
 
+      // Create user_sessions table for session management
+      db.run(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          token TEXT UNIQUE NOT NULL,
+          expires_at DATETIME NOT NULL,
+          user_type TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+      `);
+
       // Create user_rights table for granular access control
       db.run(`
         CREATE TABLE IF NOT EXISTS user_rights (
@@ -521,23 +534,6 @@ async function initDatabase() {
         )
       `);
 
-      // Insert default system pages
-      const defaultPages = [
-        { pageName: 'overview', pageTitle: 'System Overview', pageDescription: 'System dashboard and statistics', category: 'admin' },
-        { pageName: 'users', pageTitle: 'User Management', pageDescription: 'Manage system users and roles', category: 'admin' },
-        { pageName: 'doctors', pageTitle: 'Doctor Management', pageDescription: 'Manage doctor profiles and specializations', category: 'admin' },
-        { pageName: 'services', pageTitle: 'Service Management', pageDescription: 'Manage medical services and pricing', category: 'admin' },
-        { pageName: 'bill-series', pageTitle: 'Bill Series Management', pageDescription: 'Manage billing series and formats', category: 'admin' },
-        { pageName: 'specializations', pageTitle: 'Specialization Management', pageDescription: 'Manage medical specializations', category: 'admin' },
-        { pageName: 'rights', pageTitle: 'Rights Management', pageDescription: 'Manage user access rights and permissions', category: 'admin' }
-      ];
-
-      defaultPages.forEach(page => {
-        db.run(`
-          INSERT OR IGNORE INTO system_pages (pageName, pageTitle, pageDescription, category)
-          VALUES (?, ?, ?, ?)
-        `, [page.pageName, page.pageTitle, page.pageDescription, page.category]);
-      });
 
       // Create services table for billing
       db.run(`
@@ -705,86 +701,10 @@ async function initDatabase() {
         )
       `);
 
-      // Insert default specializations
-      db.run(`
-        INSERT OR IGNORE INTO specializations (specializationId, specializationName, description, category)
-        VALUES
-        ('SP001', 'Cardiology', 'Heart and cardiovascular system', 'Internal Medicine'),
-        ('SP002', 'Dermatology', 'Skin, hair, and nails', 'Clinical'),
-        ('SP003', 'Orthopedics', 'Bones, joints, and muscles', 'Surgical'),
-        ('SP004', 'Pediatrics', 'Child and adolescent health', 'Clinical'),
-        ('SP005', 'Neurology', 'Nervous system and brain', 'Internal Medicine'),
-        ('SP006', 'General Medicine', 'General medical practice', 'Internal Medicine'),
-        ('SP007', 'Gynecology', 'Women''s reproductive health', 'Clinical'),
-        ('SP008', 'Psychiatry', 'Mental health and behavior', 'Clinical')
-      `);
 
-      // Insert default doctor if not exists
-      db.run(`
-        INSERT OR IGNORE INTO doctors (doctorId, name, specialization, license, phone, email, department)
-        VALUES ('DOC001', 'Dr. [Your Name]', 'General Physician', 'MD[Your License]', '[Your Phone]', '[Your Email]', 'General Medicine')
-      `);
 
-      // Insert default admin user
-      db.run(`
-        INSERT OR IGNORE INTO users (userId, username, password, fullName, email, role, department)
-        VALUES ('ADMIN001', 'admin', '$2a$10$demo.hash.for.admin', 'System Administrator', 'admin@opd-emr.com', 'admin', 'Administration')
-      `);
 
-      // Insert default clinic setup
-      db.run(`
-        INSERT OR IGNORE INTO clinic_setup (clinicName, address, city, state, pincode, phone, email, website, license, registration, prescriptionValidity)
-        VALUES ('Your Clinic Name', 'Your Clinic Address', 'Your City', 'Your State', '123456', 'Your Phone Number', 'clinic@email.com', 'www.yourclinic.com', 'CLINIC-LICENSE-001', 'REG-001', 30)
-      `);
-
-      // Insert default system pages for rights management
-      db.run(`
-        INSERT OR IGNORE INTO system_pages (pageName, pageTitle, pageDescription, category)
-        VALUES
-        ('dashboard', 'Dashboard', 'Main dashboard and overview', 'Core'),
-        ('patients', 'Patient Management', 'Patient registration and management', 'Patient Care'),
-        ('appointments', 'Appointments', 'Appointment scheduling and management', 'Patient Care'),
-        ('prescriptions', 'Prescriptions', 'Electronic prescription management', 'Clinical'),
-        ('billing', 'Billing', 'Patient billing and payments', 'Financial'),
-        ('doctors', 'Doctor Management', 'Doctor registration and management', 'Staff'),
-        ('clinical-notes', 'Clinical Notes', 'Patient clinical notes and records', 'Clinical'),
-        ('lab-tests', 'Laboratory Tests', 'Laboratory test management and sample collection', 'Clinical'),
-        ('pharmacy', 'Pharmacy Management', 'Complete pharmacy inventory and sales management', 'Clinical'),
-        ('pharmacy-inventory', 'Pharmacy Inventory', 'Manage pharmacy stock, items, and suppliers', 'Clinical'),
-        ('pharmacy-sales', 'Pharmacy Sales', 'Process pharmacy sales and generate invoices', 'Clinical'),
-        ('pharmacy-purchases', 'Pharmacy Purchases', 'Manage purchase orders and supplier relationships', 'Clinical'),
-        ('pharmacy-reports', 'Pharmacy Reports', 'Pharmacy analytics and financial reports', 'Analytics'),
-        ('admin-panel', 'Admin Panel', 'System administration and settings', 'Administration'),
-        ('reports', 'Reports', 'System reports and analytics', 'Analytics'),
-        ('settings', 'Settings', 'System configuration and preferences', 'Administration')
-      `);
-
-      // Insert default lab tests
-      db.run(`
-        INSERT OR IGNORE INTO lab_tests (testId, testName, testCode, category, subcategory, price, description, preparation, turnaroundTime)
-        VALUES
-        ('LT001', 'Complete Blood Count (CBC)', 'CBC', 'Hematology', 'Blood Analysis', 800.00, 'Complete blood count including RBC, WBC, hemoglobin, and platelets', 'Fasting for 8-12 hours', '4-6 hours'),
-        ('LT002', 'Blood Glucose (Fasting)', 'FBG', 'Biochemistry', 'Diabetes Screening', 300.00, 'Fasting blood glucose test for diabetes diagnosis', 'Fasting for 8-12 hours', '2-4 hours'),
-        ('LT003', 'Lipid Profile', 'LIPID', 'Biochemistry', 'Cardiovascular', 600.00, 'Complete lipid profile including cholesterol and triglycerides', 'Fasting for 12-14 hours', '4-6 hours'),
-        ('LT004', 'Liver Function Test (LFT)', 'LFT', 'Biochemistry', 'Hepatology', 700.00, 'Liver function tests including enzymes and proteins', 'Fasting for 8-12 hours', '4-6 hours'),
-        ('LT005', 'Kidney Function Test (KFT)', 'KFT', 'Biochemistry', 'Nephrology', 600.00, 'Kidney function tests including creatinine and urea', 'Fasting for 8-12 hours', '4-6 hours'),
-        ('LT006', 'Urine Analysis', 'UA', 'Urinalysis', 'General', 300.00, 'Complete urinalysis including physical, chemical, and microscopic examination', 'First morning urine sample', '2-3 hours'),
-        ('LT007', 'Thyroid Function Test', 'TFT', 'Endocrinology', 'Thyroid', 800.00, 'Thyroid function tests including TSH, T3, and T4', 'No special preparation required', '6-8 hours'),
-        ('LT008', 'Electrocardiogram (ECG)', 'ECG', 'Cardiology', 'Heart', 500.00, 'Electrocardiogram for heart rhythm and function', 'No special preparation required', 'Immediate'),
-        ('LT009', 'X-Ray Chest', 'CXR', 'Radiology', 'Chest', 800.00, 'Chest X-ray for lung and heart examination', 'No special preparation required', '1-2 hours'),
-        ('LT010', 'Ultrasound Abdomen', 'USG-ABD', 'Radiology', 'Abdomen', 1200.00, 'Abdominal ultrasound for organ examination', 'Fasting for 6-8 hours', '2-3 hours')
-      `);
-
-      // Sample pharmacy data insertion (simplified)
-      console.log('📦 Inserting basic sample data...');
-      
-      // Insert a basic admin user for testing
-      db.run(`
-        INSERT OR IGNORE INTO users (userId, username, password, fullName, email, role, department)
-        VALUES ('ADMIN001', 'admin', '$2a$10$demo.hash.for.admin', 'System Administrator', 'admin@opd-emr.com', 'admin', 'Administration')
-      `);
-      
-      console.log('✅ Basic sample data inserted successfully');
+      console.log('✅ Database tables created successfully');
 
       // Create indexes for better performance
       db.run('CREATE INDEX IF NOT EXISTS idx_patients_patientId ON patients(patientId)');
@@ -792,7 +712,7 @@ async function initDatabase() {
       db.run('CREATE INDEX IF NOT EXISTS idx_prescriptions_doctorId ON prescriptions(doctorId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_billing_patientId ON billing(patientId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_appointments_patientId ON appointments(patientId)');
-      db.run('CREATE INDEX IF NOT EXISTS idx_appointments_doctorId ON appointments(doctorId)');
+       db.run('CREATE INDEX IF NOT EXISTS idx_appointments_doctorId ON appointments(doctorId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_lab_orders_patientId ON lab_orders(patientId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_lab_orders_prescriptionId ON lab_orders(prescriptionId)');
       db.run('CREATE INDEX IF NOT EXISTS idx_lab_orders_doctorId ON lab_orders(doctorId)');
@@ -812,7 +732,7 @@ async function initDatabase() {
           item_id INTEGER PRIMARY KEY AUTOINCREMENT,
           sku VARCHAR(50) UNIQUE NOT NULL,
           name VARCHAR(255) NOT NULL,
-          generic_name VARCHAR(255),
+          generic_name VARCHAR(255),ted 
           brand VARCHAR(255),
           unit VARCHAR(50) NOT NULL,
           item_type VARCHAR(100) NOT NULL,

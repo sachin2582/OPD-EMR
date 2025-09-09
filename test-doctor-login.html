@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Doctor Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-buttons {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Test Doctor Login API</h1>
+    
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" value="dr.suneet.verma" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" value="12345" required>
+        </div>
+        
+        <button type="submit">Test Login</button>
+    </form>
+    
+    <div class="test-buttons">
+        <h3>Quick Tests:</h3>
+        <button onclick="testDoctorLogin()">Test Dr. Suneet Verma</button>
+        <button onclick="testAdminLogin()">Test Admin Login</button>
+        <button onclick="testBackendHealth()">Test Backend Health</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            await testLogin(username, password);
+        });
+        
+        async function testLogin(username, password) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<p>🔄 Testing login...</p>';
+            
+            try {
+                console.log(`Testing login for: ${username}`);
+                
+                const response = await fetch('http://localhost:3001/api/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Login Successful!</h3>
+                        <p><strong>Username:</strong> ${data.data.user.username}</p>
+                        <p><strong>Role:</strong> ${data.data.user.role}</p>
+                        <p><strong>Full Name:</strong> ${data.data.user.fullName}</p>
+                        <p><strong>User ID:</strong> ${data.data.user.id}</p>
+                        <p><strong>Token:</strong> ${data.data.token ? 'Received' : 'Not received'}</p>
+                        <p><strong>Message:</strong> ${data.message}</p>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Login Failed!</h3>
+                        <p><strong>Error:</strong> ${data.error}</p>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error!</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Make sure the backend server is running on http://localhost:3001</p>
+                `;
+            }
+        }
+        
+        function testDoctorLogin() {
+            document.getElementById('username').value = 'dr.suneet.verma';
+            document.getElementById('password').value = '12345';
+            testLogin('dr.suneet.verma', '12345');
+        }
+        
+        function testAdminLogin() {
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+            testLogin('admin', 'admin123');
+        }
+        
+        async function testBackendHealth() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<p>🔄 Testing backend health...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/health');
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <h3>✅ Backend is Running!</h3>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+                    <p><strong>Uptime:</strong> ${data.uptime} seconds</p>
+                    <p><strong>Environment:</strong> ${data.environment}</p>
+                `;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Backend Not Running!</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Make sure to start the backend server with: cd backend && npm start</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
