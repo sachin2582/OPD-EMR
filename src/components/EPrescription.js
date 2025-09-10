@@ -1472,7 +1472,13 @@ const EPrescription = () => {
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById('printable-prescription').innerHTML;
+    console.log('🖨️ Print function called');
+    console.log('🖨️ Doctor data:', doctorData);
+    console.log('🖨️ Doctor name:', doctorData?.firstName, doctorData?.lastName);
+    console.log('🖨️ Doctor ID:', doctorData?.doctorId);
+    
+    const printElement = document.getElementById('printable-prescription');
+    const printContent = printElement?.innerHTML || 'No printable content found';
     const originalContent = document.body.innerHTML;
     
     document.body.innerHTML = `
@@ -2658,28 +2664,238 @@ const EPrescription = () => {
       </Box>
 
       {/* Printable Prescription */}
-            <Box id="printable-prescription" display="none">
+            <Box id="printable-prescription" display="none" data-version="2024-12-20">
         <style>
           {`
             @media print {
-              body { margin: 0; padding: 0; }
+              @page {
+                size: A4;
+                margin: 0.15in;
+              }
+              body { 
+                margin: 0; 
+                padding: 0; 
+                font-family: 'Arial', sans-serif;
+                font-size: 9px;
+                line-height: 1.1;
+                color: #333;
+                background: white;
+              }
               .no-print { display: none !important; }
               #printable-prescription { 
                 display: block !important; 
                 position: relative;
                 page-break-inside: avoid;
-                height: 100vh;
+                background: white;
+                color: #333;
+              }
+              .prescription-page {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: 3px;
+                background: white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+              }
+              
+              /* Header Section */
+              .clinic-header {
+                text-align: center;
+                border-bottom: 1px solid #2563eb;
+                padding-bottom: 4px;
+                margin-bottom: 5px;
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                padding: 6px;
+                border-radius: 4px 4px 0 0;
+              }
+              .clinic-name {
+                font-size: 14px;
+                font-weight: bold;
+                color: #1e40af;
+                margin-bottom: 2px;
+                letter-spacing: 0.3px;
+              }
+              .clinic-details {
+                font-size: 8px;
+                color: #64748b;
+                margin-bottom: 1px;
+                font-weight: 500;
+              }
+              
+              /* Prescription Title */
+              .prescription-title {
+                text-align: center;
+                font-size: 12px;
+                font-weight: bold;
+                margin: 5px 0;
+                color: #1e40af;
+                text-decoration: underline;
+                letter-spacing: 0.5px;
+              }
+              
+              /* Prescription Meta */
+              .prescription-meta {
+                display: flex;
+                justify-content: space-between;
+                font-size: 8px;
+                margin-bottom: 5px;
+                padding: 3px;
+                background: #f1f5f9;
+                border-radius: 3px;
+                border-left: 2px solid #2563eb;
+              }
+              
+              /* Content Sections */
+              .content-section {
+                margin-top: 5px;
+              }
+              
+              .info-section {
+                margin-bottom: 5px;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
                 overflow: hidden;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
               }
-              .prescription-page { 
-                page-break-after: avoid;
+              
+              .section-title {
+                background: #2563eb;
+                color: white;
+                font-weight: bold;
+                font-size: 9px;
+                padding: 4px 6px;
                 margin: 0;
-                padding: 5px;
-                height: 100vh;
-                box-sizing: border-box;
+                text-transform: uppercase;
+                letter-spacing: 0.2px;
               }
-              * {
-                box-sizing: border-box;
+              
+              .section-content {
+                padding: 5px;
+                background: white;
+              }
+              
+              /* Patient & Doctor Info */
+              .patient-doctor-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+                font-size: 8px;
+              }
+              
+              .patient-info, .doctor-info {
+                padding: 4px;
+                background: #f8fafc;
+                border-radius: 3px;
+                border-left: 2px solid #10b981;
+              }
+              
+              .patient-info {
+                border-left-color: #3b82f6;
+              }
+              
+              .doctor-info {
+                border-left-color: #8b5cf6;
+              }
+              
+              /* Lists */
+              .complaints-list, .diagnosis-list, .tests-list {
+                font-size: 8px;
+                margin: 0;
+                padding-left: 12px;
+                line-height: 1.2;
+              }
+              
+              .complaints-list li, .diagnosis-list li, .tests-list li {
+                margin-bottom: 1px;
+                color: #374151;
+              }
+              
+              /* Medications Table */
+              .medications-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 3px;
+                font-size: 7px;
+              }
+              
+              .medications-table th {
+                background: #374151;
+                color: white;
+                padding: 3px 2px;
+                text-align: left;
+                font-weight: bold;
+                font-size: 8px;
+              }
+              
+              .medications-table td {
+                padding: 2px;
+                border-bottom: 1px solid #e5e7eb;
+                vertical-align: top;
+              }
+              
+              .medications-table tr:nth-child(even) {
+                background: #f9fafb;
+              }
+              
+              .medications-table tr:hover {
+                background: #f3f4f6;
+              }
+              
+              /* Follow-up */
+              .follow-up-content {
+                margin-top: 2px;
+                padding: 4px;
+                background: #fef3c7;
+                border: 1px solid #f59e0b;
+                border-radius: 3px;
+                border-left: 2px solid #f59e0b;
+              }
+              
+              .follow-up-text {
+                font-size: 8px;
+                line-height: 1.2;
+                margin: 0;
+                color: #92400e;
+              }
+              
+              /* Signature Section */
+              .signature-section {
+                margin-top: 8px;
+                text-align: center;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 5px;
+              }
+              
+              .signature-line {
+                margin-bottom: 4px;
+                border-bottom: 1px solid #374151;
+                width: 120px;
+                margin-left: auto;
+                margin-right: auto;
+                height: 8px;
+              }
+              
+              .doctor-signature {
+                font-size: 9px;
+                margin-top: 2px;
+                font-weight: bold;
+                color: #1f2937;
+              }
+              
+              .doctor-details {
+                font-size: 7px;
+                margin-top: 1px;
+                color: #6b7280;
+              }
+              
+              /* Responsive adjustments */
+              @media print {
+                .prescription-page {
+                  box-shadow: none;
+                  padding: 3px;
+                }
+                .clinic-header {
+                  background: #f8fafc;
+                }
               }
             }
           `}
@@ -2687,8 +2903,156 @@ const EPrescription = () => {
         
         {/* Printable Prescription Content */}
         <Box className="prescription-page">
-          {/* This will contain the printable prescription content */}
-          <Text>Prescription content will be rendered here for printing</Text>
+          {/* Clinic Header */}
+          <Box className="clinic-header">
+            <Text className="clinic-name">{clinicData?.clinicName || 'MEDICAL CLINIC'}</Text>
+            <Text className="clinic-details">{clinicData?.address || '123 Medical Street'}</Text>
+            <Text className="clinic-details">{clinicData?.city || 'Medical City'} | Phone: {clinicData?.phone || '(555) 123-4567'}</Text>
+            <Text className="clinic-details">Email: info@medicalclinic.com | License: MC-2024-001</Text>
+          </Box>
+
+          {/* Prescription Header */}
+          <Box>
+            <Text className="prescription-title">MEDICAL PRESCRIPTION</Text>
+            <Box className="prescription-meta">
+              <Text><strong>Date:</strong> {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</Text>
+              <Text><strong>Prescription ID:</strong> {prescription.prescriptionId || 'RX-' + Date.now()}</Text>
+            </Box>
+          </Box>
+
+          {/* Content Section */}
+          <Box className="content-section">
+            {/* Patient & Doctor Information */}
+            <Box className="info-section">
+              <Text className="section-title">Patient & Doctor Information</Text>
+              <Box className="section-content">
+                <Box className="patient-doctor-grid">
+                  <Box className="patient-info">
+                    <Text><strong>Patient Name:</strong> {patientData?.firstName} {patientData?.middleName} {patientData?.lastName}</Text>
+                    <Text><strong>Age:</strong> {patientData?.age} years | <strong>Gender:</strong> {patientData?.gender}</Text>
+                    <Text><strong>Contact:</strong> {patientData?.phoneNumber}</Text>
+                    <Text><strong>Patient ID:</strong> {patientData?.patientId || 'N/A'}</Text>
+                  </Box>
+                  <Box className="doctor-info">
+                    <Text><strong>Dr.</strong> {doctorData?.firstName} {doctorData?.lastName}</Text>
+                    <Text><strong>Specialization:</strong> {doctorData?.specialization || 'General Medicine'}</Text>
+                    <Text><strong>Registration No:</strong> {doctorData?.registrationNumber || 'N/A'}</Text>
+                    <Text><strong>License:</strong> {doctorData?.licenseNumber || 'N/A'}</Text>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Chief Complaints */}
+            {prescription.complaints && prescription.complaints.length > 0 && (
+              <Box className="info-section">
+                <Text className="section-title">Chief Complaints</Text>
+                <Box className="section-content">
+                  <ul className="complaints-list">
+                    {prescription.complaints.map((complaint, index) => (
+                      <li key={index}>{complaint}</li>
+                    ))}
+                  </ul>
+                </Box>
+              </Box>
+            )}
+
+            {/* Diagnosis */}
+            {prescription.diagnoses && prescription.diagnoses.length > 0 && (
+              <Box className="info-section">
+                <Text className="section-title">Clinical Diagnosis</Text>
+                <Box className="section-content">
+                  <ul className="diagnosis-list">
+                    {prescription.diagnoses.map((diag, index) => (
+                      <li key={index}>{diag}</li>
+                    ))}
+                  </ul>
+                </Box>
+              </Box>
+            )}
+
+            {/* Medications */}
+            {prescription.medications && prescription.medications.length > 0 && (
+              <Box className="info-section">
+                <Text className="section-title">Prescribed Medications</Text>
+                <Box className="section-content">
+                  <table className="medications-table">
+                    <thead>
+                      <tr>
+                        <th>Medication</th>
+                        <th>Dosage</th>
+                        <th>Frequency</th>
+                        <th>Duration</th>
+                        <th>Instructions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prescription.medications.map((med, index) => (
+                        <tr key={index}>
+                          <td><strong>{med.name || med.genericName || 'Medication'}</strong></td>
+                          <td>{med.dosage || 'As directed'}</td>
+                          <td>{med.when || 'As needed'}</td>
+                          <td>{med.durationValue || 1} {med.durationUnit || 'days'}</td>
+                          <td>{med.instructions || 'Take as directed'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+              </Box>
+            )}
+
+            {/* Lab Tests */}
+            {selectedLabTests && selectedLabTests.length > 0 && (
+              <Box className="info-section">
+                <Text className="section-title">Laboratory Investigations</Text>
+                <Box className="section-content">
+                  <ul className="tests-list">
+                    {selectedLabTests.map((test, index) => (
+                      <li key={index}>{test.testName}</li>
+                    ))}
+                  </ul>
+                </Box>
+              </Box>
+            )}
+
+            {/* Follow-up Instructions */}
+            {prescription.followUp && (
+              <Box className="info-section">
+                <Text className="section-title">Follow-up Instructions</Text>
+                <Box className="section-content">
+                  <Box className="follow-up-content">
+                    <Text className="follow-up-text">{prescription.followUp}</Text>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+
+          {/* Doctor Signature */}
+          <Box className="signature-section">
+            <Box className="signature-line"></Box>
+            <Text className="doctor-signature">
+              Dr. {doctorData?.firstName || 'Doctor'} {doctorData?.lastName || 'Name'}
+            </Text>
+            <Text className="doctor-details">{doctorData?.specialization || 'General Medicine'}</Text>
+            <Text className="doctor-details">Registration No: {doctorData?.registrationNumber || 'N/A'}</Text>
+            <Text className="doctor-details">License: {doctorData?.licenseNumber || 'N/A'}</Text>
+            <Text className="doctor-details">Date: {new Date().toLocaleDateString()}</Text>
+            
+            {/* Debug info - remove this after testing */}
+            <Text className="doctor-details" style={{fontSize: '6px', color: '#999', marginTop: '5px'}}>
+              DEBUG: Doctor data available: {doctorData ? 'Yes' : 'No'} | 
+              Name: {doctorData?.firstName || 'undefined'} {doctorData?.lastName || 'undefined'} | 
+              ID: {doctorData?.doctorId || 'undefined'} | 
+              Full data: {JSON.stringify(doctorData)}
+            </Text>
+          </Box>
         </Box>
       </Box>
 
