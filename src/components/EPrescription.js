@@ -1474,8 +1474,9 @@ const EPrescription = () => {
   const handlePrint = () => {
     console.log('🖨️ Print function called');
     console.log('🖨️ Doctor data:', doctorData);
-    console.log('🖨️ Doctor name:', doctorData?.firstName, doctorData?.lastName);
-    console.log('🖨️ Doctor ID:', doctorData?.doctorId);
+    console.log('🖨️ Doctor name:', doctorData?.name);
+    console.log('🖨️ Doctor ID:', doctorData?.id);
+    console.log('🖨️ Doctor code:', doctorData?.doctor_code);
     
     const printElement = document.getElementById('printable-prescription');
     const printContent = printElement?.innerHTML || 'No printable content found';
@@ -2939,10 +2940,10 @@ const EPrescription = () => {
                     <Text><strong>Patient ID:</strong> {patientData?.patientId || 'N/A'}</Text>
                   </Box>
                   <Box className="doctor-info">
-                    <Text><strong>Dr.</strong> {doctorData?.firstName} {doctorData?.lastName}</Text>
+                    <Text><strong>{doctorData?.name || 'Dr. Doctor Name'}</strong></Text>
                     <Text><strong>Specialization:</strong> {doctorData?.specialization || 'General Medicine'}</Text>
-                    <Text><strong>Registration No:</strong> {doctorData?.registrationNumber || 'N/A'}</Text>
-                    <Text><strong>License:</strong> {doctorData?.licenseNumber || 'N/A'}</Text>
+                    <Text><strong>Registration No:</strong> {doctorData?.doctor_code || 'N/A'}</Text>
+                    <Text><strong>License:</strong> {doctorData?.license || 'N/A'}</Text>
                   </Box>
                 </Box>
               </Box>
@@ -3038,19 +3039,19 @@ const EPrescription = () => {
           <Box className="signature-section">
             <Box className="signature-line"></Box>
             <Text className="doctor-signature">
-              Dr. {doctorData?.firstName || 'Doctor'} {doctorData?.lastName || 'Name'}
+              {doctorData?.name || 'Dr. Doctor Name'}
             </Text>
             <Text className="doctor-details">{doctorData?.specialization || 'General Medicine'}</Text>
-            <Text className="doctor-details">Registration No: {doctorData?.registrationNumber || 'N/A'}</Text>
-            <Text className="doctor-details">License: {doctorData?.licenseNumber || 'N/A'}</Text>
+            <Text className="doctor-details">Registration No: {doctorData?.doctor_code || 'N/A'}</Text>
+            <Text className="doctor-details">License: {doctorData?.license || 'N/A'}</Text>
             <Text className="doctor-details">Date: {new Date().toLocaleDateString()}</Text>
             
             {/* Debug info - remove this after testing */}
             <Text className="doctor-details" style={{fontSize: '6px', color: '#999', marginTop: '5px'}}>
               DEBUG: Doctor data available: {doctorData ? 'Yes' : 'No'} | 
-              Name: {doctorData?.firstName || 'undefined'} {doctorData?.lastName || 'undefined'} | 
-              ID: {doctorData?.doctorId || 'undefined'} | 
-              Full data: {JSON.stringify(doctorData)}
+              Name: {doctorData?.name || 'undefined'} | 
+              ID: {doctorData?.id || 'undefined'} | 
+              Code: {doctorData?.doctor_code || 'undefined'}
             </Text>
           </Box>
         </Box>
