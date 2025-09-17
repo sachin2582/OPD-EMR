@@ -1,77 +1,61 @@
-# OPD-EMR Vercel Deployment Script
-# This script prepares your code for Vercel deployment
-
-Write-Host "🚀 Preparing OPD-EMR for Vercel Deployment..." -ForegroundColor Green
+# OPD-EMR Vercel Deployment Script (PowerShell)
+Write-Host "🚀 OPD-EMR Vercel Deployment Script" -ForegroundColor Green
+Write-Host "=====================================" -ForegroundColor Green
 Write-Host ""
 
-# Check if git is available
-try {
-    $gitVersion = git --version 2>&1
-    Write-Host "✅ Git found: $gitVersion" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Error: Git is not installed or not in PATH" -ForegroundColor Red
-    Write-Host "Please install Git from https://git-scm.com" -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# Check if we're in a git repository
-try {
-    git status | Out-Null
-    Write-Host "✅ Git repository found" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Error: Not in a git repository" -ForegroundColor Red
-    Write-Host "Please initialize git repository first" -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
+# Step 1: Check Git status
+Write-Host "📋 Step 1: Checking Git status..." -ForegroundColor Yellow
+git status
 Write-Host ""
 
-# Add all files
-Write-Host "📁 Adding files to git..." -ForegroundColor Yellow
-try {
-    git add .
-    Write-Host "✅ Files added to staging" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Error adding files to git" -ForegroundColor Red
+# Step 2: Build application
+Write-Host "📦 Step 2: Building application..." -ForegroundColor Yellow
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Build failed! Please fix errors and try again." -ForegroundColor Red
     Read-Host "Press Enter to exit"
     exit 1
 }
-
-# Commit changes
-Write-Host "💾 Committing changes..." -ForegroundColor Yellow
-try {
-    git commit -m "Prepare for Vercel deployment - Updated configuration for production"
-    Write-Host "✅ Changes committed" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Error committing changes" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# Push to remote
-Write-Host "🚀 Pushing to remote repository..." -ForegroundColor Yellow
-try {
-    git push origin main
-    Write-Host "✅ Code pushed to repository" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Error: Failed to push to remote repository" -ForegroundColor Red
-    Write-Host "Please check your git configuration and remote URL" -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
+Write-Host "✅ Build completed successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "✅ SUCCESS: Code pushed to repository!" -ForegroundColor Green
+
+# Step 3: Commit changes
+Write-Host "🔄 Step 3: Committing changes..." -ForegroundColor Yellow
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+git add .
+git commit -m "Deploy to production - $timestamp"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Git commit failed!" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+Write-Host "✅ Changes committed!" -ForegroundColor Green
 Write-Host ""
-Write-Host "📋 Next Steps:" -ForegroundColor Cyan
+
+# Step 4: Push to GitHub
+Write-Host "🚀 Step 4: Pushing to GitHub..." -ForegroundColor Yellow
+git push origin main
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Git push failed!" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+Write-Host "✅ Code pushed to GitHub!" -ForegroundColor Green
+Write-Host ""
+
+# Success message
+Write-Host "🎉 Deployment preparation complete!" -ForegroundColor Green
+Write-Host ""
+Write-Host "📋 Next steps:" -ForegroundColor Cyan
 Write-Host "1. Go to https://vercel.com" -ForegroundColor White
-Write-Host "2. Import your GitHub repository" -ForegroundColor White
-Write-Host "3. Configure environment variables (see VERCEL_DEPLOYMENT_GUIDE.md)" -ForegroundColor White
-Write-Host "4. Deploy your application" -ForegroundColor White
+Write-Host "2. Import your repository: sachin2582/OPD-EMR" -ForegroundColor White
+Write-Host "3. Set environment variables:" -ForegroundColor White
+Write-Host "   - REACT_APP_API_BASE_URL = https://your-app-name.vercel.app" -ForegroundColor Gray
+Write-Host "   - CORS_ORIGIN = https://your-app-name.vercel.app" -ForegroundColor Gray
+Write-Host "   - NODE_ENV = production" -ForegroundColor Gray
+Write-Host "   - JWT_SECRET = your-secret-key" -ForegroundColor Gray
+Write-Host "4. Click Deploy" -ForegroundColor White
 Write-Host ""
-Write-Host "📖 For detailed instructions, see: VERCEL_DEPLOYMENT_GUIDE.md" -ForegroundColor Yellow
+Write-Host "🌐 Your app will be available at: https://your-app-name.vercel.app" -ForegroundColor Cyan
 Write-Host ""
-
 Read-Host "Press Enter to exit"

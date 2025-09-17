@@ -35,7 +35,10 @@
     "vercel-build": "react-scripts build",
     "start:backend": "node start-backend.js",
     "start:all": "node start-servers.js",
-    "dev": "node start-servers.js"
+    "dev": "node start-servers.js",
+    "start:production": "node start-production.js",
+    "serve": "npx serve -s build -l 3000",
+    "deploy:vercel": "node deploy-to-vercel.js"
   },
   "eslintConfig": {
     "extends": [
