@@ -32,7 +32,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "vercel-build": "react-scripts build",
+    "vercel-build": "cross-env CI=false react-scripts build",
     "start:backend": "node start-backend.js",
     "start:all": "node start-servers.js",
     "dev": "node start-servers.js",
@@ -61,5 +61,8 @@
   "resolutions": {
     "fork-ts-checker-webpack-plugin": "^9.0.2"
   },
-  "proxy": "http://localhost:3001"
+  "proxy": "http://localhost:3001",
+  "devDependencies": {
+    "cross-env": "^10.0.0"
+  }
 }
